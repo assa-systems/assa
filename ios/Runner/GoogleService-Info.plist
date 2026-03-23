@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>419651451775-d0lf44fl9rnv0urr0ks0j2ql79kaj0sc.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.419651451775-d0lf44fl9rnv0urr0ks0j2ql79kaj0sc</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>419651451775-a8v8udoqn7m6mbudqib6d2661l97g6vi.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCBN5iCfV2o8to9A5H2nUb-bXRDYhD4PJc</string>
+	<key>GCM_SENDER_ID</key>
+	<string>419651451775</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.assa</string>
+	<key>PROJECT_ID</key>
+	<string>afit-shuttle-system</string>
+	<key>STORAGE_BUCKET</key>
+	<string>afit-shuttle-system.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:419651451775:ios:166e02856ad950fd15b84a</string>
+	<key>DATABASE_URL</key>
+	<string>https://afit-shuttle-system-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>
