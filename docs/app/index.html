@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="ASSA"/>
+  <meta name="theme-color" content="#0D47A1"/>
+  <title>ASSA — AFIT Shuttle Service</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+             signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc,
+             query, where, orderBy, limit, serverTimestamp, onSnapshot,
+             enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCBN5iCfV2o8to9A5H2nUb-bXRDYhD4PJc",
+      authDomain: "afit-shuttle-system.firebaseapp.com",
+      projectId: "afit-shuttle-system",
+      storageBucket: "afit-shuttle-system.firebasestorage.app",
+      messagingSenderId: "419651451775",
+      appId: "1:419651451775:ios:166e02856ad950fd15b84a",
+      databaseURL: "https://afit-shuttle-system-default-rtdb.firebaseio.com"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    // Enable offline persistence
+    enableIndexedDbPersistence(db).catch(() => {});
+
+    // ── LOCATIONS ──────────────────────────────────────────────────────
+    const LOCATIONS = {
+      1: 'AFIT Gates', 2: '45x1 Hostel', 3: 'Old Girls Hostel',
+      4: 'TETFUND Hostel', 5: 'BK', 6: 'Boys Hostel',
+      7: 'Alfa Hall', 8: 'EED', 9: 'AFIT Mosque',
+      10: 'New Mechanical', 11: 'Centre of Entrepreneurship', 12: 'Hall A'
+    };
+
+    // ── STATE ──────────────────────────────────────────────────────────
+    let currentUser = null;
+    let userData    = null;
+    let currentScreen = 'splash';
+
+    // ── NAVIGATION ─────────────────────────────────────────────────────
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      const el = document.getElementById(id);
+      if (el) { el.classList.add('active'); currentScreen = id; }
+      // update bottom nav
+      document.querySelectorAll('.nav-item').forEach(n => {
+        n.classList.toggle('active', n.dataset.screen === id);
+      });
+      document.getElementById('bottom-nav').style.display =
+        ['login','register','splash'].includes(id) ? 'none' : 'flex';
+    }
+
+    // ── SPLASH ─────────────────────────────────────────────────────────
+    setTimeout(() => {
+      onAuthStateChanged(auth, async user => {
+        if (user) {
+          currentUser = user;
+          await loadUserData();
+          showScreen('dashboard');
+        } else {
+          showScreen('login');
+        }
+      });
+    }, 1800);
+
+    async function loadUserData() {
+      try {
+        const snap = await getDoc(doc(db, 'users', currentUser.uid));
+        if (snap.exists()) {
+          userData = snap.data();
+          // Update UI with user info
+          const name = userData.name || currentUser.email;
+          document.querySelectorAll('.user-name').forEach(el => el.textContent = name);
+          document.querySelectorAll('.user-pickup-id').forEach(el =>
+            el.textContent = userData.pickupId || '---');
+        }
+      } catch(e) { console.log('loadUserData:', e); }
+    }
+
+    // ── AUTH ───────────────────────────────────────────────────────────
+    window.doLogin = async function() {
+      const email = document.getElementById('login-email').value.trim();
+      const pass  = document.getElementById('login-pass').value;
+      const btn   = document.getElementById('login-btn');
+      if (!email || !pass) { showToast('Enter email and password'); return; }
+      btn.disabled = true; btn.textContent = 'Signing in...';
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        currentUser = auth.currentUser;
+        await loadUserData();
+        showScreen('dashboard');
+      } catch(e) {
+        showToast(friendlyError(e.code));
+      } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+    };
+
+    window.doRegister = async function() {
+      const name  = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const pass  = document.getElementById('reg-pass').value;
+      const btn   = document.getElementById('reg-btn');
+      if (!name || !email || !pass) { showToast('Fill all fields'); return; }
+      if (pass.length < 6) { showToast('Password must be 6+ characters'); return; }
+      btn.disabled = true; btn.textContent = 'Creating account...';
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        const pickupId = await generatePickupId();
+        await addDoc(collection(db,'users'), {});
+        // Use setDoc with uid
+        const { setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        await setDoc(doc(db,'users', cred.user.uid), {
+          name, email, role: 'user', pickupId,
+          createdAt: serverTimestamp(), platform: 'web'
+        });
+        currentUser = cred.user;
+        userData = { name, email, role: 'user', pickupId };
+        document.querySelectorAll('.user-name').forEach(el => el.textContent = name);
+        document.querySelectorAll('.user-pickup-id').forEach(el => el.textContent = pickupId);
+        showScreen('dashboard');
+        showToast('Welcome to ASSA, ' + name + '!');
+      } catch(e) {
+        showToast(friendlyError(e.code));
+      } finally { btn.disabled = false; btn.textContent = 'Create Account'; }
+    };
+
+    window.doLogout = async function() {
+      if (!confirm('Sign out of ASSA?')) return;
+      await signOut(auth);
+      currentUser = null; userData = null;
+      showScreen('login');
+    };
+
+    async function generatePickupId() {
+      const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+      for (let i = 0; i < 20; i++) {
+        const id = letters[Math.floor(Math.random()*letters.length)] +
+                   Math.floor(Math.random()*10) + Math.floor(Math.random()*10);
+        const q = query(collection(db,'users'), where('pickupId','==',id));
+        const snap = await getDocs(q);
+        if (snap.empty) return id;
+      }
+      return 'X' + Math.floor(Math.random()*89+10);
+    }
+
+    // ── DASHBOARD ──────────────────────────────────────────────────────
+    window.goToDashboard = function() {
+      loadDashboardStats();
+      showScreen('dashboard');
+    };
+
+    async function loadDashboardStats() {
+      try {
+        if (!currentUser) return;
+        const q = query(collection(db,'ride_requests'),
+          where('userId','==',currentUser.uid), limit(5));
+        const snap = await getDocs(q);
+        document.getElementById('dash-booking-count').textContent = snap.size;
+      } catch(e) {}
+    }
+
+    // ── REQUEST RIDE ───────────────────────────────────────────────────
+    window.goToRequest = function() {
+      // Populate dropdowns
+      const pickupSel = document.getElementById('req-pickup');
+      const destSel   = document.getElementById('req-dest');
+      [pickupSel, destSel].forEach(sel => {
+        sel.innerHTML = '<option value="">Select location</option>';
+        Object.entries(LOCATIONS).forEach(([k,v]) => {
+          sel.innerHTML += `<option value="${k}">${v}</option>`;
+        });
+      });
+      showScreen('request');
+    };
+
+    window.submitRequest = async function() {
+      const pickup = document.getElementById('req-pickup').value;
+      const dest   = document.getElementById('req-dest').value;
+      const type   = document.querySelector('input[name="ride-type"]:checked').value;
+      const pax    = document.getElementById('req-pax').value;
+      const btn    = document.getElementById('req-btn');
+
+      if (!pickup || !dest) { showToast('Select pickup and destination'); return; }
+      if (pickup === dest)  { showToast('Pickup and destination cannot be the same'); return; }
+
+      btn.disabled = true; btn.textContent = 'Submitting...';
+      try {
+        await addDoc(collection(db,'ride_requests'), {
+          userId:         currentUser.uid,
+          pickupId:       userData?.pickupId || '???',
+          pickupLocation: LOCATIONS[pickup],
+          pickupCode:     parseInt(pickup),
+          destination:    LOCATIONS[dest],
+          destCode:       parseInt(dest),
+          rideType:       type,
+          passengers:     parseInt(pax),
+          status:         0,
+          requestType:    'online',
+          platform:       'web',
+          timestamp:      serverTimestamp(),
+        });
+        showToast('Ride request submitted! ✅');
+        document.getElementById('req-pickup').value = '';
+        document.getElementById('req-dest').value   = '';
+        setTimeout(() => showScreen('bookings'), 1200);
+      } catch(e) {
+        showToast('Failed to submit. Check your connection.');
+      } finally { btn.disabled = false; btn.textContent = 'Request Ride'; }
+    };
+
+    // ── BOOKINGS ───────────────────────────────────────────────────────
+    window.goToBookings = async function() {
+      showScreen('bookings');
+      const list = document.getElementById('bookings-list');
+      list.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const q = query(collection(db,'ride_requests'),
+          where('userId','==',currentUser.uid));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          list.innerHTML = '<div class="empty-state">No bookings yet.<br>Request your first ride!</div>';
+          return;
+        }
+        const docs = snap.docs.map(d => ({id:d.id,...d.data()}));
+        docs.sort((a,b) => (b.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
+        list.innerHTML = docs.map(d => `
+          <div class="booking-card">
+            <div class="booking-header">
+              <span class="pickup-badge">${d.pickupId || '---'}</span>
+              <span class="status-badge status-${d.status||0}">${statusLabel(d.status||0)}</span>
+            </div>
+            <div class="booking-route">
+              <span class="route-from">📍 ${d.pickupLocation || 'Unknown'}</span>
+              <span class="route-arrow">→</span>
+              <span class="route-to">🏁 ${d.destination || 'Unknown'}</span>
+            </div>
+            <div class="booking-meta">
+              ${d.rideType==='chartered'?'🚌 Chartered':'👥 Shared'} •
+              ${d.passengers||1} passenger${(d.passengers||1)>1?'s':''} •
+              ${d.platform==='web'?'🌐 Web':'📱 App'}
+            </div>
+          </div>
+        `).join('');
+      } catch(e) {
+        list.innerHTML = '<div class="empty-state">Could not load bookings.<br>Check your connection.</div>';
+      }
+    };
+
+    function statusLabel(s) {
+      return ['Pending','Assigned','On the way','Picked up','Completed','Cancelled'][s] || 'Pending';
+    }
+
+    // ── LOST & FOUND ───────────────────────────────────────────────────
+    window.goToLostFound = async function() {
+      showScreen('lostfound');
+      loadLostFoundItems();
+    };
+
+    async function loadLostFoundItems() {
+      const list = document.getElementById('lf-list');
+      list.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const snap = await getDocs(collection(db,'lost_found'));
+        if (snap.empty) {
+          list.innerHTML = '<div class="empty-state">No lost & found items posted yet.</div>';
+          return;
+        }
+        const docs = snap.docs.map(d => ({id:d.id,...d.data()}));
+        docs.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+        list.innerHTML = docs.map(d => `
+          <div class="lf-card ${d.type==='lost'?'lf-lost':'lf-found'}">
+            <div class="lf-type">${d.type==='lost'?'🔴 LOST':'🟢 FOUND'}</div>
+            <div class="lf-title">${d.itemName || 'Unknown item'}</div>
+            <div class="lf-desc">${d.description || ''}</div>
+            <div class="lf-meta">📍 ${d.location||'Unknown'} • ${d.contactName||'Anonymous'}</div>
+          </div>
+        `).join('');
+      } catch(e) {
+        list.innerHTML = '<div class="empty-state">Could not load items.</div>';
+      }
+    }
+
+    window.postLostFound = async function() {
+      const type    = document.querySelector('input[name="lf-type"]:checked').value;
+      const item    = document.getElementById('lf-item').value.trim();
+      const desc    = document.getElementById('lf-desc').value.trim();
+      const loc     = document.getElementById('lf-location').value.trim();
+      const contact = document.getElementById('lf-contact').value.trim();
+      if (!item || !loc) { showToast('Fill in item name and location'); return; }
+      try {
+        await addDoc(collection(db,'lost_found'), {
+          type, itemName: item, description: desc,
+          location: loc, contactName: contact || userData?.name || 'Anonymous',
+          userId: currentUser.uid, createdAt: serverTimestamp()
+        });
+        showToast('Posted successfully!');
+        document.getElementById('lf-item').value = '';
+        document.getElementById('lf-desc').value = '';
+        document.getElementById('lf-location').value = '';
+        document.getElementById('lf-contact').value = '';
+        loadLostFoundItems();
+        document.getElementById('lf-form').style.display = 'none';
+      } catch(e) { showToast('Failed to post. Check connection.'); }
+    };
+
+    // ── NOTIFICATIONS ──────────────────────────────────────────────────
+    window.goToNotifications = async function() {
+      showScreen('notifications');
+      const list = document.getElementById('notif-list');
+      list.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const q = query(collection(db,'notifications'),
+          where('userId','==',currentUser.uid), limit(20));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          list.innerHTML = '<div class="empty-state">No notifications yet.</div>';
+          return;
+        }
+        const docs = snap.docs.map(d => ({id:d.id,...d.data()}));
+        docs.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+        list.innerHTML = docs.map(d => `
+          <div class="notif-card ${d.read?'':'notif-unread'}">
+            <div class="notif-title">${d.title||'Notification'}</div>
+            <div class="notif-body">${d.body||''}</div>
+          </div>
+        `).join('');
+      } catch(e) {
+        list.innerHTML = '<div class="empty-state">Could not load notifications.</div>';
+      }
+    };
+
+    // ── SUPPORT ────────────────────────────────────────────────────────
+    window.goToSupport = function() { showScreen('support'); loadReports(); };
+
+    async function loadReports() {
+      const list = document.getElementById('report-list');
+      list.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const q = query(collection(db,'complaints'),
+          where('userId','==',currentUser.uid));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          list.innerHTML = '<div class="empty-state">No complaints submitted yet.</div>';
+          return;
+        }
+        const docs = snap.docs.map(d => ({id:d.id,...d.data()}));
+        list.innerHTML = docs.map(d => `
+          <div class="report-card">
+            <div class="report-header">
+              <span class="report-subject">${d.subject||'Complaint'}</span>
+              <span class="report-status status-text-${d.status||'open'}">${d.status||'Open'}</span>
+            </div>
+            <div class="report-body">${d.message||''}</div>
+            ${d.adminReply?`<div class="report-reply">💬 Admin: ${d.adminReply}</div>`:''}
+          </div>
+        `).join('');
+      } catch(e) {
+        list.innerHTML = '<div class="empty-state">Could not load reports.</div>';
+      }
+    }
+
+    window.submitReport = async function() {
+      const subject = document.getElementById('rep-subject').value.trim();
+      const message = document.getElementById('rep-message').value.trim();
+      if (!subject || !message) { showToast('Fill in subject and message'); return; }
+      try {
+        await addDoc(collection(db,'complaints'), {
+          userId: currentUser.uid, userName: userData?.name || 'User',
+          subject, message, status: 'open',
+          createdAt: serverTimestamp(), platform: 'web'
+        });
+        showToast('Complaint submitted!');
+        document.getElementById('rep-subject').value = '';
+        document.getElementById('rep-message').value = '';
+        document.getElementById('rep-form').style.display = 'none';
+        loadReports();
+      } catch(e) { showToast('Failed to submit.'); }
+    };
+
+    // ── PUZZLE GAME ────────────────────────────────────────────────────
+    const PUZZLES = [
+      { q: 'What is the main gate of AFIT called?', a: 'afit gate', hint: 'Think about the name of the institution' },
+      { q: 'How many passengers can a shared shuttle carry at most?', a: '4', hint: 'Single digit number' },
+      { q: 'What does ASSA stand for?', a: 'afit shuttle service app', hint: 'Four words' },
+      { q: 'What technology does ASSA use for offline hostel requests?', a: 'esp32', hint: 'A microcontroller' },
+      { q: 'What radio technology carries packets between ESP32 units?', a: 'lora', hint: 'Long Range radio' },
+      { q: 'Which Flutter database is used in ASSA?', a: 'firestore', hint: 'A Google Firebase product' },
+      { q: 'What is the minimum iOS version required for ASSA?', a: '13', hint: 'A number between 10 and 15' },
+      { q: 'How many characters is a Pickup ID?', a: '3', hint: 'Less than 5' },
+    ];
+
+    let puzzleIndex = 0;
+    let puzzleScore = 0;
+    let puzzleAnswered = false;
+
+    window.goToPuzzle = function() {
+      showScreen('puzzle');
+      puzzleIndex = Math.floor(Math.random() * PUZZLES.length);
+      puzzleScore = 0;
+      loadPuzzle();
+    };
+
+    function loadPuzzle() {
+      puzzleAnswered = false;
+      const p = PUZZLES[puzzleIndex];
+      document.getElementById('puzzle-question').textContent = p.q;
+      document.getElementById('puzzle-hint').textContent = '💡 ' + p.hint;
+      document.getElementById('puzzle-hint').style.display = 'none';
+      document.getElementById('puzzle-answer').value = '';
+      document.getElementById('puzzle-result').textContent = '';
+      document.getElementById('puzzle-result').className = 'puzzle-result';
+      document.getElementById('puzzle-score').textContent = 'Score: ' + puzzleScore;
+    }
+
+    window.showHint = function() {
+      document.getElementById('puzzle-hint').style.display = 'block';
+    };
+
+    window.checkAnswer = function() {
+      if (puzzleAnswered) return;
+      const ans = document.getElementById('puzzle-answer').value.trim().toLowerCase();
+      const correct = PUZZLES[puzzleIndex].a.toLowerCase();
+      const result = document.getElementById('puzzle-result');
+      if (ans === correct) {
+        puzzleScore++;
+        result.textContent = '✅ Correct! Well done!';
+        result.className = 'puzzle-result correct';
+        puzzleAnswered = true;
+        document.getElementById('puzzle-score').textContent = 'Score: ' + puzzleScore;
+      } else {
+        result.textContent = '❌ Wrong! Try again.';
+        result.className = 'puzzle-result wrong';
+      }
+    };
+
+    window.nextPuzzle = function() {
+      puzzleIndex = (puzzleIndex + 1) % PUZZLES.length;
+      loadPuzzle();
+    };
+
+    // ── HELPERS ────────────────────────────────────────────────────────
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function friendlyError(code) {
+      const map = {
+        'auth/invalid-email': 'Invalid email address',
+        'auth/user-not-found': 'No account found with this email',
+        'auth/wrong-password': 'Incorrect password',
+        'auth/email-already-in-use': 'Email already registered',
+        'auth/weak-password': 'Password too weak — use 6+ characters',
+        'auth/network-request-failed': 'No internet connection',
+        'auth/invalid-credential': 'Invalid email or password',
+      };
+      return map[code] || 'Something went wrong. Try again.';
+    }
+
+    // ── SERVICE WORKER ─────────────────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+
+    // Expose globals
+    window.showScreen = showScreen;
+    window.showToast  = showToast;
+    window.LOCATIONS  = LOCATIONS;
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #0D47A1;
+      --blue:   #1565C0;
+      --cyan:   #00BCD4;
+      --bg:     #F5F7FF;
+      --card:   #FFFFFF;
+      --text:   #0D1B3E;
+      --muted:  #5A6A8A;
+      --border: #DDE3F0;
+      --green:  #2E7D32;
+      --red:    #C62828;
+      --amber:  #F57F17;
+      --radius: 16px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%; width: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    #app {
+      height: 100%; width: 100%;
+      display: flex; flex-direction: column;
+      position: relative; overflow: hidden;
+    }
+
+    /* ── SCREENS ── */
+    .screen {
+      display: none; flex-direction: column;
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding-bottom: calc(70px + var(--safe-bot));
+    }
+    .screen.active { display: flex; }
+
+    /* ── SPLASH ── */
+    #splash {
+      background: linear-gradient(160deg, #0D47A1, #082F6E, #051E4A);
+      align-items: center; justify-content: center;
+      padding-bottom: 0 !important;
+    }
+    .splash-logo {
+      width: 110px; height: 110px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 52px; margin-bottom: 28px;
+      box-shadow: 0 0 40px rgba(0,188,212,0.4);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100%{transform:scale(1)} 50%{transform:scale(1.05)}
+    }
+    .splash-title {
+      font-size: 48px; font-weight: 800;
+      color: #fff; letter-spacing: 8px;
+      margin-bottom: 8px;
+    }
+    .splash-line {
+      width: 60px; height: 3px;
+      background: var(--cyan);
+      border-radius: 2px; margin: 0 auto 12px;
+    }
+    .splash-sub {
+      font-size: 13px; color: rgba(255,255,255,0.7);
+      letter-spacing: 1.5px; text-align: center;
+    }
+
+    /* ── AUTH SCREENS ── */
+    #login, #register {
+      background: linear-gradient(160deg, #0D47A1, #082F6E);
+      padding: 0 !important; justify-content: center;
+    }
+    .auth-card {
+      background: white;
+      margin: 24px 20px;
+      border-radius: 24px;
+      padding: 32px 24px;
+      box-shadow: 0 20px 60px rgba(13,71,161,0.3);
+    }
+    .auth-logo {
+      text-align: center; margin-bottom: 24px;
+    }
+    .auth-logo .logo-icon {
+      font-size: 40px; display: block; margin-bottom: 8px;
+    }
+    .auth-logo h1 {
+      font-size: 28px; font-weight: 800;
+      color: var(--navy); letter-spacing: 4px;
+    }
+    .auth-logo p {
+      font-size: 12px; color: var(--muted); margin-top: 4px;
+    }
+    .auth-card h2 {
+      font-size: 20px; font-weight: 700;
+      color: var(--navy); margin-bottom: 20px;
+    }
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 12px;
+      font-weight: 600; color: var(--muted);
+      margin-bottom: 6px; letter-spacing: 0.5px;
+    }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px; font-size: 15px;
+      color: var(--text); background: var(--bg);
+      outline: none; transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: var(--navy);
+    }
+    .field textarea { resize: none; min-height: 80px; }
+    .btn {
+      width: 100%; padding: 14px;
+      background: var(--navy); color: white;
+      border: none; border-radius: 12px;
+      font-size: 16px; font-weight: 700;
+      cursor: pointer; margin-top: 6px;
+      transition: opacity 0.2s;
+    }
+    .btn:disabled { opacity: 0.6; }
+    .btn-secondary {
+      background: transparent; color: var(--navy);
+      border: 1.5px solid var(--border);
+      margin-top: 10px;
+    }
+    .auth-switch {
+      text-align: center; margin-top: 16px;
+      font-size: 13px; color: var(--muted);
+    }
+    .auth-switch a {
+      color: var(--navy); font-weight: 700;
+      text-decoration: none;
+    }
+
+    /* ── HEADER ── */
+    .screen-header {
+      background: linear-gradient(135deg, var(--navy), var(--blue));
+      padding: calc(var(--safe-top) + 16px) 20px 20px;
+      color: white; flex-shrink: 0;
+    }
+    .screen-header h2 {
+      font-size: 22px; font-weight: 800;
+    }
+    .screen-header p {
+      font-size: 13px; opacity: 0.8; margin-top: 2px;
+    }
+
+    /* ── DASHBOARD ── */
+    .dashboard-header {
+      background: linear-gradient(160deg, #0D47A1, #082F6E);
+      padding: calc(var(--safe-top) + 20px) 20px 30px;
+      color: white;
+    }
+    .dashboard-greeting { font-size: 14px; opacity: 0.8; }
+    .dashboard-name {
+      font-size: 24px; font-weight: 800;
+      margin: 4px 0 16px;
+    }
+    .pickup-card {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 14px; padding: 14px 16px;
+      display: flex; align-items: center;
+      justify-content: space-between;
+    }
+    .pickup-label { font-size: 11px; opacity: 0.8; letter-spacing: 1px; }
+    .pickup-id {
+      font-size: 32px; font-weight: 900;
+      letter-spacing: 6px; color: var(--cyan);
+    }
+    .pickup-copy {
+      background: rgba(255,255,255,0.2);
+      border: none; color: white;
+      padding: 8px 12px; border-radius: 8px;
+      font-size: 12px; cursor: pointer;
+    }
+    .dash-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; padding: 20px 16px 8px;
+    }
+    .dash-tile {
+      background: white;
+      border-radius: var(--radius);
+      padding: 18px 14px;
+      box-shadow: 0 2px 12px rgba(13,71,161,0.08);
+      cursor: pointer; transition: transform 0.15s;
+      text-align: center;
+      border: 1.5px solid var(--border);
+    }
+    .dash-tile:active { transform: scale(0.97); }
+    .dash-tile .tile-icon { font-size: 28px; margin-bottom: 8px; }
+    .dash-tile .tile-label {
+      font-size: 12px; font-weight: 700;
+      color: var(--navy); letter-spacing: 0.3px;
+    }
+    .dash-tile .tile-count {
+      font-size: 20px; font-weight: 900;
+      color: var(--navy); margin-bottom: 4px;
+    }
+
+    /* ── CONTENT AREA ── */
+    .screen-content { padding: 16px; flex: 1; }
+
+    /* ── CARDS ── */
+    .booking-card, .lf-card, .notif-card, .report-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 12px rgba(13,71,161,0.06);
+      border: 1.5px solid var(--border);
+    }
+    .booking-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 10px;
+    }
+    .pickup-badge {
+      background: var(--navy); color: white;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 13px; font-weight: 800;
+      letter-spacing: 2px;
+    }
+    .status-badge {
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .status-0 { background: #FFF8E1; color: #F57F17; }
+    .status-1 { background: #E1F5FE; color: #0288D1; }
+    .status-2 { background: #E8F5E9; color: #2E7D32; }
+    .status-3 { background: #E8F5E9; color: #2E7D32; }
+    .status-4 { background: #E8F5E9; color: #1B5E20; }
+    .status-5 { background: #FFEBEE; color: #C62828; }
+    .booking-route {
+      display: flex; align-items: center;
+      gap: 8px; font-size: 14px; font-weight: 600;
+      color: var(--text); margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .route-arrow { color: var(--muted); }
+    .booking-meta { font-size: 11px; color: var(--muted); }
+
+    /* ── RADIO GROUPS ── */
+    .radio-group {
+      display: flex; gap: 10px; margin-bottom: 14px;
+    }
+    .radio-option {
+      flex: 1; padding: 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px; text-align: center;
+      cursor: pointer; font-size: 13px;
+      font-weight: 600; color: var(--muted);
+      transition: all 0.2s;
+    }
+    .radio-option input { display: none; }
+    .radio-option.selected {
+      border-color: var(--navy);
+      background: #E3F2FD; color: var(--navy);
+    }
+
+    /* ── LOST & FOUND ── */
+    .lf-lost { border-left: 4px solid var(--red); }
+    .lf-found { border-left: 4px solid var(--green); }
+    .lf-type { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+    .lf-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .lf-desc { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .lf-meta { font-size: 11px; color: var(--muted); }
+
+    /* ── NOTIFICATIONS ── */
+    .notif-unread { border-left: 4px solid var(--navy); }
+    .notif-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .notif-body { font-size: 13px; color: var(--muted); }
+
+    /* ── REPORTS ── */
+    .report-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 8px;
+    }
+    .report-subject { font-size: 14px; font-weight: 700; }
+    .report-status-open { color: var(--amber); font-size: 11px; font-weight: 700; }
+    .report-body { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .report-reply {
+      font-size: 12px; color: var(--green);
+      background: #E8F5E9; padding: 8px 10px;
+      border-radius: 8px; margin-top: 8px;
+    }
+
+    /* ── PUZZLE ── */
+    .puzzle-card {
+      background: white; border-radius: var(--radius);
+      padding: 24px; margin: 16px;
+      box-shadow: 0 4px 20px rgba(13,71,161,0.1);
+      border: 1.5px solid var(--border);
+    }
+    .puzzle-score {
+      font-size: 13px; font-weight: 700;
+      color: var(--cyan); text-align: right;
+      margin-bottom: 16px;
+    }
+    .puzzle-q {
+      font-size: 17px; font-weight: 700;
+      color: var(--navy); line-height: 1.4;
+      margin-bottom: 20px;
+    }
+    .puzzle-hint {
+      font-size: 13px; color: var(--amber);
+      background: #FFF8E1; padding: 10px 12px;
+      border-radius: 10px; margin-bottom: 14px;
+      display: none;
+    }
+    .puzzle-result {
+      font-size: 14px; font-weight: 700;
+      padding: 10px; border-radius: 10px;
+      text-align: center; margin-top: 10px;
+    }
+    .puzzle-result.correct { background: #E8F5E9; color: var(--green); }
+    .puzzle-result.wrong   { background: #FFEBEE; color: var(--red); }
+    .puzzle-btns { display: flex; gap: 10px; margin-top: 14px; }
+    .puzzle-btns .btn { margin-top: 0; }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed; bottom: calc(80px + var(--safe-bot));
+      right: 20px; width: 56px; height: 56px;
+      background: var(--navy); color: white;
+      border: none; border-radius: 50%;
+      font-size: 24px; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(13,71,161,0.4);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 50;
+    }
+
+    /* ── BOTTOM NAV ── */
+    #bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      padding: 8px 0 calc(8px + var(--safe-bot));
+      display: none; justify-content: space-around;
+      z-index: 100;
+    }
+    .nav-item {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+      cursor: pointer; padding: 4px 12px;
+      border-radius: 10px; transition: all 0.15s;
+      background: none; border: none;
+    }
+    .nav-item .nav-icon { font-size: 22px; }
+    .nav-item .nav-label {
+      font-size: 10px; font-weight: 600;
+      color: var(--muted);
+    }
+    .nav-item.active .nav-label { color: var(--navy); }
+    .nav-item.active .nav-icon { filter: none; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: calc(90px + var(--safe-bot));
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1A1A2E; color: white;
+      padding: 12px 20px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      opacity: 0; transition: all 0.3s;
+      white-space: nowrap; z-index: 200;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── UTILS ── */
+    .loading, .empty-state {
+      text-align: center; padding: 40px 20px;
+      color: var(--muted); font-size: 14px;
+      line-height: 1.6;
+    }
+    .loading::before { content: '⏳ '; }
+    .section-title {
+      font-size: 13px; font-weight: 700;
+      color: var(--muted); letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 16px 16px 8px;
+    }
+    .form-section {
+      background: white; margin: 0 16px 16px;
+      border-radius: var(--radius); padding: 16px;
+      border: 1.5px solid var(--border);
+    }
+    .form-section h3 {
+      font-size: 15px; font-weight: 700;
+      color: var(--navy); margin-bottom: 14px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── SPLASH ── -->
+  <div id="splash" class="screen active">
+    <div class="splash-logo">🚌</div>
+    <div class="splash-title">ASSA</div>
+    <div class="splash-line"></div>
+    <div class="splash-sub">AFIT Shuttle Service App</div>
+  </div>
+
+  <!-- ── LOGIN ── -->
+  <div id="login" class="screen">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="logo-icon">🚌</span>
+        <h1>ASSA</h1>
+        <p>AFIT Shuttle Service App</p>
+      </div>
+      <h2>Sign In</h2>
+      <div class="field">
+        <label>EMAIL</label>
+        <input id="login-email" type="email" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>PASSWORD</label>
+        <input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password"/>
+      </div>
+      <button id="login-btn" class="btn" onclick="doLogin()">Sign In</button>
+      <div class="auth-switch">
+        Don't have an account? <a href="#" onclick="showScreen('register')">Register</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REGISTER ── -->
+  <div id="register" class="screen">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="logo-icon">🚌</span>
+        <h1>ASSA</h1>
+        <p>Create your account</p>
+      </div>
+      <h2>Register</h2>
+      <div class="field">
+        <label>FULL NAME</label>
+        <input id="reg-name" type="text" placeholder="Your full name" autocomplete="name"/>
+      </div>
+      <div class="field">
+        <label>EMAIL</label>
+        <input id="reg-email" type="email" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label>PASSWORD</label>
+        <input id="reg-pass" type="password" placeholder="Min 6 characters" autocomplete="new-password"/>
+      </div>
+      <button id="reg-btn" class="btn" onclick="doRegister()">Create Account</button>
+      <div class="auth-switch">
+        Already have an account? <a href="#" onclick="showScreen('login')">Sign In</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD ── -->
+  <div id="dashboard" class="screen">
+    <div class="dashboard-header">
+      <div class="dashboard-greeting">Good day 👋</div>
+      <div class="dashboard-name user-name">Loading...</div>
+      <div class="pickup-card">
+        <div>
+          <div class="pickup-label">YOUR PICKUP ID</div>
+          <div class="pickup-id user-pickup-id">---</div>
+        </div>
+        <button class="pickup-copy" onclick="
+          navigator.clipboard?.writeText(document.querySelector('.user-pickup-id').textContent);
+          showToast('Pickup ID copied!')
+        ">Copy</button>
+      </div>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-tile" onclick="goToRequest()">
+        <div class="tile-icon">🚌</div>
+        <div class="tile-label">Request Ride</div>
+      </div>
+      <div class="dash-tile" onclick="goToBookings()">
+        <div class="tile-icon">📋</div>
+        <div class="tile-count" id="dash-booking-count">0</div>
+        <div class="tile-label">My Bookings</div>
+      </div>
+      <div class="dash-tile" onclick="goToLostFound()">
+        <div class="tile-icon">🔍</div>
+        <div class="tile-label">Lost & Found</div>
+      </div>
+      <div class="dash-tile" onclick="goToNotifications()">
+        <div class="tile-icon">🔔</div>
+        <div class="tile-label">Notifications</div>
+      </div>
+      <div class="dash-tile" onclick="goToSupport()">
+        <div class="tile-icon">💬</div>
+        <div class="tile-label">Support</div>
+      </div>
+      <div class="dash-tile" onclick="goToPuzzle()">
+        <div class="tile-icon">🧩</div>
+        <div class="tile-label">Campus Puzzle</div>
+      </div>
+    </div>
+    <div style="text-align:center; padding: 8px 16px 4px;">
+      <button class="btn btn-secondary" style="width:auto; padding:10px 24px; font-size:13px;" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- ── REQUEST RIDE ── -->
+  <div id="request" class="screen">
+    <div class="screen-header">
+      <h2>🚌 Request a Ride</h2>
+      <p>Select your pickup and destination</p>
+    </div>
+    <div class="screen-content">
+      <div class="form-section">
+        <h3>Ride Details</h3>
+
+        <div class="field">
+          <label>PICKUP LOCATION</label>
+          <select id="req-pickup"></select>
+        </div>
+
+        <div class="field">
+          <label>DESTINATION</label>
+          <select id="req-dest"></select>
+        </div>
+
+        <div class="field">
+          <label>RIDE TYPE</label>
+          <div class="radio-group">
+            <label class="radio-option selected" id="shared-opt">
+              <input type="radio" name="ride-type" value="shared" checked
+                onchange="document.getElementById('shared-opt').classList.add('selected');
+                          document.getElementById('charter-opt').classList.remove('selected')"/>
+              👥 Shared
+            </label>
+            <label class="radio-option" id="charter-opt">
+              <input type="radio" name="ride-type" value="chartered"
+                onchange="document.getElementById('charter-opt').classList.add('selected');
+                          document.getElementById('shared-opt').classList.remove('selected')"/>
+              🚌 Chartered
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>NUMBER OF PASSENGERS</label>
+          <select id="req-pax">
+            <option value="1">1 passenger</option>
+            <option value="2">2 passengers</option>
+            <option value="3">3 passengers</option>
+            <option value="4">4 passengers</option>
+          </select>
+        </div>
+
+        <p style="font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.5;">
+          💡 Select the drop-off zone closest to your destination. You can bargain the exact drop-off with the driver on arrival.
+        </p>
+
+        <button id="req-btn" class="btn" onclick="submitRequest()">Request Ride</button>
+        <button class="btn btn-secondary" onclick="showScreen('dashboard')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BOOKINGS ── -->
+  <div id="bookings" class="screen">
+    <div class="screen-header">
+      <h2>📋 My Bookings</h2>
+      <p>Your ride request history</p>
+    </div>
+    <div class="screen-content">
+      <div id="bookings-list"></div>
+    </div>
+  </div>
+
+  <!-- ── LOST & FOUND ── -->
+  <div id="lostfound" class="screen">
+    <div class="screen-header">
+      <h2>🔍 Lost & Found</h2>
+      <p>Report or find lost items on campus</p>
+    </div>
+    <div class="screen-content">
+      <div id="lf-form" style="display:none;">
+        <div class="form-section">
+          <h3>Post an Item</h3>
+          <div class="field">
+            <label>TYPE</label>
+            <div class="radio-group">
+              <label class="radio-option selected" id="lost-opt">
+                <input type="radio" name="lf-type" value="lost" checked
+                  onchange="document.getElementById('lost-opt').classList.add('selected');
+                            document.getElementById('found-opt').classList.remove('selected')"/>
+                🔴 Lost
+              </label>
+              <label class="radio-option" id="found-opt">
+                <input type="radio" name="lf-type" value="found"
+                  onchange="document.getElementById('found-opt').classList.add('selected');
+                            document.getElementById('lost-opt').classList.remove('selected')"/>
+                🟢 Found
+              </label>
+            </div>
+          </div>
+          <div class="field">
+            <label>ITEM NAME</label>
+            <input id="lf-item" type="text" placeholder="e.g. Blue backpack"/>
+          </div>
+          <div class="field">
+            <label>DESCRIPTION</label>
+            <textarea id="lf-desc" placeholder="Describe the item..."></textarea>
+          </div>
+          <div class="field">
+            <label>LOCATION FOUND/LOST</label>
+            <input id="lf-location" type="text" placeholder="e.g. Alfa Hall, Gate Area"/>
+          </div>
+          <div class="field">
+            <label>YOUR NAME (optional)</label>
+            <input id="lf-contact" type="text" placeholder="How to contact you"/>
+          </div>
+          <button class="btn" onclick="postLostFound()">Post Item</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('lf-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+      <div id="lf-list"></div>
+    </div>
+    <button class="fab" onclick="document.getElementById('lf-form').style.display='block'; window.scrollTo(0,0)">+</button>
+  </div>
+
+  <!-- ── NOTIFICATIONS ── -->
+  <div id="notifications" class="screen">
+    <div class="screen-header">
+      <h2>🔔 Notifications</h2>
+      <p>Your ride updates and alerts</p>
+    </div>
+    <div class="screen-content">
+      <div id="notif-list"></div>
+    </div>
+  </div>
+
+  <!-- ── SUPPORT ── -->
+  <div id="support" class="screen">
+    <div class="screen-header">
+      <h2>💬 Support</h2>
+      <p>Submit a complaint or get help</p>
+    </div>
+    <div class="screen-content">
+      <div id="rep-form" style="display:none;">
+        <div class="form-section">
+          <h3>New Complaint</h3>
+          <div class="field">
+            <label>SUBJECT</label>
+            <input id="rep-subject" type="text" placeholder="Brief subject"/>
+          </div>
+          <div class="field">
+            <label>MESSAGE</label>
+            <textarea id="rep-message" placeholder="Describe your issue..."></textarea>
+          </div>
+          <button class="btn" onclick="submitReport()">Submit</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('rep-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+      <div id="report-list"></div>
+    </div>
+    <button class="fab" onclick="document.getElementById('rep-form').style.display='block'; window.scrollTo(0,0)">+</button>
+  </div>
+
+  <!-- ── PUZZLE ── -->
+  <div id="puzzle" class="screen">
+    <div class="screen-header">
+      <h2>🧩 Campus Puzzle</h2>
+      <p>Test your AFIT knowledge</p>
+    </div>
+    <div class="puzzle-card">
+      <div class="puzzle-score" id="puzzle-score">Score: 0</div>
+      <div class="puzzle-q" id="puzzle-question">Loading...</div>
+      <div class="puzzle-hint" id="puzzle-hint"></div>
+      <div class="field">
+        <label>YOUR ANSWER</label>
+        <input id="puzzle-answer" type="text" placeholder="Type your answer..."
+               onkeydown="if(event.key==='Enter') checkAnswer()"/>
+      </div>
+      <div id="puzzle-result" class="puzzle-result"></div>
+      <div class="puzzle-btns">
+        <button class="btn btn-secondary" onclick="showHint()" style="margin-top:0">💡 Hint</button>
+        <button class="btn" onclick="checkAnswer()" style="margin-top:0">Check</button>
+      </div>
+      <button class="btn btn-secondary" onclick="nextPuzzle()" style="margin-top:10px">Next Question →</button>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM NAV ── -->
+  <nav id="bottom-nav">
+    <button class="nav-item active" data-screen="dashboard" onclick="goToDashboard()">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" data-screen="request" onclick="goToRequest()">
+      <span class="nav-icon">🚌</span>
+      <span class="nav-label">Ride</span>
+    </button>
+    <button class="nav-item" data-screen="bookings" onclick="goToBookings()">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Bookings</span>
+    </button>
+    <button class="nav-item" data-screen="notifications" onclick="goToNotifications()">
+      <span class="nav-icon">🔔</span>
+      <span class="nav-label">Alerts</span>
+    </button>
+    <button class="nav-item" data-screen="puzzle" onclick="goToPuzzle()">
+      <span class="nav-icon">🧩</span>
+      <span class="nav-label">Puzzle</span>
+    </button>
+  </nav>
+
+  <!-- ── TOAST ── -->
+  <div id="toast"></div>
+
+</div>
+</body>
+</html>
