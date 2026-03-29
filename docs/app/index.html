@@ -1038,14 +1038,22 @@ async function submitOnlineRequest(pickup, dest) {
 
 async function submitOfflineRequest(pickup, dest) {
   // Try ESP32 first
+  // JSON must match firmware: {"pid":"K47","pc":2,"dc":7,"rt":0,"pax":2}
+  const LOCATION_CODES = {
+    'AFIT Gates':1,'45x1 Hostel':2,'Old Girls Hostel':3,'TETFUND Hostel':4,
+    'BK':5,'Boys Hostel':6,'Alfa Hall':7,'EED':8,'AFIT Mosque':9,
+    'New Mechanical':10,'Centre of Entrepreneurship':11,'Hall A':12
+  };
   let esp32Ok = false;
   try {
     const res = await fetch(`http://${ESP32_IP}:${ESP32_PORT}/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        pickupId: userData.pickupId,
-        pickup, dest, rideType,
+        pid: userData.pickupId,
+        pc:  LOCATION_CODES[pickup] || 1,
+        dc:  LOCATION_CODES[dest]   || 1,
+        rt:  rideType === 'Chartered' ? 1 : 0,
         pax: rideType === 'Chartered' ? 1 : paxCount
       }),
       signal: AbortSignal.timeout(5000)
