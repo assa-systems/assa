@@ -2,1324 +2,1167 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>ASSA — AFIT Shuttle Service</title>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="ASSA"/>
-  <meta name="theme-color" content="#0D47A1"/>
-  <title>ASSA — AFIT Shuttle Service</title>
   <link rel="manifest" href="manifest.json"/>
   <link rel="apple-touch-icon" href="icon-192.png"/>
-
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-             signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    import { getFirestore, collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc,
-             query, where, orderBy, limit, serverTimestamp, onSnapshot,
-             enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCBN5iCfV2o8to9A5H2nUb-bXRDYhD4PJc",
-      authDomain: "afit-shuttle-system.firebaseapp.com",
-      projectId: "afit-shuttle-system",
-      storageBucket: "afit-shuttle-system.firebasestorage.app",
-      messagingSenderId: "419651451775",
-      appId: "1:419651451775:ios:166e02856ad950fd15b84a",
-      databaseURL: "https://afit-shuttle-system-default-rtdb.firebaseio.com"
-    };
-
-    const app  = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db   = getFirestore(app);
-
-    // Enable offline persistence
-    enableIndexedDbPersistence(db).catch(() => {});
-
-    // ── LOCATIONS ──────────────────────────────────────────────────────
-    const LOCATIONS = {
-      1: 'AFIT Gates', 2: '45x1 Hostel', 3: 'Old Girls Hostel',
-      4: 'TETFUND Hostel', 5: 'BK', 6: 'Boys Hostel',
-      7: 'Alfa Hall', 8: 'EED', 9: 'AFIT Mosque',
-      10: 'New Mechanical', 11: 'Centre of Entrepreneurship', 12: 'Hall A'
-    };
-
-    // ── STATE ──────────────────────────────────────────────────────────
-    let currentUser = null;
-    let userData    = null;
-    let currentScreen = 'splash';
-
-    // ── NAVIGATION ─────────────────────────────────────────────────────
-    function showScreen(id) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      const el = document.getElementById(id);
-      if (el) { el.classList.add('active'); currentScreen = id; }
-      // update bottom nav
-      document.querySelectorAll('.nav-item').forEach(n => {
-        n.classList.toggle('active', n.dataset.screen === id);
-      });
-      document.getElementById('bottom-nav').style.display =
-        ['login','register','splash'].includes(id) ? 'none' : 'flex';
-    }
-
-    // ── SPLASH ─────────────────────────────────────────────────────────
-    setTimeout(() => {
-      onAuthStateChanged(auth, async user => {
-        if (user) {
-          currentUser = user;
-          await loadUserData();
-          showScreen('dashboard');
-        } else {
-          showScreen('login');
-        }
-      });
-    }, 1800);
-
-    async function loadUserData() {
-      try {
-        if (!currentUser) return;
-        const snap = await getDoc(doc(db, 'users', currentUser.uid));
-        if (snap.exists()) {
-          userData = snap.data();
-          const name = userData.name || currentUser.displayName || currentUser.email || 'User';
-          const pid  = userData.pickupId || '---';
-          document.querySelectorAll('.user-name').forEach(el => el.textContent = name);
-          document.querySelectorAll('.user-pickup-id').forEach(el => el.textContent = pid);
-        } else {
-          // Firestore doc missing — create it (handles web-registered users)
-          const pid  = await generatePickupId();
-          const name = currentUser.displayName || currentUser.email || 'User';
-          userData   = { name, email: currentUser.email, role: 'user', pickupId: pid };
-          await setDoc(doc(db, 'users', currentUser.uid), {
-            ...userData, createdAt: serverTimestamp(), platform: 'web'
-          });
-          document.querySelectorAll('.user-name').forEach(el => el.textContent = name);
-          document.querySelectorAll('.user-pickup-id').forEach(el => el.textContent = pid);
-        }
-      } catch(e) { console.log('loadUserData error:', e); }
-    }
-
-    // ── AUTH ───────────────────────────────────────────────────────────
-    window.doLogin = async function() {
-      const email = document.getElementById('login-email').value.trim();
-      const pass  = document.getElementById('login-pass').value;
-      const btn   = document.getElementById('login-btn');
-      if (!email || !pass) { showToast('Enter email and password'); return; }
-      btn.disabled = true; btn.textContent = 'Signing in...';
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
-        currentUser = auth.currentUser;
-        await loadUserData();
-        showScreen('dashboard');
-      } catch(e) {
-        showToast(friendlyError(e.code));
-      } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
-    };
-
-    window.doRegister = async function() {
-      const name  = document.getElementById('reg-name').value.trim();
-      const email = document.getElementById('reg-email').value.trim();
-      const pass  = document.getElementById('reg-pass').value;
-      const btn   = document.getElementById('reg-btn');
-      if (!name || !email || !pass) { showToast('Fill all fields'); return; }
-      if (pass.length < 6) { showToast('Password must be 6+ characters'); return; }
-      btn.disabled = true; btn.textContent = 'Creating account...';
-      try {
-        const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        const pickupId = await generatePickupId();
-        await setDoc(doc(db,'users', cred.user.uid), {
-          name, email, role: 'user', pickupId,
-          createdAt: serverTimestamp(), platform: 'web'
-        });
-        currentUser = cred.user;
-        userData = { name, email, role: 'user', pickupId };
-        document.querySelectorAll('.user-name').forEach(el => el.textContent = name);
-        document.querySelectorAll('.user-pickup-id').forEach(el => el.textContent = pickupId);
-        showScreen('dashboard');
-        showToast('Welcome to ASSA, ' + name + '!');
-      } catch(e) {
-        showToast(friendlyError(e.code));
-      } finally { btn.disabled = false; btn.textContent = 'Create Account'; }
-    };
-
-    window.doLogout = async function() {
-      if (!confirm('Sign out of ASSA?')) return;
-      await signOut(auth);
-      currentUser = null; userData = null;
-      showScreen('login');
-    };
-
-    async function generatePickupId() {
-      const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-      for (let i = 0; i < 20; i++) {
-        const id = letters[Math.floor(Math.random()*letters.length)] +
-                   Math.floor(Math.random()*10) + Math.floor(Math.random()*10);
-        const q = query(collection(db,'users'), where('pickupId','==',id));
-        const snap = await getDocs(q);
-        if (snap.empty) return id;
-      }
-      return 'X' + Math.floor(Math.random()*89+10);
-    }
-
-    // ── DASHBOARD ──────────────────────────────────────────────────────
-    window.goToDashboard = function() {
-      loadDashboardStats();
-      showScreen('dashboard');
-    };
-
-    async function loadDashboardStats() {
-      try {
-        if (!currentUser) return;
-        const q = query(collection(db,'ride_requests'),
-          where('userId','==',currentUser.uid), limit(5));
-        const snap = await getDocs(q);
-        document.getElementById('dash-booking-count').textContent = snap.size;
-      } catch(e) {}
-    }
-
-    // ── REQUEST RIDE ───────────────────────────────────────────────────
-    // Offline pickup locations — only ESP32 access points
-    const OFFLINE_PICKUPS = {2:'45x1 Hostel', 3:'Old Girls Hostel', 6:'Boys Hostel'};
-
-    async function checkRealInternet() {
-      // Try to fetch a tiny resource from Google to confirm real internet
-      // This correctly fails on ESP32 WiFi which has no internet route
-      try {
-        const r = await fetch('https://www.google.com/favicon.ico',
-          {mode:'no-cors', cache:'no-store', signal: AbortSignal.timeout(3000)});
-        return true;
-      } catch(e) {
-        return false;
-      }
-    }
-
-    window.goToRequest = async function() {
-      showScreen('request');
-      // Show checking state
-      const modeBar = document.getElementById('req-mode-bar');
-      modeBar.textContent = '🔄 Checking connection...';
-      modeBar.style.background = '#888';
-
-      const online = await checkRealInternet();
-
-      const pickupSel = document.getElementById('req-pickup');
-      const destSel   = document.getElementById('req-dest');
-
-      // Always populate destination with all locations
-      destSel.innerHTML = '<option value="">Select destination</option>';
-      Object.entries(LOCATIONS).forEach(([k,v]) => {
-        destSel.innerHTML += `<option value="${k}">${v}</option>`;
-      });
-
-      if (online) {
-        // Online — all 12 pickup locations
-        modeBar.textContent = '🟢 Online Mode — Request goes to Firebase';
-        modeBar.style.background = '#1B5E20';
-        pickupSel.innerHTML = '<option value="">Select pickup point</option>';
-        Object.entries(LOCATIONS).forEach(([k,v]) => {
-          pickupSel.innerHTML += `<option value="${k}">${v}</option>`;
-        });
-      } else {
-        // Offline — only 3 hostel ESP32 access points
-        modeBar.textContent = '🟡 Campus WiFi Mode — Request sent to ESP32';
-        modeBar.style.background = '#E65100';
-        pickupSel.innerHTML = '<option value="">Select hostel pickup</option>';
-        Object.entries(OFFLINE_PICKUPS).forEach(([k,v]) => {
-          pickupSel.innerHTML += `<option value="${k}">${v}</option>`;
-        });
-      }
-
-      // Store mode for submitRequest to use
-      document.getElementById('req-form').dataset.online = online ? '1' : '0';
-    };
-
-    window.submitRequest = async function() {
-      const pickup   = document.getElementById('req-pickup').value;
-      const dest     = document.getElementById('req-dest').value;
-      const type     = document.querySelector('input[name="ride-type"]:checked').value;
-      const pax      = document.getElementById('req-pax').value;
-      const btn      = document.getElementById('req-btn');
-      const isOnline = document.getElementById('req-form').dataset.online === '1';
-
-      if (!pickup || !dest) { showToast('Select pickup and destination'); return; }
-      if (pickup === dest)  { showToast('Pickup and destination cannot be the same'); return; }
-
-      btn.disabled = true; btn.textContent = 'Submitting...';
-
-      if (isOnline) {
-        // ── ONLINE: save to Firebase Firestore ───────────────────────
-        try {
-          await addDoc(collection(db,'ride_requests'), {
-            userId:         currentUser.uid,
-            pickupId:       userData?.pickupId || '???',
-            pickupLocation: LOCATIONS[pickup],
-            pickupCode:     parseInt(pickup),
-            destination:    LOCATIONS[dest],
-            destCode:       parseInt(dest),
-            rideType:       type,
-            passengers:     parseInt(pax),
-            status:         0,
-            statusName:     'Pending',
-            requestType:    'online',
-            platform:       'pwa',
-            timestamp:      serverTimestamp(),
-          });
-          showToast('Ride request submitted! ✅');
-          document.getElementById('req-pickup').value = '';
-          document.getElementById('req-dest').value   = '';
-          setTimeout(() => showScreen('bookings'), 1200);
-        } catch(e) {
-          showToast('Failed to submit. Check your connection.');
-        }
-      } else {
-        // ── OFFLINE: send JSON to ESP32 at 192.168.4.1 ───────────────
-        const pc  = parseInt(pickup);
-        const dc  = parseInt(dest);
-        const rt  = type === 'chartered' ? 1 : 0;
-        const paxN = parseInt(pax);
-        const pid = userData?.pickupId || '???';
-
-        const payload = JSON.stringify({pid, pc, dc, rt, pax: paxN});
-        try {
-          const resp = await fetch('http://192.168.4.1:80/request', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: payload,
-            signal: AbortSignal.timeout(10000)
-          });
-          if (resp.ok) {
-            showToast('Request sent to ESP32! ✅ Driver will pick you up.');
-            // Save to Firestore in background (may fail if no internet — that's ok)
-            addDoc(collection(db,'ride_requests'), {
-              userId: currentUser.uid, pickupId: pid,
-              pickupLocation: LOCATIONS[pickup], destination: LOCATIONS[dest],
-              rideType: type, passengers: paxN, status: 0, statusName: 'Pending',
-              requestType: 'offline', platform: 'pwa', timestamp: serverTimestamp(),
-            }).catch(()=>{});
-            document.getElementById('req-pickup').value = '';
-            document.getElementById('req-dest').value   = '';
-            setTimeout(() => showScreen('bookings'), 1200);
-          } else {
-            showToast('ESP32 error: ' + resp.status + '. Check connection.');
-          }
-        } catch(e) {
-          showToast('Could not reach ESP32. Are you on ASSA-Campus WiFi?');
-        }
-      }
-      btn.disabled = false; btn.textContent = 'Request Ride';
-    };
-
-    // ── BOOKINGS ───────────────────────────────────────────────────────
-    window.goToBookings = async function() {
-      showScreen('bookings');
-      const list = document.getElementById('bookings-list');
-      list.innerHTML = '<div class="loading">Loading...</div>';
-      try {
-        const q = query(collection(db,'ride_requests'),
-          where('userId','==',currentUser.uid));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          list.innerHTML = '<div class="empty-state">No bookings yet.<br>Request your first ride!</div>';
-          return;
-        }
-        const docs = snap.docs.map(d => ({id:d.id,...d.data()}));
-        docs.sort((a,b) => (b.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
-        list.innerHTML = docs.map(d => `
-          <div class="booking-card">
-            <div class="booking-header">
-              <span class="pickup-badge">${d.pickupId || '---'}</span>
-              <span class="status-badge status-${d.status||0}">${statusLabel(d.status||0)}</span>
-            </div>
-            <div class="booking-route">
-              <span class="route-from">📍 ${d.pickupLocation || 'Unknown'}</span>
-              <span class="route-arrow">→</span>
-              <span class="route-to">🏁 ${d.destination || 'Unknown'}</span>
-            </div>
-            <div class="booking-meta">
-              ${d.rideType==='chartered'?'🚌 Chartered':'👥 Shared'} •
-              ${d.passengers||1} passenger${(d.passengers||1)>1?'s':''} •
-              ${d.platform==='web'?'🌐 Web':'📱 App'}
-            </div>
-          </div>
-        `).join('');
-      } catch(e) {
-        list.innerHTML = '<div class="empty-state">Could not load bookings.<br>Check your connection.</div>';
-      }
-    };
-
-    function statusLabel(s) {
-      return ['Pending','Assigned','On the way','Picked up','Completed','Cancelled'][s] || 'Pending';
-    }
-
-    // ── LOST & FOUND ───────────────────────────────────────────────────
-    window.goToLostFound = async function() {
-      showScreen('lostfound');
-      loadLostFoundItems();
-    };
-
-    async function loadLostFoundItems() {
-      const list = document.getElementById('lf-list');
-      list.innerHTML = '<div class="loading">Loading...</div>';
-      try {
-        const snap = await getDocs(collection(db,'lost_found'));
-        if (snap.empty) {
-          list.innerHTML = '<div class="empty-state">No lost & found items posted yet.</div>';
-          return;
-        }
-        const docs = snap.docs.map(d => ({id:d.id,...d.data()}));
-        docs.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
-        list.innerHTML = docs.map(d => `
-          <div class="lf-card ${d.type==='lost'?'lf-lost':'lf-found'}">
-            <div class="lf-type">${d.type==='lost'?'🔴 LOST':'🟢 FOUND'}</div>
-            ${d.imageUrl ? `<img src="${d.imageUrl}" alt="Item photo"
-              style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin:8px 0;"
-              onerror="this.style.display='none'"/>` : ''}
-            <div class="lf-title">${d.itemName || 'Unknown item'}</div>
-            <div class="lf-desc">${d.description || ''}</div>
-            <div class="lf-meta">📍 ${d.location||'Unknown'} • ${d.contactName||'Anonymous'}</div>
-          </div>
-        `).join('');
-      } catch(e) {
-        list.innerHTML = '<div class="empty-state">Could not load items.</div>';
-      }
-    }
-
-    window.postLostFound = async function() {
-      const type    = document.querySelector('input[name="lf-type"]:checked').value;
-      const item    = document.getElementById('lf-item').value.trim();
-      const desc    = document.getElementById('lf-desc').value.trim();
-      const loc     = document.getElementById('lf-location').value.trim();
-      const contact  = document.getElementById('lf-contact').value.trim();
-      const imageRaw = document.getElementById('lf-image').value.trim();
-      // Convert Google Drive share link to direct image URL
-      let imageUrl = imageRaw;
-      if (imageRaw.includes('drive.google.com')) {
-        const m = imageRaw.match(/(?:\/file\/d\/|[?&]id=)([a-zA-Z0-9_-]+)/);
-        if (m) imageUrl = 'https://lh3.googleusercontent.com/d/' + m[1];
-      }
-      if (!item || !loc) { showToast('Fill in item name and location'); return; }
-      try {
-        await addDoc(collection(db,'lost_found'), {
-          type, itemName: item, description: desc,
-          location: loc, contactName: contact || userData?.name || 'Anonymous',
-          imageUrl: imageUrl || '',
-          userId: currentUser.uid, createdAt: serverTimestamp()
-        });
-        showToast('Posted successfully!');
-        document.getElementById('lf-item').value = '';
-        document.getElementById('lf-desc').value = '';
-        document.getElementById('lf-location').value = '';
-        document.getElementById('lf-contact').value = '';
-        document.getElementById('lf-image').value = '';
-        loadLostFoundItems();
-        document.getElementById('lf-form').style.display = 'none';
-      } catch(e) { showToast('Failed to post. Check connection.'); }
-    };
-
-    // ── NOTIFICATIONS ──────────────────────────────────────────────────
-    window.goToNotifications = async function() {
-      showScreen('notifications');
-      const list = document.getElementById('notif-list');
-      list.innerHTML = '<div class="loading">Loading...</div>';
-      try {
-        const q = query(collection(db,'notifications'),
-          where('userId','==',currentUser.uid), limit(20));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          list.innerHTML = '<div class="empty-state">No notifications yet.</div>';
-          return;
-        }
-        const docs = snap.docs.map(d => ({id:d.id,...d.data()}));
-        docs.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
-        list.innerHTML = docs.map(d => `
-          <div class="notif-card ${d.read?'':'notif-unread'}">
-            <div class="notif-title">${d.title||'Notification'}</div>
-            <div class="notif-body">${d.body||''}</div>
-          </div>
-        `).join('');
-      } catch(e) {
-        list.innerHTML = '<div class="empty-state">Could not load notifications.</div>';
-      }
-    };
-
-    // ── SUPPORT ────────────────────────────────────────────────────────
-    window.goToSupport = function() { showScreen('support'); loadReports(); };
-
-    async function loadReports() {
-      const list = document.getElementById('report-list');
-      list.innerHTML = '<div class="loading">Loading...</div>';
-      try {
-        const q = query(collection(db,'complaints'),
-          where('userId','==',currentUser.uid));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          list.innerHTML = '<div class="empty-state">No complaints submitted yet.</div>';
-          return;
-        }
-        const docs = snap.docs.map(d => ({id:d.id,...d.data()}));
-        list.innerHTML = docs.map(d => `
-          <div class="report-card">
-            <div class="report-header">
-              <span class="report-subject">${d.subject||'Complaint'}</span>
-              <span class="report-status status-text-${d.status||'open'}">${d.status||'Open'}</span>
-            </div>
-            <div class="report-body">${d.message||''}</div>
-            ${d.adminReply?`<div class="report-reply">💬 Admin: ${d.adminReply}</div>`:''}
-          </div>
-        `).join('');
-      } catch(e) {
-        list.innerHTML = '<div class="empty-state">Could not load reports.</div>';
-      }
-    }
-
-    window.submitReport = async function() {
-      const subject = document.getElementById('rep-subject').value.trim();
-      const message = document.getElementById('rep-message').value.trim();
-      if (!subject || !message) { showToast('Fill in subject and message'); return; }
-      try {
-        await addDoc(collection(db,'complaints'), {
-          userId: currentUser.uid, userName: userData?.name || 'User',
-          subject, message, status: 'open',
-          createdAt: serverTimestamp(), platform: 'web'
-        });
-        showToast('Complaint submitted!');
-        document.getElementById('rep-subject').value = '';
-        document.getElementById('rep-message').value = '';
-        document.getElementById('rep-form').style.display = 'none';
-        loadReports();
-      } catch(e) { showToast('Failed to submit.'); }
-    };
-
-    // ── PUZZLE GAME ────────────────────────────────────────────────────
-    const PUZZLES = [
-      { q: 'What is the main gate of AFIT called?', a: 'afit gate', hint: 'Think about the name of the institution' },
-      { q: 'How many passengers can a shared shuttle carry at most?', a: '4', hint: 'Single digit number' },
-      { q: 'What does ASSA stand for?', a: 'afit shuttle service app', hint: 'Four words' },
-      { q: 'What technology does ASSA use for offline hostel requests?', a: 'esp32', hint: 'A microcontroller' },
-      { q: 'What radio technology carries packets between ESP32 units?', a: 'lora', hint: 'Long Range radio' },
-      { q: 'Which Flutter database is used in ASSA?', a: 'firestore', hint: 'A Google Firebase product' },
-      { q: 'What is the minimum iOS version required for ASSA?', a: '13', hint: 'A number between 10 and 15' },
-      { q: 'How many characters is a Pickup ID?', a: '3', hint: 'Less than 5' },
-    ];
-
-    let puzzleIndex = 0;
-    let puzzleScore = 0;
-    let puzzleAnswered = false;
-
-    window.goToPuzzle = function() {
-      showScreen('puzzle');
-      puzzleIndex = Math.floor(Math.random() * PUZZLES.length);
-      puzzleScore = 0;
-      loadPuzzle();
-    };
-
-    function loadPuzzle() {
-      puzzleAnswered = false;
-      const p = PUZZLES[puzzleIndex];
-      document.getElementById('puzzle-question').textContent = p.q;
-      document.getElementById('puzzle-hint').textContent = '💡 ' + p.hint;
-      document.getElementById('puzzle-hint').style.display = 'none';
-      document.getElementById('puzzle-answer').value = '';
-      document.getElementById('puzzle-result').textContent = '';
-      document.getElementById('puzzle-result').className = 'puzzle-result';
-      document.getElementById('puzzle-score').textContent = 'Score: ' + puzzleScore;
-    }
-
-    window.showHint = function() {
-      document.getElementById('puzzle-hint').style.display = 'block';
-    };
-
-    window.checkAnswer = function() {
-      if (puzzleAnswered) return;
-      const ans = document.getElementById('puzzle-answer').value.trim().toLowerCase();
-      const correct = PUZZLES[puzzleIndex].a.toLowerCase();
-      const result = document.getElementById('puzzle-result');
-      if (ans === correct) {
-        puzzleScore++;
-        result.textContent = '✅ Correct! Well done!';
-        result.className = 'puzzle-result correct';
-        puzzleAnswered = true;
-        document.getElementById('puzzle-score').textContent = 'Score: ' + puzzleScore;
-      } else {
-        result.textContent = '❌ Wrong! Try again.';
-        result.className = 'puzzle-result wrong';
-      }
-    };
-
-    window.nextPuzzle = function() {
-      puzzleIndex = (puzzleIndex + 1) % PUZZLES.length;
-      loadPuzzle();
-    };
-
-    // ── HELPERS ────────────────────────────────────────────────────────
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 3000);
-    }
-
-    function friendlyError(code) {
-      const map = {
-        'auth/invalid-email': 'Invalid email address',
-        'auth/user-not-found': 'No account found with this email',
-        'auth/wrong-password': 'Incorrect password',
-        'auth/email-already-in-use': 'Email already registered',
-        'auth/weak-password': 'Password too weak — use 6+ characters',
-        'auth/network-request-failed': 'No internet connection',
-        'auth/invalid-credential': 'Invalid email or password',
-      };
-      return map[code] || 'Something went wrong. Try again.';
-    }
-
-    // ── SERVICE WORKER ─────────────────────────────────────────────────
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    }
-
-    // Expose globals
-    window.showScreen = showScreen;
-    window.showToast  = showToast;
-    window.LOCATIONS  = LOCATIONS;
-  </script>
-
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --navy:   #0D47A1;
-      --blue:   #1565C0;
-      --cyan:   #00BCD4;
-      --bg:     #F5F7FF;
-      --card:   #FFFFFF;
-      --text:   #0D1B3E;
-      --muted:  #5A6A8A;
-      --border: #DDE3F0;
-      --green:  #2E7D32;
-      --red:    #C62828;
-      --amber:  #F57F17;
-      --radius: 16px;
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-bot: env(safe-area-inset-bottom, 0px);
+      --primary: #1565C0; --primary-dark: #0D47A1; --primary-deeper: #0A2E6E;
+      --accent: #42A5F5; --success: #2E7D32; --success-light: #E8F5E9;
+      --warning: #F57F17; --warning-light: #FFF8E1;
+      --danger: #C62828; --danger-light: #FFEBEE;
+      --text-primary: #1A237E; --text-secondary: #546E7A; --text-muted: #90A4AE;
+      --bg: #F0F4FF; --card: #FFFFFF; --border: #E3E8F0;
+      --safe-top: env(safe-area-inset-top,0px); --safe-bottom: env(safe-area-inset-bottom,0px);
     }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:var(--bg);color:#1a1a2e;-webkit-tap-highlight-color:transparent}
+    #app{height:100%;display:flex;flex-direction:column;overflow:hidden}
+    .screen{display:none;flex-direction:column;height:100%;overflow:hidden}
+    .screen.active{display:flex}
 
-    html, body {
-      height: 100%; width: 100%;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      overflow: hidden;
-    }
+    /* SPLASH */
+    #screen-splash{background:linear-gradient(160deg,var(--primary-deeper) 0%,var(--primary) 60%,#1976D2 100%);align-items:center;justify-content:center;gap:1rem}
+    .splash-logo{font-size:3.5rem;font-weight:800;color:white;letter-spacing:-0.02em}
+    .splash-logo span{color:#90CAF9}
+    .splash-sub{color:rgba(255,255,255,0.65);font-size:0.85rem}
+    .splash-spinner{width:32px;height:32px;border:3px solid rgba(255,255,255,0.25);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;margin-top:2rem}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
-    #app {
-      height: 100%; width: 100%;
-      display: flex; flex-direction: column;
-      position: relative; overflow: hidden;
-    }
+    /* AUTH */
+    #screen-login,#screen-register{background:linear-gradient(160deg,var(--primary-deeper) 0%,var(--primary) 50%,#1565C0 100%);overflow-y:auto}
+    .auth-container{min-height:100%;display:flex;flex-direction:column;padding:calc(var(--safe-top) + 3rem) 1.5rem calc(var(--safe-bottom) + 2rem)}
+    .auth-logo{font-size:2.5rem;font-weight:800;color:white;text-align:center;margin-bottom:0.3rem}
+    .auth-logo span{color:#90CAF9}
+    .auth-tagline{color:rgba(255,255,255,0.6);text-align:center;font-size:0.8rem;margin-bottom:2.5rem}
+    .auth-card{background:white;border-radius:24px;padding:1.8rem;box-shadow:0 20px 60px rgba(0,0,0,0.25)}
+    .auth-title{font-size:1.3rem;font-weight:700;color:var(--primary-dark);margin-bottom:1.5rem}
+    .form-group{margin-bottom:1rem}
+    .form-label{display:block;font-size:0.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.04em}
+    .form-input{width:100%;padding:0.85rem 1rem;border:1.5px solid var(--border);border-radius:12px;font-size:0.95rem;font-family:inherit;color:#1a1a2e;background:#FAFCFF;transition:border-color 0.2s;outline:none}
+    .form-input:focus{border-color:var(--accent);background:white}
+    .form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23546E7A'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 1rem center;padding-right:2.5rem}
+    .btn{display:flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.9rem;border:none;border-radius:14px;font-size:0.95rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all 0.15s}
+    .btn:active{transform:scale(0.97)}
+    .btn-primary{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:white}
+    .btn-secondary{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary)}
+    .btn-danger{background:var(--danger-light);color:var(--danger)}
+    .btn-success{background:var(--success);color:white}
+    .btn-cancel{background:#FFF8E1;color:var(--warning);border:1px solid #FFE082}
+    .auth-switch{text-align:center;margin-top:1.2rem;color:rgba(255,255,255,0.7);font-size:0.85rem}
+    .auth-switch a{color:#90CAF9;font-weight:600;text-decoration:none}
+    .error-msg{background:var(--danger-light);color:var(--danger);padding:0.75rem 1rem;border-radius:10px;font-size:0.82rem;margin-bottom:1rem;font-weight:500;display:none}
+    .error-msg.show{display:block}
 
-    /* ── SCREENS ── */
-    .screen {
-      display: none; flex-direction: column;
-      flex: 1; overflow-y: auto; overflow-x: hidden;
-      padding-bottom: calc(70px + var(--safe-bot));
-    }
-    .screen.active { display: flex; }
+    /* LAYOUT */
+    #screen-dashboard,#screen-request,#screen-myrequests,#screen-notifications,
+    #screen-lostfound,#screen-report,#screen-admin,#screen-driver{overflow-y:auto}
 
-    /* ── SPLASH ── */
-    #splash {
-      background: linear-gradient(160deg, #0D47A1, #082F6E, #051E4A);
-      align-items: center; justify-content: center;
-      padding-bottom: 0 !important;
-    }
-    .splash-logo {
-      width: 110px; height: 110px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.12);
-      border: 2px solid rgba(255,255,255,0.3);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 52px; margin-bottom: 28px;
-      box-shadow: 0 0 40px rgba(0,188,212,0.4);
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%,100%{transform:scale(1)} 50%{transform:scale(1.05)}
-    }
-    .splash-title {
-      font-size: 48px; font-weight: 800;
-      color: #fff; letter-spacing: 8px;
-      margin-bottom: 8px;
-    }
-    .splash-line {
-      width: 60px; height: 3px;
-      background: var(--cyan);
-      border-radius: 2px; margin: 0 auto 12px;
-    }
-    .splash-sub {
-      font-size: 13px; color: rgba(255,255,255,0.7);
-      letter-spacing: 1.5px; text-align: center;
-    }
+    /* TOPBAR — matches Android app gradient */
+    .topbar{background:linear-gradient(135deg,#1565C0 0%,#0D47A1 100%);padding:calc(var(--safe-top) + 1rem) 1.2rem 1.2rem;flex-shrink:0;border-radius:0 0 24px 24px}
+    .topbar-row{display:flex;align-items:center;gap:0.75rem}
+    .topbar-avatar{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:white;flex-shrink:0;border:2px solid rgba(255,255,255,0.3)}
+    .topbar-name{color:white;font-weight:700;font-size:1rem;flex:1}
+    .topbar-greeting{color:rgba(255,255,255,0.7);font-size:0.73rem;font-weight:400}
+    .topbar-icon{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;color:white;position:relative;flex-shrink:0}
+    .notif-badge{position:absolute;top:4px;right:4px;width:16px;height:16px;background:#FF5252;border-radius:50%;font-size:9px;font-weight:700;color:white;display:flex;align-items:center;justify-content:center;border:1.5px solid white}
+    .notif-badge.hidden{display:none}
+    .status-pill{display:inline-flex;align-items:center;gap:0.4rem;background:rgba(255,255,255,0.15);border-radius:50px;padding:0.3rem 0.8rem;margin-top:0.75rem}
+    .status-dot{width:7px;height:7px;border-radius:50%}
+    .status-dot.online{background:#69F0AE}
+    .status-dot.offline{background:#FFD740}
+    .status-text{color:white;font-size:0.75rem;font-weight:600}
 
-    /* ── AUTH SCREENS ── */
-    #login, #register {
-      background: linear-gradient(160deg, #0D47A1, #082F6E);
-      padding: 0 !important; justify-content: center;
-    }
-    .auth-card {
-      background: white;
-      margin: 24px 20px;
-      border-radius: 24px;
-      padding: 32px 24px;
-      box-shadow: 0 20px 60px rgba(13,71,161,0.3);
-    }
-    .auth-logo {
-      text-align: center; margin-bottom: 24px;
-    }
-    .auth-logo .logo-icon {
-      font-size: 40px; display: block; margin-bottom: 8px;
-    }
-    .auth-logo h1 {
-      font-size: 28px; font-weight: 800;
-      color: var(--navy); letter-spacing: 4px;
-    }
-    .auth-logo p {
-      font-size: 12px; color: var(--muted); margin-top: 4px;
-    }
-    .auth-card h2 {
-      font-size: 20px; font-weight: 700;
-      color: var(--navy); margin-bottom: 20px;
-    }
-    .field { margin-bottom: 14px; }
-    .field label {
-      display: block; font-size: 12px;
-      font-weight: 600; color: var(--muted);
-      margin-bottom: 6px; letter-spacing: 0.5px;
-    }
-    .field input, .field select, .field textarea {
-      width: 100%; padding: 12px 14px;
-      border: 1.5px solid var(--border);
-      border-radius: 12px; font-size: 15px;
-      color: var(--text); background: var(--bg);
-      outline: none; transition: border-color 0.2s;
-      -webkit-appearance: none;
-    }
-    .field input:focus, .field select:focus, .field textarea:focus {
-      border-color: var(--navy);
-    }
-    .field textarea { resize: none; min-height: 80px; }
-    .btn {
-      width: 100%; padding: 14px;
-      background: var(--navy); color: white;
-      border: none; border-radius: 12px;
-      font-size: 16px; font-weight: 700;
-      cursor: pointer; margin-top: 6px;
-      transition: opacity 0.2s;
-    }
-    .btn:disabled { opacity: 0.6; }
-    .btn-secondary {
-      background: transparent; color: var(--navy);
-      border: 1.5px solid var(--border);
-      margin-top: 10px;
-    }
-    .auth-switch {
-      text-align: center; margin-top: 16px;
-      font-size: 13px; color: var(--muted);
-    }
-    .auth-switch a {
-      color: var(--navy); font-weight: 700;
-      text-decoration: none;
-    }
+    /* OFFLINE BANNER */
+    .offline-banner{background:var(--warning);padding:0.6rem 1rem;display:flex;align-items:center;gap:0.5rem;flex-shrink:0}
+    .offline-banner span{color:white;font-size:0.8rem;font-weight:600}
+    .offline-banner.hidden{display:none}
 
-    /* ── HEADER ── */
-    .screen-header {
-      background: linear-gradient(135deg, var(--navy), var(--blue));
-      padding: calc(var(--safe-top) + 16px) 20px 20px;
-      color: white; flex-shrink: 0;
-    }
-    .screen-header h2 {
-      font-size: 22px; font-weight: 800;
-    }
-    .screen-header p {
-      font-size: 13px; opacity: 0.8; margin-top: 2px;
-    }
+    /* CONTENT */
+    .content{flex:1;overflow-y:auto;padding:1rem 1rem calc(var(--safe-bottom) + 5rem);-webkit-overflow-scrolling:touch}
 
-    /* ── DASHBOARD ── */
-    .dashboard-header {
-      background: linear-gradient(160deg, #0D47A1, #082F6E);
-      padding: calc(var(--safe-top) + 20px) 20px 30px;
-      color: white;
-    }
-    .dashboard-greeting { font-size: 14px; opacity: 0.8; }
-    .dashboard-name {
-      font-size: 24px; font-weight: 800;
-      margin: 4px 0 16px;
-    }
-    .pickup-card {
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.25);
-      border-radius: 14px; padding: 14px 16px;
-      display: flex; align-items: center;
-      justify-content: space-between;
-    }
-    .pickup-label { font-size: 11px; opacity: 0.8; letter-spacing: 1px; }
-    .pickup-id {
-      font-size: 32px; font-weight: 900;
-      letter-spacing: 6px; color: var(--cyan);
-    }
-    .pickup-copy {
-      background: rgba(255,255,255,0.2);
-      border: none; color: white;
-      padding: 8px 12px; border-radius: 8px;
-      font-size: 12px; cursor: pointer;
-    }
-    .dash-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 12px; padding: 20px 16px 8px;
-    }
-    .dash-tile {
-      background: white;
-      border-radius: var(--radius);
-      padding: 18px 14px;
-      box-shadow: 0 2px 12px rgba(13,71,161,0.08);
-      cursor: pointer; transition: transform 0.15s;
-      text-align: center;
-      border: 1.5px solid var(--border);
-    }
-    .dash-tile:active { transform: scale(0.97); }
-    .dash-tile .tile-icon { font-size: 28px; margin-bottom: 8px; }
-    .dash-tile .tile-label {
-      font-size: 12px; font-weight: 700;
-      color: var(--navy); letter-spacing: 0.3px;
-    }
-    .dash-tile .tile-count {
-      font-size: 20px; font-weight: 900;
-      color: var(--navy); margin-bottom: 4px;
-    }
+    /* CARDS — match Android blue gradient card */
+    .card{background:var(--card);border-radius:18px;padding:1.2rem;box-shadow:0 2px 12px rgba(0,0,0,0.06);margin-bottom:1rem;border:1px solid var(--border)}
+    .card-title{font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem}
 
-    /* ── CONTENT AREA ── */
-    .screen-content { padding: 16px; flex: 1; }
+    /* PICKUP ID CARD */
+    .pickup-card{background:linear-gradient(135deg,#0D47A1 0%,#1565C0 100%);border-radius:18px;padding:1.2rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;box-shadow:0 6px 20px rgba(13,71,161,0.35)}
+    .pickup-icon{width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0}
+    .pickup-label{color:rgba(255,255,255,0.7);font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em}
+    .pickup-id{color:white;font-size:2.2rem;font-weight:800;letter-spacing:0.1em;line-height:1}
+    .pickup-hint{color:rgba(255,255,255,0.5);font-size:0.68rem;margin-top:0.25rem}
+    .pickup-copy{margin-left:auto;background:rgba(255,255,255,0.2);border:none;border-radius:10px;padding:0.5rem 0.9rem;color:white;font-size:0.75rem;font-weight:700;cursor:pointer}
 
-    /* ── CARDS ── */
-    .booking-card, .lf-card, .notif-card, .report-card {
-      background: white;
-      border-radius: var(--radius);
-      padding: 16px;
-      margin-bottom: 12px;
-      box-shadow: 0 2px 12px rgba(13,71,161,0.06);
-      border: 1.5px solid var(--border);
-    }
-    .booking-header {
-      display: flex; justify-content: space-between;
-      align-items: center; margin-bottom: 10px;
-    }
-    .pickup-badge {
-      background: var(--navy); color: white;
-      padding: 4px 10px; border-radius: 20px;
-      font-size: 13px; font-weight: 800;
-      letter-spacing: 2px;
-    }
-    .status-badge {
-      padding: 4px 10px; border-radius: 20px;
-      font-size: 11px; font-weight: 700;
-    }
-    .status-0 { background: #FFF8E1; color: #F57F17; }
-    .status-1 { background: #E1F5FE; color: #0288D1; }
-    .status-2 { background: #E8F5E9; color: #2E7D32; }
-    .status-3 { background: #E8F5E9; color: #2E7D32; }
-    .status-4 { background: #E8F5E9; color: #1B5E20; }
-    .status-5 { background: #FFEBEE; color: #C62828; }
-    .booking-route {
-      display: flex; align-items: center;
-      gap: 8px; font-size: 14px; font-weight: 600;
-      color: var(--text); margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-    .route-arrow { color: var(--muted); }
-    .booking-meta { font-size: 11px; color: var(--muted); }
+    /* QUICK ACTIONS */
+    .section-title{font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:0.8rem}
+    .quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;margin-bottom:1rem}
+    .quick-btn{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.1rem 0.8rem;display:flex;flex-direction:column;align-items:center;gap:0.6rem;cursor:pointer;transition:all 0.15s;text-align:center}
+    .quick-btn:active{transform:scale(0.96);background:#F0F4FF}
+    .quick-btn .icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem}
+    .quick-btn .label{font-size:0.8rem;font-weight:700;color:var(--text-primary)}
+    .quick-btn .sub{font-size:0.68rem;color:var(--text-muted)}
+    .icon-blue{background:#E3F2FD} .icon-green{background:#E8F5E9}
+    .icon-orange{background:#FFF3E0} .icon-red{background:#FFEBEE}
+    .icon-teal{background:#E0F7FA} .icon-purple{background:#F3E5F5}
 
-    /* ── RADIO GROUPS ── */
-    .radio-group {
-      display: flex; gap: 10px; margin-bottom: 14px;
-    }
-    .radio-option {
-      flex: 1; padding: 10px;
-      border: 1.5px solid var(--border);
-      border-radius: 10px; text-align: center;
-      cursor: pointer; font-size: 13px;
-      font-weight: 600; color: var(--muted);
-      transition: all 0.2s;
-    }
-    .radio-option input { display: none; }
-    .radio-option.selected {
-      border-color: var(--navy);
-      background: #E3F2FD; color: var(--navy);
-    }
+    /* BOTTOM NAV */
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);display:flex;padding:0.5rem 0 calc(var(--safe-bottom) + 0.3rem);z-index:50;box-shadow:0 -4px 20px rgba(0,0,0,0.08)}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:0.2rem;padding:0.3rem;cursor:pointer;border:none;background:none;font-family:inherit}
+    .nav-item .nav-icon{font-size:1.3rem;transition:transform 0.15s}
+    .nav-item .nav-label{font-size:0.62rem;font-weight:500;color:var(--text-muted);transition:color 0.15s}
+    .nav-item.active .nav-label{color:var(--primary);font-weight:700}
+    .nav-item.active .nav-icon{transform:scale(1.1)}
 
-    /* ── LOST & FOUND ── */
-    .lf-lost { border-left: 4px solid var(--red); }
-    .lf-found { border-left: 4px solid var(--green); }
-    .lf-type { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
-    .lf-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-    .lf-desc { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-    .lf-meta { font-size: 11px; color: var(--muted); }
+    /* SUB HEADER */
+    .sub-header{background:linear-gradient(135deg,#1565C0,#0D47A1);padding:calc(var(--safe-top) + 1rem) 1.2rem 1.2rem;display:flex;align-items:center;gap:0.75rem;flex-shrink:0;border-radius:0 0 24px 24px}
+    .back-btn{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+    .sub-title{color:white;font-size:1.05rem;font-weight:700}
 
-    /* ── NOTIFICATIONS ── */
-    .notif-unread { border-left: 4px solid var(--navy); }
-    .notif-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-    .notif-body { font-size: 13px; color: var(--muted); }
+    /* REQUEST SCREEN — location chips like Android */
+    .mode-badge{display:inline-flex;align-items:center;gap:0.4rem;border-radius:50px;padding:0.35rem 0.9rem;font-size:0.75rem;font-weight:600;margin-bottom:1rem}
+    .mode-badge.online{background:var(--success-light);color:var(--success)}
+    .mode-badge.offline{background:var(--warning-light);color:var(--warning)}
+    .location-chips{display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem}
+    .loc-chip{padding:0.5rem 1rem;border-radius:50px;border:1.5px solid var(--border);background:white;font-size:0.82rem;font-weight:500;cursor:pointer;transition:all 0.15s;color:var(--text-primary)}
+    .loc-chip.selected{background:var(--primary);border-color:var(--primary);color:white;font-weight:700}
+    .loc-chip.disabled{opacity:0.4;cursor:not-allowed;background:#f5f5f5}
+    .ride-type-row{display:flex;gap:0.75rem;margin-bottom:1rem}
+    .ride-type-btn{flex:1;padding:0.9rem 0.5rem;border:2px solid var(--border);border-radius:14px;background:white;font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;color:var(--text-secondary);transition:all 0.15s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:0.3rem}
+    .ride-type-btn.active{border-color:var(--primary);background:#E3F2FD;color:var(--primary)}
+    .pax-row{display:flex;align-items:center;gap:0;margin-top:0.5rem}
+    .pax-circle{width:54px;height:54px;border-radius:50%;border:2px solid var(--border);background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;font-weight:800;color:var(--text-primary);transition:all 0.15s;margin:0 0.4rem}
+    .pax-circle.active{background:var(--primary);border-color:var(--primary);color:white;box-shadow:0 4px 12px rgba(21,101,192,0.35)}
+    .pax-label{font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.25rem}
+    .info-tip{background:#E3F2FD;border-left:3px solid var(--primary);border-radius:0 10px 10px 0;padding:0.7rem 0.9rem;margin-bottom:1rem;font-size:0.8rem;color:var(--text-secondary);line-height:1.5}
+    .summary-card{background:#F8FAFF;border:1px solid #C5CAE9;border-radius:14px;padding:1rem;margin-bottom:1rem}
+    .summary-row{display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0;border-bottom:1px solid var(--border);font-size:0.85rem}
+    .summary-row:last-child{border-bottom:none}
+    .summary-key{color:var(--text-muted);min-width:80px;font-size:0.8rem}
+    .summary-val{font-weight:600;color:var(--text-primary)}
 
-    /* ── REPORTS ── */
-    .report-header {
-      display: flex; justify-content: space-between;
-      align-items: center; margin-bottom: 8px;
-    }
-    .report-subject { font-size: 14px; font-weight: 700; }
-    .report-status-open { color: var(--amber); font-size: 11px; font-weight: 700; }
-    .report-body { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-    .report-reply {
-      font-size: 12px; color: var(--green);
-      background: #E8F5E9; padding: 8px 10px;
-      border-radius: 8px; margin-top: 8px;
-    }
+    /* LIST ITEMS */
+    .list-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;margin-bottom:0.75rem}
+    .list-item-row{display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem}
+    .list-item-title{font-size:0.9rem;font-weight:600;color:var(--text-primary)}
+    .list-item-sub{font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem}
+    .status-badge{display:inline-block;padding:0.25rem 0.7rem;border-radius:50px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
+    .badge-pending{background:#FFF8E1;color:#F57F17}
+    .badge-approved{background:#E8F5E9;color:#2E7D32}
+    .badge-rejected,.badge-cancelled{background:#FFEBEE;color:#C62828}
+    .badge-completed{background:#E3F2FD;color:#1565C0}
+    .badge-open{background:#FFF8E1;color:#F57F17}
+    .badge-resolved{background:#E8F5E9;color:#2E7D32}
 
-    /* ── PUZZLE ── */
-    .puzzle-card {
-      background: white; border-radius: var(--radius);
-      padding: 24px; margin: 16px;
-      box-shadow: 0 4px 20px rgba(13,71,161,0.1);
-      border: 1.5px solid var(--border);
-    }
-    .puzzle-score {
-      font-size: 13px; font-weight: 700;
-      color: var(--cyan); text-align: right;
-      margin-bottom: 16px;
-    }
-    .puzzle-q {
-      font-size: 17px; font-weight: 700;
-      color: var(--navy); line-height: 1.4;
-      margin-bottom: 20px;
-    }
-    .puzzle-hint {
-      font-size: 13px; color: var(--amber);
-      background: #FFF8E1; padding: 10px 12px;
-      border-radius: 10px; margin-bottom: 14px;
-      display: none;
-    }
-    .puzzle-result {
-      font-size: 14px; font-weight: 700;
-      padding: 10px; border-radius: 10px;
-      text-align: center; margin-top: 10px;
-    }
-    .puzzle-result.correct { background: #E8F5E9; color: var(--green); }
-    .puzzle-result.wrong   { background: #FFEBEE; color: var(--red); }
-    .puzzle-btns { display: flex; gap: 10px; margin-top: 14px; }
-    .puzzle-btns .btn { margin-top: 0; }
+    /* NOTIFICATIONS */
+    .notif-item{display:flex;gap:0.75rem;padding:1rem;background:var(--card);border-radius:14px;margin-bottom:0.6rem;border:1px solid var(--border);cursor:pointer;transition:background 0.15s}
+    .notif-item:active{background:#F0F4FF}
+    .notif-dot{width:9px;height:9px;border-radius:50%;background:var(--primary);margin-top:0.35rem;flex-shrink:0}
+    .notif-dot.read{background:transparent;border:1.5px solid var(--border)}
+    .notif-title{font-size:0.88rem;font-weight:600;color:var(--text-primary)}
+    .notif-body{font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem}
+    .notif-time{font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem}
+    .notif-unread{background:#F0F4FF}
 
-    /* ── FAB ── */
-    .fab {
-      position: fixed; bottom: calc(80px + var(--safe-bot));
-      right: 20px; width: 56px; height: 56px;
-      background: var(--navy); color: white;
-      border: none; border-radius: 50%;
-      font-size: 24px; cursor: pointer;
-      box-shadow: 0 4px 16px rgba(13,71,161,0.4);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 50;
-    }
+    /* EMPTY STATE */
+    .empty-state{text-align:center;padding:3rem 1rem}
+    .empty-icon{font-size:3rem;margin-bottom:1rem}
+    .empty-title{font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.4rem}
+    .empty-sub{font-size:0.82rem;color:var(--text-muted)}
 
-    /* ── BOTTOM NAV ── */
-    #bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: white;
-      border-top: 1px solid var(--border);
-      padding: 8px 0 calc(8px + var(--safe-bot));
-      display: none; justify-content: space-around;
-      z-index: 100;
-    }
-    .nav-item {
-      display: flex; flex-direction: column;
-      align-items: center; gap: 3px;
-      cursor: pointer; padding: 4px 12px;
-      border-radius: 10px; transition: all 0.15s;
-      background: none; border: none;
-    }
-    .nav-item .nav-icon { font-size: 22px; }
-    .nav-item .nav-label {
-      font-size: 10px; font-weight: 600;
-      color: var(--muted);
-    }
-    .nav-item.active .nav-label { color: var(--navy); }
-    .nav-item.active .nav-icon { filter: none; }
+    /* ADMIN */
+    .admin-section-title{font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin:1rem 0 0.5rem;padding-left:0.2rem}
+    .admin-row{display:flex;align-items:center;gap:0.75rem;padding:0.9rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:0.5rem;cursor:pointer;transition:background 0.15s}
+    .admin-row:active{background:#F0F4FF}
+    .admin-row-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+    .admin-row-label{flex:1;font-size:0.9rem;font-weight:600;color:var(--text-primary)}
+    .admin-row-arrow{color:var(--text-muted);font-size:1rem}
 
-    /* ── TOAST ── */
-    #toast {
-      position: fixed; bottom: calc(90px + var(--safe-bot));
-      left: 50%; transform: translateX(-50%) translateY(20px);
-      background: #1A1A2E; color: white;
-      padding: 12px 20px; border-radius: 20px;
-      font-size: 13px; font-weight: 600;
-      opacity: 0; transition: all 0.3s;
-      white-space: nowrap; z-index: 200;
-      pointer-events: none;
-    }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    /* MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s}
+    .modal-overlay.show{opacity:1;pointer-events:all}
+    .modal{background:white;border-radius:28px 28px 0 0;padding:1.5rem 1.5rem calc(var(--safe-bottom) + 1.5rem);width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1)}
+    .modal-overlay.show .modal{transform:translateY(0)}
+    .modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 1.2rem}
+    .modal-title{font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:1rem}
 
-    /* ── UTILS ── */
-    .loading, .empty-state {
-      text-align: center; padding: 40px 20px;
-      color: var(--muted); font-size: 14px;
-      line-height: 1.6;
-    }
-    .loading::before { content: '⏳ '; }
-    .section-title {
-      font-size: 13px; font-weight: 700;
-      color: var(--muted); letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 16px 16px 8px;
-    }
-    .form-section {
-      background: white; margin: 0 16px 16px;
-      border-radius: var(--radius); padding: 16px;
-      border: 1.5px solid var(--border);
-    }
-    .form-section h3 {
-      font-size: 15px; font-weight: 700;
-      color: var(--navy); margin-bottom: 14px;
-    }
+    /* DRIVER */
+    .driver-request-card{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:1.1rem;margin-bottom:0.75rem}
+    .driver-route{font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:0.5rem}
+    .driver-meta{display:flex;flex-wrap:wrap;gap:0.4rem}
+    .driver-chip{background:#F0F4FF;color:var(--primary);border-radius:50px;padding:0.2rem 0.65rem;font-size:0.72rem;font-weight:600}
+
+    /* LOADING */
+    .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.9);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
+    .loading-overlay.hidden{display:none}
+    .loading-spinner{width:40px;height:40px;border:4px solid #E3F2FD;border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite}
+    .loading-text{font-size:0.85rem;color:var(--text-secondary);font-weight:500}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:calc(var(--safe-bottom) + 5rem);left:1rem;right:1rem;background:#1a1a2e;color:white;padding:0.9rem 1.2rem;border-radius:14px;font-size:0.85rem;font-weight:500;z-index:400;transform:translateY(20px);opacity:0;transition:all 0.25s;pointer-events:none}
+    .toast.show{transform:translateY(0);opacity:1}
+    .toast.success{background:var(--success)}
+    .toast.error{background:var(--danger)}
+
+    /* SUCCESS DIALOG */
+    .success-dialog .modal{text-align:center;padding:2rem 1.5rem calc(var(--safe-bottom) + 2rem)}
+    .success-icon{font-size:4rem;margin-bottom:1rem}
+    .success-title{font-size:1.3rem;font-weight:800;color:var(--text-primary);margin-bottom:0.5rem}
+    .success-msg{font-size:0.88rem;color:var(--text-muted);margin-bottom:1.2rem;line-height:1.5}
+    .success-detail{background:#F0F4FF;border-radius:14px;padding:1rem;margin-bottom:1.2rem;text-align:left}
+    .success-detail-row{display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;border-bottom:1px solid var(--border);font-size:0.82rem}
+    .success-detail-row:last-child{border-bottom:none}
+    .success-detail-row .key{color:var(--text-muted)}
+    .success-detail-row .val{font-weight:600;color:var(--text-primary)}
+    textarea.form-input{resize:none;min-height:90px}
+
+    /* WHILE YOU WAIT TIP */
+    .wait-tip{background:#E8F5E9;border-radius:12px;padding:0.9rem;margin-bottom:1.2rem;text-align:left}
+    .wait-tip-title{font-size:0.8rem;font-weight:700;color:var(--success);margin-bottom:0.4rem;display:flex;align-items:center;gap:0.4rem}
+    .wait-tip p{font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.2rem;line-height:1.5}
   </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- ── SPLASH ── -->
-  <div id="splash" class="screen active">
-    <div class="splash-logo">🚌</div>
-    <div class="splash-title">ASSA</div>
-    <div class="splash-line"></div>
+  <!-- SPLASH -->
+  <div id="screen-splash" class="screen active">
+    <div class="splash-logo">ASSA<span>.</span></div>
     <div class="splash-sub">AFIT Shuttle Service App</div>
+    <div class="splash-spinner"></div>
   </div>
 
-  <!-- ── LOGIN ── -->
-  <div id="login" class="screen">
-    <div class="auth-card">
-      <div class="auth-logo">
-        <span class="logo-icon">🚌</span>
-        <h1>ASSA</h1>
-        <p>AFIT Shuttle Service App</p>
+  <!-- LOGIN -->
+  <div id="screen-login" class="screen">
+    <div class="auth-container">
+      <div class="auth-logo">ASSA<span>.</span></div>
+      <div class="auth-tagline">AFIT Shuttle Service App</div>
+      <div class="auth-card">
+        <div class="auth-title">Welcome back</div>
+        <div class="error-msg" id="login-error"></div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="login-email" type="email" placeholder="your@email.com" autocomplete="email"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password"/>
+        </div>
+        <button class="btn btn-primary" id="login-btn">Sign In</button>
       </div>
-      <h2>Sign In</h2>
-      <div class="field">
-        <label>EMAIL</label>
-        <input id="login-email" type="email" placeholder="your@email.com" autocomplete="email"/>
-      </div>
-      <div class="field">
-        <label>PASSWORD</label>
-        <input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password"/>
-      </div>
-      <button id="login-btn" class="btn" onclick="doLogin()">Sign In</button>
-      <div class="auth-switch">
-        Don't have an account? <a href="#" onclick="showScreen('register')">Register</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── REGISTER ── -->
-  <div id="register" class="screen">
-    <div class="auth-card">
-      <div class="auth-logo">
-        <span class="logo-icon">🚌</span>
-        <h1>ASSA</h1>
-        <p>Create your account</p>
-      </div>
-      <h2>Register</h2>
-      <div class="field">
-        <label>FULL NAME</label>
-        <input id="reg-name" type="text" placeholder="Your full name" autocomplete="name"/>
-      </div>
-      <div class="field">
-        <label>EMAIL</label>
-        <input id="reg-email" type="email" placeholder="your@email.com" autocomplete="email"/>
-      </div>
-      <div class="field">
-        <label>PASSWORD</label>
-        <input id="reg-pass" type="password" placeholder="Min 6 characters" autocomplete="new-password"/>
-      </div>
-      <button id="reg-btn" class="btn" onclick="doRegister()">Create Account</button>
-      <div class="auth-switch">
-        Already have an account? <a href="#" onclick="showScreen('login')">Sign In</a>
-      </div>
+      <div class="auth-switch">Don't have an account? <a href="#" id="go-register">Register</a></div>
     </div>
   </div>
 
-  <!-- ── DASHBOARD ── -->
-  <div id="dashboard" class="screen">
-    <div class="dashboard-header">
-      <div class="dashboard-greeting">Good day 👋</div>
-      <div class="dashboard-name user-name">Loading...</div>
-      <div class="pickup-card">
-        <div>
-          <div class="pickup-label">YOUR PICKUP ID</div>
-          <div class="pickup-id user-pickup-id">---</div>
+  <!-- REGISTER -->
+  <div id="screen-register" class="screen">
+    <div class="auth-container">
+      <div class="auth-logo">ASSA<span>.</span></div>
+      <div class="auth-tagline">Create your account</div>
+      <div class="auth-card">
+        <div class="auth-title">Get started</div>
+        <div class="error-msg" id="register-error"></div>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" id="reg-name" type="text" placeholder="Your full name"/>
         </div>
-        <button class="pickup-copy" onclick="
-          navigator.clipboard?.writeText(document.querySelector('.user-pickup-id').textContent);
-          showToast('Pickup ID copied!')
-        ">Copy</button>
-      </div>
-    </div>
-    <div class="dash-grid">
-      <div class="dash-tile" onclick="goToRequest()">
-        <div class="tile-icon">🚌</div>
-        <div class="tile-label">Request Ride</div>
-      </div>
-      <div class="dash-tile" onclick="goToBookings()">
-        <div class="tile-icon">📋</div>
-        <div class="tile-count" id="dash-booking-count">0</div>
-        <div class="tile-label">My Bookings</div>
-      </div>
-      <div class="dash-tile" onclick="goToLostFound()">
-        <div class="tile-icon">🔍</div>
-        <div class="tile-label">Lost & Found</div>
-      </div>
-      <div class="dash-tile" onclick="goToNotifications()">
-        <div class="tile-icon">🔔</div>
-        <div class="tile-label">Notifications</div>
-      </div>
-      <div class="dash-tile" onclick="goToSupport()">
-        <div class="tile-icon">💬</div>
-        <div class="tile-label">Support</div>
-      </div>
-      <div class="dash-tile" onclick="goToPuzzle()">
-        <div class="tile-icon">🧩</div>
-        <div class="tile-label">Campus Puzzle</div>
-      </div>
-    </div>
-    <div style="text-align:center; padding: 8px 16px 4px;">
-      <button class="btn btn-secondary" style="width:auto; padding:10px 24px; font-size:13px;" onclick="doLogout()">Sign Out</button>
-    </div>
-  </div>
-
-  <!-- ── REQUEST RIDE ── -->
-  <div id="request" class="screen">
-    <div class="screen-header">
-      <h2>🚌 Request a Ride</h2>
-      <p>Select your pickup and destination</p>
-    </div>
-    <div id="req-mode-bar" style="background:#1B5E20;color:white;font-size:12px;
-         font-weight:700;padding:8px 16px;text-align:center;">
-      🟢 Online Mode
-    </div>
-    <div class="screen-content">
-      <div class="form-section" id="req-form" data-online="1">
-        <h3>Ride Details</h3>
-
-        <div class="field">
-          <label>PICKUP LOCATION</label>
-          <select id="req-pickup"></select>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="reg-email" type="email" placeholder="your@email.com" autocomplete="email"/>
         </div>
-
-        <div class="field">
-          <label>DESTINATION</label>
-          <select id="req-dest"></select>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="reg-password" type="password" placeholder="Min. 6 characters" autocomplete="new-password"/>
         </div>
-
-        <div class="field">
-          <label>RIDE TYPE</label>
-          <div class="radio-group">
-            <label class="radio-option selected" id="shared-opt">
-              <input type="radio" name="ride-type" value="shared" checked
-                onchange="document.getElementById('shared-opt').classList.add('selected');
-                          document.getElementById('charter-opt').classList.remove('selected')"/>
-              👥 Shared
-            </label>
-            <label class="radio-option" id="charter-opt">
-              <input type="radio" name="ride-type" value="chartered"
-                onchange="document.getElementById('charter-opt').classList.add('selected');
-                          document.getElementById('shared-opt').classList.remove('selected')"/>
-              🚌 Chartered
-            </label>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>NUMBER OF PASSENGERS</label>
-          <select id="req-pax">
-            <option value="1">1 passenger</option>
-            <option value="2">2 passengers</option>
-            <option value="3">3 passengers</option>
-            <option value="4">4 passengers</option>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select class="form-input form-select" id="reg-role">
+            <option value="user">User</option>
+            <option value="driver">Driver</option>
           </select>
         </div>
+        <button class="btn btn-primary" id="register-btn">Create Account</button>
+      </div>
+      <div class="auth-switch">Already have an account? <a href="#" id="go-login">Sign In</a></div>
+    </div>
+  </div>
 
-        <p style="font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.5;">
-          💡 Select the drop-off zone closest to your destination. You can bargain the exact drop-off with the driver on arrival.
-        </p>
-
-        <button id="req-btn" class="btn" onclick="submitRequest()">Request Ride</button>
-        <button class="btn btn-secondary" onclick="showScreen('dashboard')">Cancel</button>
+  <!-- DASHBOARD -->
+  <div id="screen-dashboard" class="screen">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div class="topbar-avatar" id="dash-avatar">?</div>
+        <div style="flex:1">
+          <div class="topbar-greeting" id="dash-greeting">Good morning</div>
+          <div class="topbar-name" id="dash-name">Loading...</div>
+        </div>
+        <button class="topbar-icon" onclick="showScreen('notifications')" style="position:relative;">
+          🔔<span class="notif-badge hidden" id="dash-notif-badge">0</span>
+        </button>
+        <button class="topbar-icon" onclick="showSettings()">⚙️</button>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot online" id="dash-status-dot"></div>
+        <span class="status-text" id="dash-status-text">Checking...</span>
       </div>
     </div>
-  </div>
-
-  <!-- ── BOOKINGS ── -->
-  <div id="bookings" class="screen">
-    <div class="screen-header">
-      <h2>📋 My Bookings</h2>
-      <p>Your ride request history</p>
+    <div class="offline-banner hidden" id="dash-offline-banner">
+      <span>📵</span><span>Offline Mode — Campus WiFi only</span>
     </div>
-    <div class="screen-content">
-      <div id="bookings-list"></div>
-    </div>
-  </div>
-
-  <!-- ── LOST & FOUND ── -->
-  <div id="lostfound" class="screen">
-    <div class="screen-header">
-      <h2>🔍 Lost & Found</h2>
-      <p>Report or find lost items on campus</p>
-    </div>
-    <div class="screen-content">
-      <div id="lf-form" style="display:none;">
-        <div class="form-section">
-          <h3>Post an Item</h3>
-          <div class="field">
-            <label>TYPE</label>
-            <div class="radio-group">
-              <label class="radio-option selected" id="lost-opt">
-                <input type="radio" name="lf-type" value="lost" checked
-                  onchange="document.getElementById('lost-opt').classList.add('selected');
-                            document.getElementById('found-opt').classList.remove('selected')"/>
-                🔴 Lost
-              </label>
-              <label class="radio-option" id="found-opt">
-                <input type="radio" name="lf-type" value="found"
-                  onchange="document.getElementById('found-opt').classList.add('selected');
-                            document.getElementById('lost-opt').classList.remove('selected')"/>
-                🟢 Found
-              </label>
-            </div>
-          </div>
-          <div class="field">
-            <label>ITEM NAME</label>
-            <input id="lf-item" type="text" placeholder="e.g. Blue backpack"/>
-          </div>
-          <div class="field">
-            <label>DESCRIPTION</label>
-            <textarea id="lf-desc" placeholder="Describe the item..."></textarea>
-          </div>
-          <div class="field">
-            <label>LOCATION FOUND/LOST</label>
-            <input id="lf-location" type="text" placeholder="e.g. Alfa Hall, Gate Area"/>
-          </div>
-          <div class="field">
-            <label>IMAGE URL (optional)</label>
-            <input id="lf-image" type="url" placeholder="Paste image link e.g. Google Drive, WhatsApp..."/>
-            <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block;">
-              To add a photo: upload to Google Drive → Share → Copy link → paste here
-            </small>
-          </div>
-          <div class="field">
-            <label>YOUR NAME (optional)</label>
-            <input id="lf-contact" type="text" placeholder="How to contact you"/>
-          </div>
-          <button class="btn" onclick="postLostFound()">Post Item</button>
-          <button class="btn btn-secondary" onclick="document.getElementById('lf-form').style.display='none'">Cancel</button>
+    <div class="content">
+      <div class="pickup-card">
+        <div class="pickup-icon">🪪</div>
+        <div>
+          <div class="pickup-label">Your Pickup ID</div>
+          <div class="pickup-id" id="dash-pickup-id">---</div>
+          <div class="pickup-hint">Show this to your driver</div>
+        </div>
+        <button class="pickup-copy" onclick="copyPickupId()">Copy</button>
+      </div>
+      <div class="section-title">Quick Actions</div>
+      <div class="quick-grid">
+        <div class="quick-btn" onclick="showScreen('request')">
+          <div class="icon icon-blue">🚐</div>
+          <div class="label">Request Ride</div>
+          <div class="sub">Book a shuttle</div>
+        </div>
+        <div class="quick-btn" onclick="showScreen('myrequests')">
+          <div class="icon icon-green">📋</div>
+          <div class="label">My Requests</div>
+          <div class="sub">View history</div>
+        </div>
+        <div class="quick-btn" onclick="showScreen('lostfound')">
+          <div class="icon icon-orange">🔍</div>
+          <div class="label">Lost & Found</div>
+          <div class="sub">Report items</div>
+        </div>
+        <div class="quick-btn" onclick="showScreen('report')">
+          <div class="icon icon-red">⚠️</div>
+          <div class="label">Report Issue</div>
+          <div class="sub">Contact admin</div>
         </div>
       </div>
-      <div id="lf-list"></div>
+      <div id="admin-quick-wrap"></div>
     </div>
-    <button class="fab" onclick="document.getElementById('lf-form').style.display='block'; window.scrollTo(0,0)">+</button>
-  </div>
-
-  <!-- ── NOTIFICATIONS ── -->
-  <div id="notifications" class="screen">
-    <div class="screen-header">
-      <h2>🔔 Notifications</h2>
-      <p>Your ride updates and alerts</p>
-    </div>
-    <div class="screen-content">
-      <div id="notif-list"></div>
+    <div class="bottom-nav">
+      <button class="nav-item active" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+      <button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button>
+      <button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button>
+      <button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button>
     </div>
   </div>
 
-  <!-- ── SUPPORT ── -->
-  <div id="support" class="screen">
-    <div class="screen-header">
-      <h2>💬 Support</h2>
-      <p>Submit a complaint or get help</p>
+  <!-- REQUEST RIDE -->
+  <div id="screen-request" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
+      <div class="sub-title">Book a Ride</div>
+      <div id="req-mode-chip" style="margin-left:auto;background:rgba(255,255,255,0.15);border-radius:50px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:600;color:white;">Checking...</div>
     </div>
-    <div class="screen-content">
-      <div id="rep-form" style="display:none;">
-        <div class="form-section">
-          <h3>New Complaint</h3>
-          <div class="field">
-            <label>SUBJECT</label>
-            <input id="rep-subject" type="text" placeholder="Brief subject"/>
+    <div class="offline-banner hidden" id="req-offline-banner">
+      <span>📵</span><span>Campus WiFi Mode — Hostel pickups only</span>
+    </div>
+    <div class="content">
+      <div id="req-checking" style="text-align:center;padding:3rem 1rem;color:var(--text-muted);font-size:0.85rem;">
+        <div class="loading-spinner" style="margin:0 auto 1rem;"></div>Checking connection...
+      </div>
+      <div id="req-form" style="display:none;">
+        <div class="card">
+          <div class="card-title">Pickup Location</div>
+          <div class="location-chips" id="req-pickup-chips"></div>
+          <div id="req-offline-note" style="display:none;font-size:0.75rem;color:var(--warning);margin-top:0.3rem;">⚠ Campus WiFi: hostel pickups only</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Destination</div>
+          <div class="info-tip">💡 Select the zone closest to your destination. You can negotiate your exact drop-off point with the driver on arrival.</div>
+          <div class="location-chips" id="req-dest-chips"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Ride Type</div>
+          <div class="ride-type-row">
+            <button class="ride-type-btn active" id="rt-shared" onclick="setRideType('Shared')">
+              <span style="font-size:1.3rem;">👥</span>Shared Ride<span style="font-size:0.72rem;opacity:0.7;">1–4 passengers</span>
+            </button>
+            <button class="ride-type-btn" id="rt-chartered" onclick="setRideType('Chartered')">
+              <span style="font-size:1.3rem;">🚌</span>Chartered<span style="font-size:0.72rem;opacity:0.7;">Private shuttle</span>
+            </button>
           </div>
-          <div class="field">
-            <label>MESSAGE</label>
-            <textarea id="rep-message" placeholder="Describe your issue..."></textarea>
+        </div>
+        <div class="card" id="pax-card">
+          <div class="card-title">Number of Passengers</div>
+          <div class="info-tip" style="margin-bottom:0.75rem;">👥 Others at your stop? Select your total group size — one shuttle picks you all up together.</div>
+          <div class="pax-row" id="pax-row">
+            <div onclick="setPax(1)" class="pax-circle active" data-pax="1" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">1<span class="pax-label">Just me</span></div>
+            <div onclick="setPax(2)" class="pax-circle" data-pax="2" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">2<span class="pax-label"></span></div>
+            <div onclick="setPax(3)" class="pax-circle" data-pax="3" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">3<span class="pax-label"></span></div>
+            <div onclick="setPax(4)" class="pax-circle" data-pax="4" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">4<span class="pax-label"></span></div>
           </div>
-          <button class="btn" onclick="submitReport()">Submit</button>
-          <button class="btn btn-secondary" onclick="document.getElementById('rep-form').style.display='none'">Cancel</button>
+        </div>
+        <div class="summary-card hidden" id="req-summary">
+          <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary);margin-bottom:0.75rem;">Request Summary</div>
+          <div class="summary-row"><span class="summary-key">📍 From</span><span class="summary-val" id="sum-from">-</span></div>
+          <div class="summary-row"><span class="summary-key">🏁 To</span><span class="summary-val" id="sum-to">-</span></div>
+          <div class="summary-row"><span class="summary-key">🚐 Type</span><span class="summary-val" id="sum-type">-</span></div>
+        </div>
+        <button class="btn btn-primary" id="req-submit-btn" onclick="submitRequest()" style="margin-bottom:0.75rem;">
+          ➤ Send Request
+        </button>
+        <button class="btn btn-cancel" onclick="showScreen('dashboard')">Cancel</button>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+      <button class="nav-item active" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button>
+      <button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button>
+      <button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button>
+    </div>
+  </div>
+
+  <!-- MY REQUESTS -->
+  <div id="screen-myrequests" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
+      <div class="sub-title">My Requests</div>
+    </div>
+    <div class="content" id="myrequests-content">
+      <div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+      <button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button>
+      <button class="nav-item active" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button>
+      <button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div id="screen-notifications" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
+      <div class="sub-title">Notifications</div>
+      <button onclick="markAllRead()" style="margin-left:auto;background:rgba(255,255,255,0.15);border:none;color:white;font-size:0.75rem;font-weight:600;cursor:pointer;border-radius:50px;padding:0.3rem 0.75rem;">Mark all read</button>
+    </div>
+    <div class="content" id="notif-content">
+      <div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+      <button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button>
+      <button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button>
+      <button class="nav-item active" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button>
+    </div>
+  </div>
+
+  <!-- LOST & FOUND -->
+  <div id="screen-lostfound" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
+      <div class="sub-title">Lost & Found</div>
+    </div>
+    <div class="content">
+      <div style="display:flex;gap:0.75rem;margin-bottom:1rem;">
+        <button class="btn btn-primary" style="flex:1;" onclick="showLostFoundForm('lost')">📦 Report Lost</button>
+        <button class="btn" style="flex:1;background:#E8F5E9;color:var(--success);border:1px solid #A5D6A7;" onclick="showLostFoundForm('found')">✅ Report Found</button>
+      </div>
+      <div class="section-title">Recent Reports</div>
+      <div id="lostfound-list"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div>
+    </div>
+  </div>
+
+  <!-- REPORT ISSUE -->
+  <div id="screen-report" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
+      <div class="sub-title">Report an Issue</div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="card-title">Subject</div>
+        <input class="form-input" id="report-subject" type="text" placeholder="Brief description of issue"/>
+      </div>
+      <div class="card">
+        <div class="card-title">Message</div>
+        <textarea class="form-input" id="report-message" placeholder="Describe the issue in detail..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="submitReport()" style="margin-bottom:1rem;">Send Report</button>
+      <div class="section-title" style="margin-top:0.5rem;">My Previous Reports</div>
+      <div id="reports-list"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div id="screen-admin" class="screen">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div class="topbar-avatar" id="admin-avatar">A</div>
+        <div style="flex:1"><div class="topbar-greeting">Admin Panel</div><div class="topbar-name" id="admin-name">Admin</div></div>
+        <button class="topbar-icon" onclick="logout()">🚪</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="admin-section-title">Manage</div>
+      <div class="admin-row" onclick="adminShowBookings()"><div class="admin-row-icon icon-blue">📋</div><span class="admin-row-label">All Ride Requests</span><span class="admin-row-arrow">›</span></div>
+      <div class="admin-row" onclick="adminShowUsers()"><div class="admin-row-icon icon-green">👥</div><span class="admin-row-label">Users</span><span class="admin-row-arrow">›</span></div>
+      <div class="admin-row" onclick="adminShowDrivers()"><div class="admin-row-icon icon-orange">🚐</div><span class="admin-row-label">Drivers</span><span class="admin-row-arrow">›</span></div>
+      <div class="admin-row" onclick="adminShowLostFound()"><div class="admin-row-icon icon-purple">🔍</div><span class="admin-row-label">Lost & Found</span><span class="admin-row-arrow">›</span></div>
+      <div class="admin-row" onclick="adminShowComplaints()"><div class="admin-row-icon icon-red">⚠️</div><span class="admin-row-label">Complaints</span><span class="admin-row-arrow">›</span></div>
+      <div class="admin-row" onclick="adminSendNotification()"><div class="admin-row-icon icon-teal">📢</div><span class="admin-row-label">Send Notification</span><span class="admin-row-arrow">›</span></div>
+      <div id="admin-content"></div>
+    </div>
+  </div>
+
+  <!-- DRIVER PANEL -->
+  <div id="screen-driver" class="screen">
+    <div class="topbar">
+      <div class="topbar-row">
+        <div class="topbar-avatar" id="driver-avatar">D</div>
+        <div style="flex:1"><div class="topbar-greeting">Driver Dashboard</div><div class="topbar-name" id="driver-name">Driver</div></div>
+        <button class="topbar-icon" onclick="loadDriverRequests()" title="Refresh">🔄</button>
+        <button class="topbar-icon" onclick="logout()">🚪</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="section-title">Pending Requests</div>
+      <div id="driver-requests"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <div class="modal-overlay" id="modal-settings" onclick="closeModal('settings')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Settings</div>
+      <div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#F0F4FF;border-radius:14px;margin-bottom:1rem;">
+        <div style="width:54px;height:54px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.3rem;color:white;" id="settings-avatar">?</div>
+        <div>
+          <div style="font-weight:700;color:var(--text-primary);" id="settings-name">-</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);" id="settings-email">-</div>
+          <div style="font-size:0.72rem;color:var(--primary);font-weight:700;margin-top:0.2rem;" id="settings-role">USER</div>
         </div>
       </div>
-      <div id="report-list"></div>
-    </div>
-    <button class="fab" onclick="document.getElementById('rep-form').style.display='block'; window.scrollTo(0,0)">+</button>
-  </div>
-
-  <!-- ── PUZZLE ── -->
-  <div id="puzzle" class="screen">
-    <div class="screen-header">
-      <h2>🧩 Campus Puzzle</h2>
-      <p>Test your AFIT knowledge</p>
-    </div>
-    <div class="puzzle-card">
-      <div class="puzzle-score" id="puzzle-score">Score: 0</div>
-      <div class="puzzle-q" id="puzzle-question">Loading...</div>
-      <div class="puzzle-hint" id="puzzle-hint"></div>
-      <div class="field">
-        <label>YOUR ANSWER</label>
-        <input id="puzzle-answer" type="text" placeholder="Type your answer..."
-               onkeydown="if(event.key==='Enter') checkAnswer()"/>
+      <div style="background:#F0F4FF;border-radius:14px;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Pickup ID</div>
+          <div style="font-size:1.8rem;font-weight:800;color:var(--primary);" id="settings-pickup-id">---</div>
+        </div>
+        <button onclick="copyPickupId()" style="background:var(--primary);color:white;border:none;border-radius:10px;padding:0.5rem 1rem;font-size:0.8rem;font-weight:700;cursor:pointer;">Copy</button>
       </div>
-      <div id="puzzle-result" class="puzzle-result"></div>
-      <div class="puzzle-btns">
-        <button class="btn btn-secondary" onclick="showHint()" style="margin-top:0">💡 Hint</button>
-        <button class="btn" onclick="checkAnswer()" style="margin-top:0">Check</button>
-      </div>
-      <button class="btn btn-secondary" onclick="nextPuzzle()" style="margin-top:10px">Next Question →</button>
+      <button class="btn btn-danger" onclick="logout()">🚪 Sign Out</button>
     </div>
   </div>
 
-  <!-- ── BOTTOM NAV ── -->
-  <nav id="bottom-nav">
-    <button class="nav-item active" data-screen="dashboard" onclick="goToDashboard()">
-      <span class="nav-icon">🏠</span>
-      <span class="nav-label">Home</span>
-    </button>
-    <button class="nav-item" data-screen="request" onclick="goToRequest()">
-      <span class="nav-icon">🚌</span>
-      <span class="nav-label">Ride</span>
-    </button>
-    <button class="nav-item" data-screen="bookings" onclick="goToBookings()">
-      <span class="nav-icon">📋</span>
-      <span class="nav-label">Bookings</span>
-    </button>
-    <button class="nav-item" data-screen="notifications" onclick="goToNotifications()">
-      <span class="nav-icon">🔔</span>
-      <span class="nav-label">Alerts</span>
-    </button>
-    <button class="nav-item" data-screen="puzzle" onclick="goToPuzzle()">
-      <span class="nav-icon">🧩</span>
-      <span class="nav-label">Puzzle</span>
-    </button>
-  </nav>
+  <!-- Success Dialog -->
+  <div class="modal-overlay success-dialog" id="modal-success" onclick="closeModal('success')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="success-icon">✅</div>
+      <div class="success-title" id="success-title">Request Sent!</div>
+      <div class="success-msg" id="success-msg">A driver will pick you up shortly.</div>
+      <div class="success-detail" id="success-detail"></div>
+      <div class="wait-tip">
+        <div class="wait-tip-title">💡 While you wait...</div>
+        <p>🎮 Try our puzzle game and climb the leaderboard!</p>
+        <p>🔍 Check Lost & Found — someone may have found something of yours!</p>
+      </div>
+      <button class="btn btn-primary" style="margin-bottom:0.75rem;" onclick="closeModal('success');showScreen('myrequests')">View My Requests</button>
+      <button class="btn btn-secondary" onclick="closeModal('success');showScreen('dashboard')">Back to Home</button>
+    </div>
+  </div>
 
-  <!-- ── TOAST ── -->
-  <div id="toast"></div>
+  <!-- Lost & Found Form -->
+  <div class="modal-overlay" id="modal-lostfound" onclick="closeModal('lostfound')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="lf-modal-title">Report Lost Item</div>
+      <div class="form-group"><label class="form-label">Item Name</label><input class="form-input" id="lf-item" type="text" placeholder="e.g. Black backpack"/></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="lf-desc" placeholder="Describe the item..."></textarea></div>
+      <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="lf-location" type="text" placeholder="Where was it lost/found?"/></div>
+      <button class="btn btn-primary" onclick="submitLostFound()">Submit Report</button>
+    </div>
+  </div>
 
+  <!-- Admin Send Notification -->
+  <div class="modal-overlay" id="modal-send-notif" onclick="closeModal('send-notif')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Send Notification</div>
+      <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="sn-title" type="text" placeholder="Notification title"/></div>
+      <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="sn-body" placeholder="Message body..."></textarea></div>
+      <div class="form-group">
+        <label class="form-label">Send To</label>
+        <select class="form-input form-select" id="sn-target">
+          <option value="all">All Users</option>
+          <option value="driver">Drivers Only</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="sendAdminNotification()">Send</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-overlay hidden" id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loading-text">Please wait...</div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
 </div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, collection,
+  query, where, onSnapshot, serverTimestamp, getDocs, writeBatch }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCBN5iCfV2o8to9A5H2nUb-bXRDYhD4PJc",
+  authDomain: "afit-shuttle-system.firebaseapp.com",
+  projectId: "afit-shuttle-system",
+  storageBucket: "afit-shuttle-system.appspot.com",
+  messagingSenderId: "419651451775",
+  appId: "1:419651451775:ios:166e02856ad950fd15b84a"
+};
+const fbApp = initializeApp(firebaseConfig);
+const auth  = getAuth(fbApp);
+const db    = getFirestore(fbApp);
+
+// ── CONSTANTS ─────────────────────────────────────────────────────────
+const ALL_LOCATIONS = [
+  'AFIT Gates','45x1 Hostel','Old Girls Hostel','TETFUND Hostel',
+  'BK','Boys Hostel','Alfa Hall','EED','AFIT Mosque',
+  'New Mechanical','Centre of Entrepreneurship','Hall A'
+];
+const OFFLINE_PICKUPS = ['45x1 Hostel','Old Girls Hostel','Boys Hostel'];
+const LOCATION_CODES = {
+  'AFIT Gates':1,'45x1 Hostel':2,'Old Girls Hostel':3,'TETFUND Hostel':4,
+  'BK':5,'Boys Hostel':6,'Alfa Hall':7,'EED':8,'AFIT Mosque':9,
+  'New Mechanical':10,'Centre of Entrepreneurship':11,'Hall A':12
+};
+const ESP32_IP = '192.168.4.1';
+
+// ── STATE ─────────────────────────────────────────────────────────────
+let currentUser = null, userData = null;
+let isOnline = true, rideType = 'Shared', paxCount = 1, lfType = 'lost';
+let selectedPickup = null, selectedDest = null;
+let notifUnsub = null;
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+const getInitials = n => n ? n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+const getGreeting = () => { const h=new Date().getHours(); return h<12?'Good morning':h<17?'Good afternoon':'Good evening'; };
+function generatePickupId(uid) {
+  const letters='ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let hash=0; for(let i=0;i<uid.length;i++) hash=(hash*31+uid.charCodeAt(i))|0;
+  return letters[Math.abs(hash)%letters.length] + String(Math.abs(hash)%100).padStart(2,'0');
+}
+function formatTime(ts) {
+  if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts);
+  return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+function statusBadge(s) {
+  const m={0:['Pending','badge-pending'],1:['Approved','badge-approved'],2:['In Progress','badge-approved'],
+    3:['Completed','badge-completed'],4:['Rejected','badge-rejected'],5:['Cancelled','badge-cancelled'],
+    'open':['Open','badge-open'],'in_progress':['In Progress','badge-pending'],'resolved':['Resolved','badge-resolved'],
+    'lost':['Lost','badge-pending'],'found':['Found','badge-approved']};
+  const [l,c]=m[s]??[String(s),'badge-pending'];
+  return `<span class="status-badge ${c}">${l}</span>`;
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────────
+window.showScreen = function(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===id));
+  if(id==='myrequests') loadMyRequests();
+  if(id==='notifications') loadNotifications();
+  if(id==='lostfound') loadLostFound();
+  if(id==='report') loadReports();
+  if(id==='request') initRequestScreen();
+  if(id==='driver') loadDriverRequests();
+};
+window.closeModal = id => document.getElementById('modal-'+id).classList.remove('show');
+function openModal(id) { document.getElementById('modal-'+id).classList.add('show'); }
+function showLoading(msg) { document.getElementById('loading-text').textContent=msg||'Please wait...'; document.getElementById('loading-overlay').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
+let _tt; function showToast(msg,type='') { const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+type; clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('show'),3000); }
+window.showSettings = function() {
+  if(!userData) return;
+  document.getElementById('settings-avatar').textContent=getInitials(userData.name);
+  document.getElementById('settings-name').textContent=userData.name||'-';
+  document.getElementById('settings-email').textContent=currentUser.email||'-';
+  document.getElementById('settings-role').textContent=(userData.role||'user').toUpperCase();
+  document.getElementById('settings-pickup-id').textContent=userData.pickupId||'---';
+  openModal('settings');
+};
+window.copyPickupId = function() {
+  const id=userData?.pickupId||'---';
+  navigator.clipboard?.writeText(id).then(()=>showToast('Pickup ID copied!','success')).catch(()=>showToast(id));
+};
+
+// ── FIX 1: CONNECTIVITY — uses navigator.onLine + probe, no false positives ──
+async function checkConnectivity() {
+  if(!navigator.onLine) return false; // fast path — definitely offline
+  try {
+    const ctrl = new AbortController();
+    setTimeout(()=>ctrl.abort(), 3000);
+    const res = await fetch('https://www.gstatic.com/generate_204',
+      { cache:'no-store', signal:ctrl.signal });
+    return res.status===204||res.status===200;
+  } catch { return false; }
+}
+async function updateOnlineStatus() {
+  isOnline = await checkConnectivity();
+  const dot=document.getElementById('dash-status-dot');
+  const txt=document.getElementById('dash-status-text');
+  const ban=document.getElementById('dash-offline-banner');
+  if(dot){ dot.className='status-dot '+(isOnline?'online':'offline'); txt.textContent=isOnline?'Online':'Campus WiFi Mode'; ban?.classList.toggle('hidden',isOnline); }
+  return isOnline;
+}
+// Poll connectivity every 30s so status stays accurate
+setInterval(updateOnlineStatus, 30000);
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', ()=>{ isOnline=false; updateOnlineStatus(); });
+
+// ── AUTH ──────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if(user){ currentUser=user; await loadUserData(user.uid); }
+  else { currentUser=null; userData=null; showScreen('login'); }
+});
+
+async function loadUserData(uid) {
+  try {
+    showScreen('splash');
+    const ref = doc(db,'users',uid);
+    let snap;
+    try {
+      snap = await Promise.race([
+        getDoc(ref),
+        new Promise((_,rej)=>setTimeout(()=>rej('timeout'),5000))
+      ]);
+    } catch {
+      // timeout — try cache
+      snap = await new Promise(res=>{ const u=onSnapshot(ref,{source:'cache'},s=>{u();res(s)},()=>res(null)); });
+    }
+    let data = snap?.data?.()??snap?.data??null;
+    if(data&&(!data.pickupId||data.pickupId==='')){
+      data.pickupId=generatePickupId(uid);
+      try{ await updateDoc(ref,{pickupId:data.pickupId}); }catch{}
+    }
+    if(!data){
+      // FIX 2: Store platform:'pwa' and all required fields so admin sees PWA users
+      data={name:currentUser.email?.split('@')[0]||'User',email:currentUser.email,role:'user',
+            pickupId:generatePickupId(uid),platform:'pwa',createdAt:new Date().toISOString()};
+      try{ await setDoc(ref,{...data,createdAt:serverTimestamp(),platform:'pwa'}); }catch{}
+    }
+    userData=data;
+    await updateOnlineStatus();
+    routeByRole(data.role);
+    // FIX 3: Use real-time listener for notifications — not just once
+    startNotifListener(uid);
+  } catch(e){ showScreen('login'); }
+}
+
+function routeByRole(role) {
+  if(role==='admin'){ document.getElementById('admin-avatar').textContent=getInitials(userData.name); document.getElementById('admin-name').textContent=userData.name||'Admin'; showScreen('admin'); }
+  else if(role==='driver'){ document.getElementById('driver-name').textContent=userData.name||'Driver'; document.getElementById('driver-avatar').textContent=getInitials(userData.name); showScreen('driver'); loadDriverRequests(); }
+  else { showScreen('dashboard'); loadDashboard(); }
+}
+
+function loadDashboard() {
+  if(!userData) return;
+  document.getElementById('dash-avatar').textContent=getInitials(userData.name);
+  document.getElementById('dash-name').textContent=userData.name||'User';
+  document.getElementById('dash-greeting').textContent=getGreeting();
+  document.getElementById('dash-pickup-id').textContent=userData.pickupId||'---';
+  updateOnlineStatus();
+  if(userData.role==='admin'&&!document.getElementById('admin-quick-btn')){
+    const w=document.getElementById('admin-quick-wrap');
+    w.innerHTML='<div class="quick-btn" id="admin-quick-btn" onclick="showScreen(\'admin\')"><div class="icon icon-teal">🛡️</div><div class="label">Admin Panel</div><div class="sub">Manage system</div></div>';
+  }
+}
+
+// ── FIX 3: REAL-TIME NOTIFICATION LISTENER ────────────────────────────
+function startNotifListener(uid) {
+  if(notifUnsub) notifUnsub();
+  const q=query(collection(db,'notifications'),where('userId','==',uid),where('read','==',false));
+  notifUnsub=onSnapshot(q, snap=>{
+    const count=snap.size;
+    const badge=document.getElementById('dash-notif-badge');
+    if(badge){ badge.textContent=count; badge.classList.toggle('hidden',count===0); }
+  }, ()=>{});
+}
+
+// ── REQUEST SCREEN — location chips like Android app ──────────────────
+async function initRequestScreen() {
+  selectedPickup=null; selectedDest=null;
+  document.getElementById('req-checking').style.display='block';
+  document.getElementById('req-form').style.display='none';
+  document.getElementById('req-summary').classList.add('hidden');
+  await new Promise(r=>setTimeout(r,2500));
+  isOnline=await checkConnectivity();
+  const chip=document.getElementById('req-mode-chip');
+  const banner=document.getElementById('req-offline-banner');
+  const offNote=document.getElementById('req-offline-note');
+  if(isOnline){ chip.textContent='🟢 Online'; chip.style.background='rgba(46,125,50,0.3)'; banner.classList.add('hidden'); offNote.style.display='none'; }
+  else { chip.textContent='🟡 Campus WiFi'; chip.style.background='rgba(245,127,23,0.3)'; banner.classList.remove('hidden'); offNote.style.display='block'; }
+  buildLocationChips();
+  document.getElementById('req-checking').style.display='none';
+  document.getElementById('req-form').style.display='block';
+}
+
+function buildLocationChips() {
+  const pickups=isOnline?ALL_LOCATIONS:OFFLINE_PICKUPS;
+  const pc=document.getElementById('req-pickup-chips');
+  const dc=document.getElementById('req-dest-chips');
+  pc.innerHTML=pickups.map(l=>`<div class="loc-chip" data-loc="${l}" onclick="selectPickup('${l}')">${l}</div>`).join('');
+  dc.innerHTML=ALL_LOCATIONS.map(l=>`<div class="loc-chip" data-loc="${l}" onclick="selectDest('${l}')">${l}</div>`).join('');
+}
+
+window.selectPickup = function(loc) {
+  selectedPickup=loc;
+  document.querySelectorAll('#req-pickup-chips .loc-chip').forEach(c=>{ c.classList.toggle('selected',c.dataset.loc===loc); c.classList.toggle('disabled',c.dataset.loc===selectedDest); });
+  document.querySelectorAll('#req-dest-chips .loc-chip').forEach(c=>c.classList.toggle('disabled',c.dataset.loc===loc));
+  updateSummary();
+};
+window.selectDest = function(loc) {
+  selectedDest=loc;
+  document.querySelectorAll('#req-dest-chips .loc-chip').forEach(c=>{ c.classList.toggle('selected',c.dataset.loc===loc); c.classList.toggle('disabled',c.dataset.loc===selectedPickup); });
+  document.querySelectorAll('#req-pickup-chips .loc-chip').forEach(c=>c.classList.toggle('disabled',c.dataset.loc===loc));
+  updateSummary();
+};
+function updateSummary() {
+  if(!selectedPickup||!selectedDest) return;
+  document.getElementById('sum-from').textContent=selectedPickup;
+  document.getElementById('sum-to').textContent=selectedDest;
+  document.getElementById('sum-type').textContent=rideType+(rideType==='Shared'?' · '+paxCount+' passenger'+(paxCount>1?'s':''):'');
+  document.getElementById('req-summary').classList.remove('hidden');
+}
+
+window.setRideType = function(type) {
+  rideType=type;
+  document.getElementById('rt-shared').classList.toggle('active',type==='Shared');
+  document.getElementById('rt-chartered').classList.toggle('active',type==='Chartered');
+  document.getElementById('pax-card').style.display=type==='Shared'?'block':'none';
+  updateSummary();
+};
+window.setPax = function(n) {
+  paxCount=n;
+  document.querySelectorAll('.pax-circle').forEach(c=>c.classList.toggle('active',parseInt(c.dataset.pax)===n));
+  updateSummary();
+};
+
+window.submitRequest = async function() {
+  if(!selectedPickup||!selectedDest){ showToast('Please select pickup and destination','error'); return; }
+  if(selectedPickup===selectedDest){ showToast('Pickup and destination cannot be the same','error'); return; }
+  showLoading('Submitting request...');
+  const stillOnline=await checkConnectivity(); isOnline=stillOnline;
+  try {
+    if(stillOnline) await submitOnlineRequest(selectedPickup,selectedDest);
+    else await submitOfflineRequest(selectedPickup,selectedDest);
+  } catch { showToast('Failed to submit. Try again.','error'); }
+  finally { hideLoading(); }
+};
+
+async function submitOnlineRequest(pickup,dest) {
+  const pax=rideType==='Chartered'?1:paxCount;
+  await addDoc(collection(db,'ride_requests'),{
+    userId:currentUser.uid, userName:userData.name, pickupId:userData.pickupId,
+    pickupLocation:pickup, destination:dest, rideType, passengerCount:pax,
+    status:0, requestType:'online', platform:'pwa', timestamp:serverTimestamp()
+  });
+  showSuccessDialog({pickup,dest,mode:'Online',rideType,pax});
+}
+
+async function submitOfflineRequest(pickup,dest) {
+  let esp32Ok=false;
+  try {
+    const ctrl=new AbortController(); setTimeout(()=>ctrl.abort(),5000);
+    const res=await fetch(`http://${ESP32_IP}/request`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pid:userData.pickupId,pc:LOCATION_CODES[pickup]||1,
+        dc:LOCATION_CODES[dest]||1,rt:rideType==='Chartered'?1:0,
+        pax:rideType==='Chartered'?1:paxCount}), signal:ctrl.signal
+    });
+    esp32Ok=res.ok;
+  } catch {}
+  if(!esp32Ok){ showToast('Cannot reach ESP32. Connect to ASSA-Campus WiFi first.','error'); return; }
+  try {
+    await addDoc(collection(db,'offline_requests'),{
+      userId:currentUser.uid, userName:userData.name, offlineUUID:userData.pickupId,
+      pickupLocation:pickup, destination:dest, rideType,
+      passengerCount:rideType==='Chartered'?1:paxCount,
+      status:0, requestType:'offline', platform:'pwa', timestamp:serverTimestamp()
+    });
+  } catch {}
+  showSuccessDialog({pickup,dest,mode:'Campus WiFi (ESP32)',rideType,pax:rideType==='Chartered'?1:paxCount});
+}
+
+function showSuccessDialog({pickup,dest,mode,rideType,pax}) {
+  document.getElementById('success-detail').innerHTML=`
+    <div class="success-detail-row"><span class="key">From</span><span class="val">${pickup}</span></div>
+    <div class="success-detail-row"><span class="key">To</span><span class="val">${dest}</span></div>
+    <div class="success-detail-row"><span class="key">Type</span><span class="val">${rideType}</span></div>
+    <div class="success-detail-row"><span class="key">Passengers</span><span class="val">${pax}</span></div>
+    <div class="success-detail-row"><span class="key">Mode</span><span class="val">${mode}</span></div>`;
+  openModal('success');
+}
+
+// ── MY REQUESTS — with cancel for pending ─────────────────────────────
+async function loadMyRequests() {
+  const el=document.getElementById('myrequests-content');
+  el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    const q=query(collection(db,'ride_requests'),where('userId','==',currentUser.uid));
+    const snap=await getDocs(q);
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
+    if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🚐</div><div class="empty-title">No requests yet</div><div class="empty-sub">Submit your first ride request</div></div>'; return; }
+    el.innerHTML=docs.map(r=>`
+      <div class="list-item">
+        <div class="list-item-row">
+          <div style="flex:1;">
+            <div class="list-item-title">${r.pickupLocation||''} → ${r.destination||''}</div>
+            <div class="list-item-sub">${r.rideType||''} · ${r.passengerCount||1} pax · ${formatTime(r.timestamp)}</div>
+          </div>
+          ${statusBadge(r.status)}
+        </div>
+        ${r.status===0?`<button class="btn btn-cancel" style="margin-top:0.6rem;padding:0.5rem;" onclick="cancelRequest('${r.id}')">Cancel Request</button>`:''}
+      </div>`).join('');
+  } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; }
+}
+
+window.cancelRequest = async function(id) {
+  showLoading('Cancelling...');
+  try { await updateDoc(doc(db,'ride_requests',id),{status:5}); showToast('Request cancelled','success'); loadMyRequests(); }
+  catch { showToast('Failed to cancel','error'); }
+  finally { hideLoading(); }
+};
+
+// ── FIX 4: NOTIFICATIONS — real-time listener + proper rendering ───────
+async function loadNotifications() {
+  const el=document.getElementById('notif-content');
+  el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    const q=query(collection(db,'notifications'),where('userId','==',currentUser.uid));
+    const snap=await getDocs(q);
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🔔</div><div class="empty-title">No notifications</div><div class="empty-sub">You\'re all caught up</div></div>'; return; }
+    el.innerHTML=docs.map(n=>`
+      <div class="notif-item ${n.read?'':'notif-unread'}" id="notif-${n.id}" onclick="markRead('${n.id}')">
+        <div class="notif-dot ${n.read?'read':''}"></div>
+        <div style="flex:1;">
+          <div class="notif-title">${n.title||'Notification'}</div>
+          <div class="notif-body">${n.body||''}</div>
+          <div class="notif-time">${formatTime(n.createdAt)}</div>
+        </div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load notifications</div><div class="empty-sub">Check your connection and try again</div></div>'; }
+}
+
+window.markRead = async function(id) {
+  const el=document.getElementById('notif-'+id); if(!el) return;
+  el.querySelector('.notif-dot')?.classList.add('read');
+  el.classList.remove('notif-unread');
+  try { await updateDoc(doc(db,'notifications',id),{read:true}); } catch {}
+};
+
+window.markAllRead = async function() {
+  showLoading('Marking all as read...');
+  try {
+    const q=query(collection(db,'notifications'),where('userId','==',currentUser.uid),where('read','==',false));
+    const snap=await getDocs(q);
+    const batch=writeBatch(db);
+    snap.docs.forEach(d=>batch.update(d.ref,{read:true}));
+    await batch.commit();
+    loadNotifications();
+    showToast('All marked as read','success');
+  } catch { showToast('Failed','error'); }
+  finally { hideLoading(); }
+};
+
+// ── LOST & FOUND ──────────────────────────────────────────────────────
+async function loadLostFound() {
+  const el=document.getElementById('lostfound-list');
+  el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    const snap=await getDocs(collection(db,'lost_found'));
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No reports yet</div></div>'; return; }
+    el.innerHTML=docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.itemName||''}</div><div class="list-item-sub">${r.description||''} · ${r.location||''}</div><div class="list-item-sub">${formatTime(r.createdAt)}</div></div>${statusBadge(r.type)}</div></div>`).join('');
+  } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; }
+}
+window.showLostFoundForm = function(type) {
+  lfType=type;
+  document.getElementById('lf-modal-title').textContent=type==='lost'?'Report Lost Item':'Report Found Item';
+  ['lf-item','lf-desc','lf-location'].forEach(id=>document.getElementById(id).value='');
+  openModal('lostfound');
+};
+window.submitLostFound = async function() {
+  const item=document.getElementById('lf-item').value.trim();
+  if(!item){ showToast('Please enter item name','error'); return; }
+  showLoading('Submitting...'); try {
+    await addDoc(collection(db,'lost_found'),{type:lfType,itemName:item,description:document.getElementById('lf-desc').value.trim(),location:document.getElementById('lf-location').value.trim(),contactName:userData.name,userId:currentUser.uid,createdAt:serverTimestamp()});
+    closeModal('lostfound'); showToast('Report submitted!','success'); loadLostFound();
+  } catch { showToast('Failed. Try again.','error'); } finally { hideLoading(); }
+};
+
+// ── REPORT ────────────────────────────────────────────────────────────
+async function loadReports() {
+  const el=document.getElementById('reports-list');
+  el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    const snap=await getDocs(query(collection(db,'complaints'),where('userId','==',currentUser.uid)));
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">No reports yet</div></div>'; return; }
+    el.innerHTML=docs.map(r=>`<div class="list-item"><div class="list-item-row"><div style="flex:1;"><div class="list-item-title">${r.subject||''}</div><div class="list-item-sub">${(r.message||'').slice(0,60)}</div>${r.adminReply?`<div class="list-item-sub" style="color:var(--primary);margin-top:0.3rem;">Admin: ${r.adminReply}</div>`:''}</div>${statusBadge(r.status)}</div></div>`).join('');
+  } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; }
+}
+window.submitReport = async function() {
+  const subject=document.getElementById('report-subject').value.trim();
+  const message=document.getElementById('report-message').value.trim();
+  if(!subject||!message){ showToast('Please fill in all fields','error'); return; }
+  showLoading('Submitting...'); try {
+    await addDoc(collection(db,'complaints'),{userId:currentUser.uid,userName:userData.name,subject,message,status:'open',adminReply:'',platform:'pwa',createdAt:serverTimestamp()});
+    document.getElementById('report-subject').value=''; document.getElementById('report-message').value='';
+    showToast('Report submitted!','success'); loadReports();
+  } catch { showToast('Failed. Try again.','error'); } finally { hideLoading(); }
+};
+
+// ── DRIVER ────────────────────────────────────────────────────────────
+async function loadDriverRequests() {
+  const el=document.getElementById('driver-requests');
+  el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    const snap=await getDocs(query(collection(db,'ride_requests'),where('status','==',0)));
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.timestamp?.seconds||0)-(b.timestamp?.seconds||0));
+    if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No pending requests</div></div>'; return; }
+    el.innerHTML=docs.map(r=>`<div class="driver-request-card"><div class="driver-route">${r.pickupLocation||''} → ${r.destination||''}</div><div class="driver-meta"><span class="driver-chip">ID: ${r.pickupId||'-'}</span><span class="driver-chip">${r.rideType||''}</span><span class="driver-chip">${r.passengerCount||1} pax</span><span class="driver-chip">${r.userName||'-'}</span><span class="driver-chip" style="background:#E0F7FA;color:#00838F;">${r.platform==='pwa'?'iOS PWA':'Android'}</span></div><div style="display:flex;gap:0.5rem;margin-top:0.75rem;"><button class="btn btn-success" style="flex:1;padding:0.6rem;" onclick="updateStatus('${r.id}',1)">✓ Accept</button><button class="btn btn-danger" style="flex:1;padding:0.6rem;" onclick="updateStatus('${r.id}',4)">✗ Reject</button></div></div>`).join('');
+  } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; }
+}
+window.loadDriverRequests = loadDriverRequests;
+window.updateStatus = async function(id,status) {
+  showLoading('Updating...'); try { await updateDoc(doc(db,'ride_requests',id),{status}); showToast(status===1?'Request accepted!':'Request rejected',status===1?'success':'error'); loadDriverRequests(); }
+  catch { showToast('Failed','error'); } finally { hideLoading(); }
+};
+
+// ── ADMIN ─────────────────────────────────────────────────────────────
+// FIX 2: Admin queries BOTH platforms — users collection shows all registrations
+window.adminShowUsers = async function() {
+  const el=document.getElementById('admin-content');
+  el.innerHTML='<div class="admin-section-title">All Users</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    const snap=await getDocs(collection(db,'users'));
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='user');
+    el.innerHTML=`<div class="admin-section-title">Users (${docs.length})</div>`+
+      (docs.length===0?'<div class="empty-state"><div class="empty-title">No users</div></div>':
+      docs.map(u=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${u.name||u.email||'-'}</div><div class="list-item-sub">${u.email||''} · ID: ${u.pickupId||'-'}</div></div><span class="status-badge badge-approved" style="background:#E0F7FA;color:#00695C;">${u.platform==='pwa'?'iOS PWA':'Android'}</span></div></div>`).join(''));
+  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
+};
+window.adminShowDrivers = async function() {
+  const el=document.getElementById('admin-content');
+  el.innerHTML='<div class="admin-section-title">Drivers</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    const snap=await getDocs(collection(db,'users'));
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='driver');
+    el.innerHTML=`<div class="admin-section-title">Drivers (${docs.length})</div>`+
+      (docs.length===0?'<div class="empty-state"><div class="empty-title">No drivers</div></div>':
+      docs.map(u=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${u.name||u.email||'-'}</div><div class="list-item-sub">${u.email||''}</div></div><span class="status-badge badge-pending">DRIVER</span></div></div>`).join(''));
+  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
+};
+window.adminShowBookings = async function() {
+  const el=document.getElementById('admin-content');
+  el.innerHTML='<div class="admin-section-title">All Ride Requests</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    const snap=await getDocs(collection(db,'ride_requests'));
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
+    el.innerHTML=`<div class="admin-section-title">Requests (${docs.length})</div>`+
+      (docs.length===0?'<div class="empty-state"><div class="empty-title">No requests</div></div>':
+      docs.map(r=>`<div class="list-item"><div class="list-item-row"><div style="flex:1;"><div class="list-item-title">${r.pickupLocation||''} → ${r.destination||''}</div><div class="list-item-sub">${r.userName||'-'} · ${r.rideType||''} · ID:${r.pickupId||'-'} · ${r.platform==='pwa'?'PWA':'App'}</div><div class="list-item-sub">${formatTime(r.timestamp)}</div></div>${statusBadge(r.status)}</div><div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;"><button class="btn btn-success" style="flex:1;min-width:70px;padding:0.45rem;font-size:0.78rem;" onclick="updateStatus('${r.id}',1)">Accept</button><button class="btn btn-danger" style="flex:1;min-width:70px;padding:0.45rem;font-size:0.78rem;" onclick="updateStatus('${r.id}',4)">Reject</button><button class="btn btn-secondary" style="flex:1;min-width:70px;padding:0.45rem;font-size:0.78rem;" onclick="updateStatus('${r.id}',3)">Complete</button></div></div>`).join(''));
+  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
+};
+window.adminShowLostFound = async function() {
+  const el=document.getElementById('admin-content');
+  el.innerHTML='<div class="admin-section-title">Lost & Found</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    const snap=await getDocs(collection(db,'lost_found'));
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    el.innerHTML=`<div class="admin-section-title">Lost & Found (${docs.length})</div>`+
+      (docs.length===0?'<div class="empty-state"><div class="empty-title">No reports</div></div>':
+      docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.itemName||''}</div><div class="list-item-sub">${r.description||''} · ${r.location||''}</div><div class="list-item-sub">By: ${r.contactName||'-'}</div></div>${statusBadge(r.type)}</div></div>`).join(''));
+  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
+};
+window.adminShowComplaints = async function() {
+  const el=document.getElementById('admin-content');
+  el.innerHTML='<div class="admin-section-title">Complaints</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    const snap=await getDocs(collection(db,'complaints'));
+    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    el.innerHTML=`<div class="admin-section-title">Complaints (${docs.length})</div>`+
+      (docs.length===0?'<div class="empty-state"><div class="empty-title">No complaints</div></div>':
+      docs.map(r=>`<div class="list-item"><div class="list-item-row"><div style="flex:1;"><div class="list-item-title">${r.subject||''}</div><div class="list-item-sub">${r.userName||'-'} · ${formatTime(r.createdAt)}</div><div class="list-item-sub">${(r.message||'').slice(0,80)}</div>${r.adminReply?`<div class="list-item-sub" style="color:var(--primary);">Reply: ${r.adminReply}</div>`:''}</div>${statusBadge(r.status)}</div><div style="display:flex;gap:0.4rem;margin-top:0.5rem;"><input class="form-input" id="reply-${r.id}" placeholder="Reply..." style="flex:1;padding:0.5rem;font-size:0.82rem;"/><button class="btn btn-primary" style="width:auto;padding:0.5rem 0.75rem;font-size:0.78rem;" onclick="replyComplaint('${r.id}')">Send</button></div></div>`).join(''));
+  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
+};
+window.replyComplaint = async function(id) {
+  const reply=document.getElementById('reply-'+id)?.value.trim();
+  if(!reply) return;
+  showLoading('Sending...'); try { await updateDoc(doc(db,'complaints',id),{adminReply:reply,status:'in_progress'}); showToast('Reply sent!','success'); adminShowComplaints(); }
+  catch { showToast('Failed','error'); } finally { hideLoading(); }
+};
+window.adminSendNotification = function() {
+  ['sn-title','sn-body'].forEach(id=>document.getElementById(id).value='');
+  openModal('send-notif');
+};
+window.sendAdminNotification = async function() {
+  const title=document.getElementById('sn-title').value.trim();
+  const body=document.getElementById('sn-body').value.trim();
+  const target=document.getElementById('sn-target').value;
+  if(!title||!body){ showToast('Fill in all fields','error'); return; }
+  showLoading('Sending...'); try {
+    const snap=await getDocs(collection(db,'users'));
+    const users=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>target==='all'?u.role==='user':u.role===target);
+    const batch=writeBatch(db);
+    users.forEach(u=>{ const ref=doc(collection(db,'notifications')); batch.set(ref,{userId:u.id,title,body,type:'admin',read:false,createdAt:serverTimestamp()}); });
+    await batch.commit();
+    closeModal('send-notif'); showToast(`Sent to ${users.length} user${users.length!==1?'s':''}!`,'success');
+  } catch { showToast('Failed','error'); } finally { hideLoading(); }
+};
+
+// ── AUTH EVENTS ───────────────────────────────────────────────────────
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-password').value;
+  const err=document.getElementById('login-error'); err.classList.remove('show');
+  if(!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; }
+  showLoading('Signing in...'); try { await signInWithEmailAndPassword(auth,email,pass); }
+  catch(e){ err.textContent=e.code==='auth/invalid-credential'?'Invalid email or password.':e.message; err.classList.add('show'); }
+  finally { hideLoading(); }
+});
+document.getElementById('register-btn').addEventListener('click', async () => {
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-password').value;
+  const role=document.getElementById('reg-role').value;
+  const err=document.getElementById('register-error'); err.classList.remove('show');
+  if(!name||!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; }
+  if(pass.length<6){ err.textContent='Password must be at least 6 characters.'; err.classList.add('show'); return; }
+  showLoading('Creating account...'); try {
+    const cred=await createUserWithEmailAndPassword(auth,email,pass);
+    const uid=cred.user.uid; const pickupId=generatePickupId(uid);
+    // FIX 2: Always write full user doc with platform:'pwa' so admin sees them
+    await setDoc(doc(db,'users',uid),{name,email,role,pickupId,platform:'pwa',shortId:0,fcmToken:'',createdAt:serverTimestamp()});
+  } catch(e){ err.textContent=e.code==='auth/email-already-in-use'?'Email already registered.':e.message; err.classList.add('show'); }
+  finally { hideLoading(); }
+});
+document.getElementById('go-register').addEventListener('click',e=>{e.preventDefault();showScreen('register');});
+document.getElementById('go-login').addEventListener('click',e=>{e.preventDefault();showScreen('login');});
+window.logout = async function() { closeModal('settings'); showLoading('Signing out...'); try{ await signOut(auth); }finally{ hideLoading(); } };
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/assa/app/sw.js').catch(()=>{});
+</script>
 </body>
 </html>
