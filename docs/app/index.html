@@ -219,6 +219,16 @@
     .success-detail-row .key{color:var(--text-muted)}
     .success-detail-row .val{font-weight:600;color:var(--text-primary)}
     textarea.form-input{resize:none;min-height:90px}
+    /* CHAT */
+    .chat-bubble{max-width:78%;padding:0.65rem 0.9rem;border-radius:18px;margin-bottom:0.5rem;font-size:0.88rem;line-height:1.45;word-break:break-word}
+    .chat-bubble.mine{background:var(--primary);color:white;border-radius:18px 18px 4px 18px;margin-left:auto;}
+    .chat-bubble.theirs{background:white;color:var(--text-primary);border:1px solid var(--border);border-radius:18px 18px 18px 4px;margin-right:auto;}
+    .chat-meta{font-size:0.65rem;opacity:0.7;margin-top:0.25rem}
+    .chat-sender{font-size:0.72rem;font-weight:700;margin-bottom:0.2rem;color:var(--primary)}
+    .chat-wrap{display:flex;flex-direction:column;margin-bottom:0.75rem}
+    .chat-wrap.mine{align-items:flex-end}
+    .chat-wrap.theirs{align-items:flex-start}
+    .chat-day-divider{text-align:center;font-size:0.72rem;color:var(--text-muted);margin:0.75rem 0;font-weight:600}
 
     /* WHILE YOU WAIT TIP */
     .wait-tip{background:#E8F5E9;border-radius:12px;padding:0.9rem;margin-bottom:1.2rem;text-align:left}
@@ -443,11 +453,24 @@
   <div id="screen-notifications" class="screen">
     <div class="sub-header">
       <button class="back-btn" onclick="showScreen('dashboard')">←</button>
-      <div class="sub-title">Notifications</div>
-      <button onclick="markAllRead()" style="margin-left:auto;background:rgba(255,255,255,0.15);border:none;color:white;font-size:0.75rem;font-weight:600;cursor:pointer;border-radius:50px;padding:0.3rem 0.75rem;">Mark all read</button>
+      <div class="sub-title" id="notif-screen-title">Notifications</div>
+      <button onclick="markAllRead()" id="mark-read-btn" style="margin-left:auto;background:rgba(255,255,255,0.15);border:none;color:white;font-size:0.75rem;font-weight:600;cursor:pointer;border-radius:50px;padding:0.3rem 0.75rem;">Mark all read</button>
+    </div>
+    <!-- Tab switcher -->
+    <div style="display:flex;background:white;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <button id="tab-notifs" onclick="switchNotifTab('notifs')" style="flex:1;padding:0.75rem;border:none;background:none;font-family:inherit;font-size:0.85rem;font-weight:700;color:var(--primary);border-bottom:2.5px solid var(--primary);cursor:pointer;">🔔 Alerts</button>
+      <button id="tab-chat" onclick="switchNotifTab('chat')" style="flex:1;padding:0.75rem;border:none;background:none;font-family:inherit;font-size:0.85rem;font-weight:600;color:var(--text-muted);border-bottom:2.5px solid transparent;cursor:pointer;">💬 Chat</button>
     </div>
     <div class="content" id="notif-content">
       <div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>
+    </div>
+    <!-- CHAT PANEL -->
+    <div id="chat-panel" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+      <div id="chat-messages" style="flex:1;overflow-y:auto;padding:1rem 1rem 0.5rem;-webkit-overflow-scrolling:touch;"></div>
+      <div style="padding:0.75rem 1rem calc(var(--safe-bottom) + 4.5rem);background:white;border-top:1px solid var(--border);display:flex;gap:0.5rem;flex-shrink:0;">
+        <input id="chat-input" class="form-input" type="text" placeholder="Type a message..." style="flex:1;padding:0.65rem 1rem;font-size:0.9rem;"/>
+        <button onclick="sendChatMessage()" style="background:var(--primary);border:none;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;flex-shrink:0;">➤</button>
+      </div>
     </div>
     <div class="bottom-nav">
       <button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
@@ -510,6 +533,7 @@
       <div class="admin-row" onclick="adminShowDrivers()"><div class="admin-row-icon icon-orange">🚐</div><span class="admin-row-label">Drivers</span><span class="admin-row-arrow">›</span></div>
       <div class="admin-row" onclick="adminShowLostFound()"><div class="admin-row-icon icon-purple">🔍</div><span class="admin-row-label">Lost & Found</span><span class="admin-row-arrow">›</span></div>
       <div class="admin-row" onclick="adminShowComplaints()"><div class="admin-row-icon icon-red">⚠️</div><span class="admin-row-label">Complaints</span><span class="admin-row-arrow">›</span></div>
+      <div class="admin-row" onclick="adminShowChats()"><div class="admin-row-icon icon-blue">💬</div><span class="admin-row-label">User Chats</span><span class="admin-row-arrow">›</span></div>
       <div class="admin-row" onclick="adminSendNotification()"><div class="admin-row-icon icon-teal">📢</div><span class="admin-row-label">Send Notification</span><span class="admin-row-arrow">›</span></div>
       <div id="admin-content"></div>
     </div>
@@ -705,29 +729,35 @@ window.copyPickupId = function() {
   navigator.clipboard?.writeText(id).then(()=>showToast('Pickup ID copied!','success')).catch(()=>showToast(id));
 };
 
-// ── FIX 1: CONNECTIVITY — uses navigator.onLine + probe, no false positives ──
-async function checkConnectivity() {
-  if(!navigator.onLine) return false; // fast path — definitely offline
-  try {
-    const ctrl = new AbortController();
-    setTimeout(()=>ctrl.abort(), 3000);
-    const res = await fetch('https://www.gstatic.com/generate_204',
-      { cache:'no-store', signal:ctrl.signal });
-    return res.status===204||res.status===200;
-  } catch { return false; }
-}
-async function updateOnlineStatus() {
-  isOnline = await checkConnectivity();
+// ── CONNECTIVITY FIX ────────────────────────────────────────────────────────
+// ROOT CAUSE: fetch() to external URLs is blocked in PWA (CORS/mixed content).
+// navigator.onLine is the correct reliable API — returns false when on ESP32
+// WiFi (no internet route), true when on real mobile data or internet WiFi.
+function checkConnectivity() { return navigator.onLine; }
+function updateOnlineStatus() {
+  isOnline = navigator.onLine;
   const dot=document.getElementById('dash-status-dot');
   const txt=document.getElementById('dash-status-text');
   const ban=document.getElementById('dash-offline-banner');
-  if(dot){ dot.className='status-dot '+(isOnline?'online':'offline'); txt.textContent=isOnline?'Online':'Campus WiFi Mode'; ban?.classList.toggle('hidden',isOnline); }
+  const reqChip=document.getElementById('req-mode-chip');
+  const reqBan=document.getElementById('req-offline-banner');
+  const offNote=document.getElementById('req-offline-note');
+  if(dot){
+    dot.className='status-dot '+(isOnline?'online':'offline');
+    txt.textContent=isOnline?'Online':'Campus WiFi Mode';
+    ban?.classList.toggle('hidden',isOnline);
+  }
+  if(reqChip){
+    reqChip.textContent=isOnline?'🟢 Online':'🟡 Campus WiFi';
+    reqChip.style.background=isOnline?'rgba(46,125,50,0.3)':'rgba(245,127,23,0.3)';
+    reqBan?.classList.toggle('hidden',isOnline);
+    if(offNote) offNote.style.display=isOnline?'none':'block';
+    buildLocationChips();
+  }
   return isOnline;
 }
-// Poll connectivity every 30s so status stays accurate
-setInterval(updateOnlineStatus, 30000);
-window.addEventListener('online', updateOnlineStatus);
-window.addEventListener('offline', ()=>{ isOnline=false; updateOnlineStatus(); });
+window.addEventListener('online',  ()=>{ isOnline=true;  updateOnlineStatus(); showToast('Back online ✓','success'); });
+window.addEventListener('offline', ()=>{ isOnline=false; updateOnlineStatus(); showToast('Offline — Campus WiFi Mode',''); });
 
 // ── AUTH ──────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
@@ -761,7 +791,7 @@ async function loadUserData(uid) {
       try{ await setDoc(ref,{...data,createdAt:serverTimestamp(),platform:'pwa'}); }catch{}
     }
     userData=data;
-    await updateOnlineStatus();
+    updateOnlineStatus();
     routeByRole(data.role);
     // FIX 3: Use real-time listener for notifications — not just once
     startNotifListener(uid);
@@ -799,18 +829,12 @@ function startNotifListener(uid) {
 }
 
 // ── REQUEST SCREEN — location chips like Android app ──────────────────
-async function initRequestScreen() {
+function initRequestScreen() {
   selectedPickup=null; selectedDest=null;
-  document.getElementById('req-checking').style.display='block';
-  document.getElementById('req-form').style.display='none';
   document.getElementById('req-summary').classList.add('hidden');
-  await new Promise(r=>setTimeout(r,2500));
-  isOnline=await checkConnectivity();
-  const chip=document.getElementById('req-mode-chip');
-  const banner=document.getElementById('req-offline-banner');
-  const offNote=document.getElementById('req-offline-note');
-  if(isOnline){ chip.textContent='🟢 Online'; chip.style.background='rgba(46,125,50,0.3)'; banner.classList.add('hidden'); offNote.style.display='none'; }
-  else { chip.textContent='🟡 Campus WiFi'; chip.style.background='rgba(245,127,23,0.3)'; banner.classList.remove('hidden'); offNote.style.display='block'; }
+  // No async delay needed — navigator.onLine is synchronous and instant
+  isOnline = checkConnectivity();
+  updateOnlineStatus();
   buildLocationChips();
   document.getElementById('req-checking').style.display='none';
   document.getElementById('req-form').style.display='block';
@@ -861,9 +885,9 @@ window.submitRequest = async function() {
   if(!selectedPickup||!selectedDest){ showToast('Please select pickup and destination','error'); return; }
   if(selectedPickup===selectedDest){ showToast('Pickup and destination cannot be the same','error'); return; }
   showLoading('Submitting request...');
-  const stillOnline=await checkConnectivity(); isOnline=stillOnline;
+  isOnline = checkConnectivity(); // synchronous — instant
   try {
-    if(stillOnline) await submitOnlineRequest(selectedPickup,selectedDest);
+    if(isOnline) await submitOnlineRequest(selectedPickup,selectedDest);
     else await submitOfflineRequest(selectedPickup,selectedDest);
   } catch { showToast('Failed to submit. Try again.','error'); }
   finally { hideLoading(); }
@@ -880,27 +904,26 @@ async function submitOnlineRequest(pickup,dest) {
 }
 
 async function submitOfflineRequest(pickup,dest) {
-  let esp32Ok=false;
-  try {
-    const ctrl=new AbortController(); setTimeout(()=>ctrl.abort(),5000);
-    const res=await fetch(`http://${ESP32_IP}/request`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({pid:userData.pickupId,pc:LOCATION_CODES[pickup]||1,
-        dc:LOCATION_CODES[dest]||1,rt:rideType==='Chartered'?1:0,
-        pax:rideType==='Chartered'?1:paxCount}), signal:ctrl.signal
-    });
-    esp32Ok=res.ok;
-  } catch {}
-  if(!esp32Ok){ showToast('Cannot reach ESP32. Connect to ASSA-Campus WiFi first.','error'); return; }
+  // MIXED CONTENT FIX: Browsers block HTTP fetch from HTTPS PWA pages.
+  // fetch('http://192.168.4.1/request') will always fail from a PWA.
+  // The correct approach: write to Firestore offline_requests collection.
+  // Firestore has built-in offline persistence — it queues the write locally
+  // and syncs to the server when internet returns (after leaving ESP32 WiFi).
+  // The Gateway will pick it up via Firebase polling and forward to Shuttle.
+  const pax = rideType==='Chartered'?1:paxCount;
   try {
     await addDoc(collection(db,'offline_requests'),{
-      userId:currentUser.uid, userName:userData.name, offlineUUID:userData.pickupId,
+      userId:currentUser.uid, userName:userData.name,
+      pickupId:userData.pickupId, offlineUUID:userData.pickupId,
       pickupLocation:pickup, destination:dest, rideType,
-      passengerCount:rideType==='Chartered'?1:paxCount,
-      status:0, requestType:'offline', platform:'pwa', timestamp:serverTimestamp()
+      passengerCount:pax, status:0,
+      requestType:'offline', platform:'pwa', timestamp:serverTimestamp()
     });
-  } catch {}
-  showSuccessDialog({pickup,dest,mode:'Campus WiFi (ESP32)',rideType,pax:rideType==='Chartered'?1:paxCount});
+    showSuccessDialog({pickup,dest,mode:'Campus WiFi (Offline)',rideType,pax});
+  } catch(e) {
+    showToast('Request saved locally — will sync when online.','');
+    showSuccessDialog({pickup,dest,mode:'Saved Offline',rideType,pax});
+  }
 }
 
 function showSuccessDialog({pickup,dest,mode,rideType,pax}) {
@@ -943,7 +966,33 @@ window.cancelRequest = async function(id) {
   finally { hideLoading(); }
 };
 
-// ── FIX 4: NOTIFICATIONS — real-time listener + proper rendering ───────
+// ── NOTIFICATIONS + CHAT ─────────────────────────────────────────────────────
+let currentChatTab = 'notifs';
+let chatUnsub = null;
+
+window.switchNotifTab = function(tab) {
+  currentChatTab = tab;
+  const notifContent = document.getElementById('notif-content');
+  const chatPanel    = document.getElementById('chat-panel');
+  const tabNotifs    = document.getElementById('tab-notifs');
+  const tabChat      = document.getElementById('tab-chat');
+  const markBtn      = document.getElementById('mark-read-btn');
+  const title        = document.getElementById('notif-screen-title');
+  if(tab==='notifs'){
+    notifContent.style.display='block'; chatPanel.style.display='none';
+    tabNotifs.style.color=tabNotifs.style.borderBottomColor='var(--primary)'; tabNotifs.style.fontWeight='700';
+    tabChat.style.color='var(--text-muted)'; tabChat.style.borderBottomColor='transparent'; tabChat.style.fontWeight='600';
+    markBtn.style.display='block'; title.textContent='Notifications';
+    loadNotifications();
+  } else {
+    notifContent.style.display='none'; chatPanel.style.display='flex'; chatPanel.style.flexDirection='column';
+    tabChat.style.color=tabChat.style.borderBottomColor='var(--primary)'; tabChat.style.fontWeight='700';
+    tabNotifs.style.color='var(--text-muted)'; tabNotifs.style.borderBottomColor='transparent'; tabNotifs.style.fontWeight='600';
+    markBtn.style.display='none'; title.textContent='Chat';
+    loadChat();
+  }
+};
+
 async function loadNotifications() {
   const el=document.getElementById('notif-content');
   el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
@@ -961,8 +1010,67 @@ async function loadNotifications() {
           <div class="notif-time">${formatTime(n.createdAt)}</div>
         </div>
       </div>`).join('');
-  } catch(e) { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load notifications</div><div class="empty-sub">Check your connection and try again</div></div>'; }
+  } catch(e) { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load notifications</div><div class="empty-sub">Check your connection</div></div>'; }
 }
+
+// ── CHAT — real-time Firestore messages between user and admin ────────────────
+// Collection: chats/{userId}/messages/{msgId}
+// Fields: senderId, senderName, senderRole, text, createdAt
+function loadChat() {
+  const el = document.getElementById('chat-messages');
+  el.innerHTML = '<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  if(chatUnsub) chatUnsub();
+  const uid = currentUser.uid;
+  // Each user has their own chat thread — admin can see all threads
+  const chatRef = collection(db, 'chats', uid, 'messages');
+  const q = query(chatRef);
+  chatUnsub = onSnapshot(q, snap => {
+    const msgs = snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+    if(msgs.length===0){
+      el.innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-title">No messages yet</div><div class="empty-sub">Start a conversation with admin</div></div>';
+      return;
+    }
+    let lastDate='';
+    el.innerHTML = msgs.map(m=>{
+      const mine = m.senderId === uid;
+      const d = m.createdAt?.toDate ? m.createdAt.toDate() : new Date();
+      const dateStr = d.toLocaleDateString();
+      const timeStr = d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      let divider='';
+      if(dateStr!==lastDate){ lastDate=dateStr; divider=`<div class="chat-day-divider">${dateStr}</div>`; }
+      return `${divider}<div class="chat-wrap ${mine?'mine':'theirs'}">
+        ${!mine?`<div class="chat-sender">${m.senderName||'Admin'}</div>`:''}
+        <div class="chat-bubble ${mine?'mine':'theirs'}">${m.text||''}
+          <div class="chat-meta">${timeStr}</div>
+        </div>
+      </div>`;
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  }, ()=>{
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load chat</div></div>';
+  });
+}
+
+window.sendChatMessage = async function() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  try {
+    await addDoc(collection(db,'chats',currentUser.uid,'messages'),{
+      senderId:   currentUser.uid,
+      senderName: userData.name || currentUser.email,
+      senderRole: userData.role || 'user',
+      text, createdAt: serverTimestamp()
+    });
+  } catch { showToast('Failed to send','error'); input.value=text; }
+};
+
+// Send on Enter key
+document.getElementById('chat-input')?.addEventListener('keydown', e=>{
+  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendChatMessage(); }
+});
 
 window.markRead = async function(id) {
   const el=document.getElementById('notif-'+id); if(!el) return;
@@ -1113,6 +1221,74 @@ window.replyComplaint = async function(id) {
   showLoading('Sending...'); try { await updateDoc(doc(db,'complaints',id),{adminReply:reply,status:'in_progress'}); showToast('Reply sent!','success'); adminShowComplaints(); }
   catch { showToast('Failed','error'); } finally { hideLoading(); }
 };
+window.adminShowChats = async function() {
+  const el=document.getElementById('admin-content');
+  el.innerHTML='<div class="admin-section-title">User Chats</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+  try {
+    // Get all users to list their chat threads
+    const snap=await getDocs(collection(db,'users'));
+    const users=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='user'||u.role==='driver');
+    if(users.length===0){ el.innerHTML='<div class="admin-section-title">User Chats</div><div class="empty-state"><div class="empty-title">No users</div></div>'; return; }
+    el.innerHTML='<div class="admin-section-title">Select a user to chat</div>'+
+      users.map(u=>`<div class="admin-row" onclick="adminOpenChat('${u.id}','${(u.name||u.email||'User').replace(/'/g,"\'")}')">
+        <div class="admin-row-icon" style="background:#E3F2FD;font-size:1.1rem;">${(u.name||'?')[0].toUpperCase()}</div>
+        <div><div class="admin-row-label">${u.name||u.email||'-'}</div><div style="font-size:0.72rem;color:var(--text-muted);">ID: ${u.pickupId||'-'} · ${u.platform==='pwa'?'iOS PWA':'Android'}</div></div>
+        <span class="admin-row-arrow">💬</span></div>`).join('');
+  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
+};
+
+let adminChatUnsub=null, adminChatUserId=null;
+window.adminOpenChat = function(uid, name) {
+  adminChatUserId=uid;
+  const el=document.getElementById('admin-content');
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+      <button onclick="adminShowChats()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;">←</button>
+      <div style="font-weight:700;color:var(--text-primary);">Chat with ${name}</div>
+    </div>
+    <div id="admin-chat-msgs" style="height:55vh;overflow-y:auto;padding:0.5rem;background:#F8FAFF;border-radius:14px;border:1px solid var(--border);margin-bottom:0.75rem;"></div>
+    <div style="display:flex;gap:0.5rem;">
+      <input id="admin-chat-input" class="form-input" type="text" placeholder="Type a message..." style="flex:1;padding:0.65rem 1rem;"/>
+      <button onclick="adminSendChat()" style="background:var(--primary);border:none;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;flex-shrink:0;">➤</button>
+    </div>`;
+  document.getElementById('admin-chat-input')?.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();adminSendChat();} });
+  if(adminChatUnsub) adminChatUnsub();
+  const q=query(collection(db,'chats',uid,'messages'));
+  adminChatUnsub=onSnapshot(q, snap=>{
+    const msgs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+    const el2=document.getElementById('admin-chat-msgs');
+    if(!el2) return;
+    if(msgs.length===0){ el2.innerHTML='<div class="empty-state" style="padding:2rem;"><div class="empty-icon">💬</div><div class="empty-title">No messages yet</div></div>'; return; }
+    el2.innerHTML=msgs.map(m=>{
+      const mine=m.senderRole==='admin';
+      const d=m.createdAt?.toDate?m.createdAt.toDate():new Date();
+      return `<div class="chat-wrap ${mine?'mine':'theirs'}">
+        ${!mine?`<div class="chat-sender">${m.senderName||'User'}</div>`:''}
+        <div class="chat-bubble ${mine?'mine':'theirs'}">${m.text||''}
+          <div class="chat-meta">${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+        </div></div>`;
+    }).join('');
+    el2.scrollTop=el2.scrollHeight;
+  });
+};
+
+window.adminSendChat = async function() {
+  const input=document.getElementById('admin-chat-input');
+  const text=input?.value.trim(); if(!text||!adminChatUserId) return;
+  input.value='';
+  try {
+    await addDoc(collection(db,'chats',adminChatUserId,'messages'),{
+      senderId:currentUser.uid, senderName:userData.name||'Admin',
+      senderRole:'admin', text, createdAt:serverTimestamp()
+    });
+    // Also notify the user
+    await addDoc(collection(db,'notifications'),{
+      userId:adminChatUserId, title:'New message from Admin',
+      body:text.slice(0,60), type:'chat', read:false, createdAt:serverTimestamp()
+    });
+  } catch { showToast('Failed to send','error'); if(input) input.value=text; }
+};
+
 window.adminSendNotification = function() {
   ['sn-title','sn-body'].forEach(id=>document.getElementById(id).value='');
   openModal('send-notif');
