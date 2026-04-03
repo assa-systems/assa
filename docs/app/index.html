@@ -219,6 +219,34 @@
     .success-detail-row .key{color:var(--text-muted)}
     .success-detail-row .val{font-weight:600;color:var(--text-primary)}
     textarea.form-input{resize:none;min-height:90px}
+    /* ADS */
+    .ad-card{background:white;border-radius:16px;overflow:hidden;margin-bottom:1rem;border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,0.06);cursor:pointer;position:relative}
+    .ad-label{position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.45);color:white;font-size:9px;font-weight:700;letter-spacing:1.5px;padding:2px 7px;border-radius:4px;border:1px solid rgba(255,255,255,0.3)}
+    .ad-img{width:100%;height:140px;object-fit:cover;display:block}
+    .ad-placeholder{width:100%;height:100px;display:flex;align-items:center;justify-content:center;font-size:2rem;background:#F0F4FF}
+    .ad-body{padding:0.75rem 0.9rem 0.9rem}
+    .ad-title{font-size:0.88rem;font-weight:700;color:var(--text-primary);margin-bottom:0.2rem}
+    .ad-text{font-size:0.75rem;color:var(--text-muted);line-height:1.4}
+    .ad-video{width:100%;max-height:180px;object-fit:cover;display:block;background:#000}
+    /* INTENT BANNER */
+    .intent-banner{background:linear-gradient(135deg,#1B5E20,#2E7D32);border-radius:18px;padding:1.2rem;margin-bottom:1rem;box-shadow:0 6px 20px rgba(27,94,32,0.4)}
+    .intent-badge{display:inline-flex;align-items:center;gap:0.35rem;background:rgba(255,255,255,0.2);border-radius:50px;padding:0.25rem 0.7rem;font-size:0.7rem;font-weight:700;color:white;letter-spacing:0.05em;margin-bottom:0.6rem}
+    .intent-dot{width:6px;height:6px;border-radius:50%;background:#69F0AE;animation:blink-g 1s infinite}
+    @keyframes blink-g{0%,100%{opacity:1}50%{opacity:0.3}}
+    .intent-row{font-size:0.8rem;color:rgba(255,255,255,0.85);margin-bottom:0.2rem}
+    .intent-row strong{color:white}
+    .intent-btns{display:flex;gap:0.6rem;margin-top:0.9rem}
+    .intent-reject{flex:1;padding:0.7rem;border:1px solid rgba(255,255,255,0.3);border-radius:12px;background:transparent;color:white;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit}
+    .intent-accept{flex:2;padding:0.7rem;border:none;border-radius:12px;background:white;color:#1B5E20;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit}
+    /* CONFIRM DIALOG */
+    .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:1.5rem;opacity:0;pointer-events:none;transition:opacity 0.2s}
+    .confirm-overlay.show{opacity:1;pointer-events:all}
+    .confirm-box{background:white;border-radius:20px;padding:1.5rem;width:100%;max-width:340px;transform:scale(0.92);transition:transform 0.2s}
+    .confirm-overlay.show .confirm-box{transform:scale(1)}
+    .confirm-icon{font-size:2.5rem;text-align:center;margin-bottom:0.75rem}
+    .confirm-title{font-size:1rem;font-weight:800;color:var(--text-primary);text-align:center;margin-bottom:0.4rem}
+    .confirm-msg{font-size:0.83rem;color:var(--text-muted);text-align:center;margin-bottom:1.2rem;line-height:1.5}
+    .confirm-btns{display:flex;gap:0.6rem}
     /* CHAT */
     .chat-bubble{max-width:78%;padding:0.65rem 0.9rem;border-radius:18px;margin-bottom:0.5rem;font-size:0.88rem;line-height:1.45;word-break:break-word}
     .chat-bubble.mine{background:var(--primary);color:white;border-radius:18px 18px 4px 18px;margin-left:auto;}
@@ -357,6 +385,7 @@
         </div>
       </div>
       <div id="admin-quick-wrap"></div>
+      <div id="dash-ad-container"></div>
     </div>
     <div class="bottom-nav">
       <button class="nav-item active" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
@@ -550,7 +579,8 @@
       </div>
     </div>
     <div class="content">
-      <div class="section-title">Pending Requests</div>
+      <div id="driver-intents-container"></div>
+      <div class="section-title">Assigned Requests</div>
       <div id="driver-requests"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div>
     </div>
   </div>
@@ -635,6 +665,18 @@
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
+  <!-- Confirm Dialog -->
+  <div class="confirm-overlay" id="confirm-overlay">
+    <div class="confirm-box">
+      <div class="confirm-icon" id="confirm-icon">❓</div>
+      <div class="confirm-title" id="confirm-title">Are you sure?</div>
+      <div class="confirm-msg" id="confirm-msg"></div>
+      <div class="confirm-btns">
+        <button class="btn btn-secondary" style="flex:1;" id="confirm-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" style="flex:1;" id="confirm-ok-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script type="module">
@@ -900,6 +942,31 @@ async function submitOnlineRequest(pickup,dest) {
     pickupLocation:pickup, destination:dest, rideType, passengerCount:pax,
     status:0, requestType:'online', platform:'pwa', timestamp:serverTimestamp()
   });
+  // Send intent to available driver
+  try {
+    const dSnap=await getDocs(query(collection(db,'users'),
+      where('role','==','driver'),where('status','==','approved')));
+    if(dSnap.docs.length>0){
+      const drv=dSnap.docs[0];
+      await updateDoc(doc(db,'driver_intents',ref.id),{
+        driverId:drv.id, driverName:drv.data().name||'Driver'
+      }).catch(async()=>{
+        await setDoc(doc(db,'driver_intents',ref.id),{
+          requestId:ref.id, driverId:drv.id, driverName:drv.data().name||'Driver',
+          status:'pending_intent', requestType:'online',
+          pickupLocation:pickup, destination:dest, rideType,
+          passengerCount:pax, pickupId:userData.pickupId,
+          userName:userData.name, userId:currentUser.uid,
+          createdAt:serverTimestamp(), expiresAt:new Date(Date.now()+60000)
+        });
+      });
+      await addDoc(collection(db,'notifications'),{
+        userId:drv.id, title:'🚨 Request Coming In!',
+        body:`${pickup} → ${dest} · ${rideType} · ${pax} pax`,
+        type:'ride_intent', requestId:ref.id, read:false, createdAt:serverTimestamp()
+      });
+    }
+  } catch {}
   showSuccessDialog({pickup,dest,mode:'Online',rideType,pax});
 }
 
@@ -1337,6 +1404,162 @@ document.getElementById('register-btn').addEventListener('click', async () => {
 document.getElementById('go-register').addEventListener('click',e=>{e.preventDefault();showScreen('register');});
 document.getElementById('go-login').addEventListener('click',e=>{e.preventDefault();showScreen('login');});
 window.logout = async function() { closeModal('settings'); showLoading('Signing out...'); try{ await signOut(auth); }finally{ hideLoading(); } };
+
+// ── CONFIRM DIALOG ───────────────────────────────────────────────────────────
+function showConfirm({icon='❓',title='Are you sure?',msg='',okText='Confirm',okClass='btn-primary'}) {
+  return new Promise(resolve => {
+    document.getElementById('confirm-icon').textContent  = icon;
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-msg').textContent   = msg;
+    const okBtn  = document.getElementById('confirm-ok-btn');
+    const cnBtn  = document.getElementById('confirm-cancel-btn');
+    okBtn.textContent = okText; okBtn.className = 'btn '+okClass;
+    const ov = document.getElementById('confirm-overlay');
+    ov.classList.add('show');
+    const close = v => { ov.classList.remove('show'); resolve(v); };
+    okBtn.onclick = () => close(true);
+    cnBtn.onclick = () => close(false);
+    ov.onclick    = e => { if(e.target===ov) close(false); };
+  });
+}
+
+// ── CONFIRMATIONS — wrap existing actions ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Cancel request confirmation
+  const _origCancel = window.cancelRequest;
+  window.cancelRequest = async function(id) {
+    const ok = await showConfirm({icon:'🚫',title:'Cancel Request',
+      msg:'Are you sure you want to cancel this ride request?',
+      okText:'Yes, Cancel',okClass:'btn-danger'});
+    if(ok) _origCancel(id);
+  };
+  // Logout confirmation
+  const _origLogout = window.logout;
+  window.logout = async function() {
+    const ok = await showConfirm({icon:'🚪',title:'Sign Out',
+      msg:'Are you sure you want to sign out of ASSA?',
+      okText:'Sign Out',okClass:'btn-danger'});
+    if(ok) _origLogout();
+  };
+});
+
+// ── INTERNAL ADS ──────────────────────────────────────────────────────────────
+async function loadDashboardAd() {
+  const container = document.getElementById('dash-ad-container');
+  if(!container || !currentUser) return;
+  try {
+    const snap = await getDocs(query(collection(db,'ads'),where('isActive','==',true)));
+    const ads  = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!ads.length) return;
+    const ad = ads[Math.floor(Math.random()*ads.length)];
+    // Track impression
+    try { await updateDoc(doc(db,'ads',ad.id),{
+      impressions:(ad.impressions||0)+1, lastSeen:serverTimestamp()
+    }); } catch {}
+    // Build media
+    let media = '';
+    if(ad.videoUrl?.trim()) {
+      media = `<video class="ad-video" src="${ad.videoUrl}" autoplay muted loop playsinline></video>`;
+    } else if(ad.imageUrl?.trim()) {
+      let url = ad.imageUrl;
+      const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if(m) url = `https://lh3.googleusercontent.com/d/${m[1]}`;
+      media = `<img class="ad-img" src="${url}" alt="${ad.title||''}" onerror="this.style.display='none'"/>`;
+    } else {
+      media = `<div class="ad-placeholder">📢</div>`;
+    }
+    const link = ad.linkUrl?.trim() ? ad.linkUrl : '';
+    container.innerHTML = `
+      <div class="ad-card" onclick="tapAd('${ad.id}','${link.replace(/'/g,"\'")}')">
+        <span class="ad-label">AD</span>${media}
+        <div class="ad-body">
+          <div class="ad-title">${ad.title||''}</div>
+          ${ad.body?`<div class="ad-text">${ad.body}</div>`:''}
+        </div>
+      </div>`;
+  } catch {}
+}
+window.tapAd = async function(id, link) {
+  try { const d=await getDoc(doc(db,'ads',id)); if(d.exists())
+    await updateDoc(doc(db,'ads',id),{taps:(d.data().taps||0)+1,lastTap:serverTimestamp()}); } catch {}
+  if(link) window.open(link.startsWith('http')?link:'https://'+link,'_blank');
+};
+
+// ── DRIVER INTENT SYSTEM ──────────────────────────────────────────────────────
+let intentUnsub = null;
+
+function startIntentListener(driverId) {
+  if(intentUnsub) intentUnsub();
+  const q = query(collection(db,'driver_intents'),
+    where('driverId','==',driverId), where('status','==','pending_intent'));
+  intentUnsub = onSnapshot(q, snap => {
+    const intents = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderIntents(intents);
+  }, ()=>{});
+}
+
+function renderIntents(intents) {
+  const c = document.getElementById('driver-intents-container');
+  if(!c) return;
+  if(!intents.length){ c.innerHTML=''; return; }
+  c.innerHTML = intents.map(i=>`
+    <div class="intent-banner">
+      <div class="intent-badge"><span class="intent-dot"></span>
+        ${i.requestType==='offline'?'OFFLINE REQUEST':'ONLINE REQUEST'}</div>
+      <div style="font-size:1rem;font-weight:800;color:white;margin-bottom:0.6rem;">🚨 Request Coming In!</div>
+      <div class="intent-row">📍 <strong>From:</strong> ${i.pickupLocation||''}</div>
+      <div class="intent-row">🏁 <strong>To:</strong> ${i.destination||''}</div>
+      <div class="intent-row">🚐 <strong>Type:</strong> ${i.rideType||''} · ${i.passengerCount||1} pax</div>
+      <div class="intent-row">🪪 <strong>Passenger:</strong> ${i.userName||''} (ID: ${i.pickupId||''})</div>
+      <div class="intent-btns">
+        <button class="intent-reject" onclick="rejectIntent('${i.id}')">✗ Reject</button>
+        <button class="intent-accept" onclick="acceptIntent('${i.id}')">✓ Accept Ride</button>
+      </div>
+    </div>`).join('');
+}
+
+window.acceptIntent = async function(requestId) {
+  const ok = await showConfirm({icon:'✅',title:'Accept Ride Request',
+    msg:'Accept this request? You will be assigned to pick up this passenger.',
+    okText:'Accept',okClass:'btn-success'});
+  if(!ok) return;
+  showLoading('Accepting...');
+  try {
+    const uid=currentUser.uid, name=userData.name||'Driver', shuttle=userData.shuttleId||'0';
+    const b=writeBatch(db);
+    b.update(doc(db,'driver_intents',requestId),{status:'accepted',acceptedAt:serverTimestamp()});
+    b.update(doc(db,'ride_requests',requestId),{
+      status:1,statusName:'Assigned',driverId:uid,driverName:name,assignedAt:serverTimestamp(),intentStatus:'accepted'
+    });
+    b.update(doc(db,'users',uid),{driverStatus:'on_ride'});
+    await b.commit();
+    const rSnap=await getDoc(doc(db,'ride_requests',requestId));
+    const userId=rSnap.data()?.userId;
+    if(userId) await addDoc(collection(db,'notifications'),{
+      userId,title:'🚌 Shuttle Assigned!',
+      body:`Driver ${name} accepted your request. Shuttle ${shuttle} is on the way!`,
+      type:'ride_assigned',requestId,read:false,createdAt:serverTimestamp()
+    });
+    showToast('Accepted! Passenger notified.','success');
+  } catch { showToast('Failed to accept. Try again.','error'); }
+  finally { hideLoading(); }
+};
+
+window.rejectIntent = async function(requestId) {
+  const ok = await showConfirm({icon:'❌',title:'Reject Request',
+    msg:'Reject this request? It will be forwarded to the next available driver.',
+    okText:'Reject',okClass:'btn-danger'});
+  if(!ok) return;
+  showLoading('Rejecting...');
+  try {
+    await updateDoc(doc(db,'driver_intents',requestId),{
+      status:'rejected',rejectedAt:serverTimestamp(),rejectedBy:currentUser.uid
+    });
+    await updateDoc(doc(db,'users',currentUser.uid),{driverStatus:'available'});
+    showToast('Request rejected. Forwarded to next driver.','');
+  } catch { showToast('Failed','error'); }
+  finally { hideLoading(); }
+};
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/assa/app/sw.js').catch(()=>{});
 </script>
