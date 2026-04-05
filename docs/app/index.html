@@ -635,6 +635,11 @@
       <div class="form-group"><label class="form-label">Item Name</label><input class="form-input" id="lf-item" type="text" placeholder="e.g. Black backpack"/></div>
       <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="lf-desc" placeholder="Describe the item..."></textarea></div>
       <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="lf-location" type="text" placeholder="Where was it lost/found?"/></div>
+      <div class="form-group">
+        <label class="form-label">Photo (optional)</label>
+        <input class="form-input" id="lf-image" type="url" placeholder="Google Drive image link"/>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">Google Drive → Share → Anyone with link → Copy link → Paste here</div>
+      </div>
       <button class="btn btn-primary" onclick="submitLostFound()">Submit Report</button>
     </div>
   </div>
@@ -1168,7 +1173,28 @@ async function loadLostFound() {
     const snap=await getDocs(collection(db,'lost_found'));
     const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
     if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No reports yet</div></div>'; return; }
-    el.innerHTML=docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.itemName||''}</div><div class="list-item-sub">${r.description||''} · ${r.location||''}</div><div class="list-item-sub">${formatTime(r.createdAt)}</div></div>${statusBadge(r.type)}</div></div>`).join('');
+    el.innerHTML=docs.map(r=>{
+      let imgHtml='';
+      if(r.imageUrl){
+        let url=r.imageUrl;
+        const dm=url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if(dm) url=`https://lh3.googleusercontent.com/d/${dm[1]}`;
+        imgHtml=`<div style="position:relative;"><img src="${url}" style="width:100%;height:160px;object-fit:cover;border-radius:0;display:block;" onerror="this.style.display='none'"/>
+          <div style="position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(transparent,rgba(0,0,0,0.5));border-radius:0;"></div></div>`;
+      }
+      return `<div class="list-item" style="padding:0;overflow:hidden;">
+        ${imgHtml}
+        <div style="padding:0.9rem 1rem;">
+          <div class="list-item-row">
+            <div><div class="list-item-title">${r.itemName||r.description||''}</div>
+            <div class="list-item-sub">${r.description||''}</div>
+            <div class="list-item-sub">📍 ${r.locationName||r.location||''} · ${formatTime(r.createdAt)}</div>
+            <div class="list-item-sub">👤 ${r.userName||r.contactName||''}</div></div>
+            ${statusBadge(r.itemType||r.type)}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
   } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; }
 }
 window.showLostFoundForm = function(type) {
@@ -1443,42 +1469,72 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 });
 
-// ── INTERNAL ADS ──────────────────────────────────────────────────────────────
-async function loadDashboardAd() {
+// ── INTERNAL ADS — synced from admin Firestore in real-time ──────────────────
+// Pulls from same ads collection admin manages via manage_ads_screen on Android.
+// Rotates through active ads, tracks impressions + taps.
+let _allAds = [], _adIndex = 0, _adUnsub = null, _adDismissed = false;
+
+function startAdListener() {
+  if(_adUnsub) _adUnsub();
+  const q = query(collection(db,'ads'), where('isActive','==',true));
+  _adUnsub = onSnapshot(q, snap => {
+    _allAds = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(_allAds.length > 0 && !_adDismissed) renderNextAd();
+  }, ()=>{});
+}
+
+function toDirectImgUrl(url) {
+  if(!url) return '';
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if(m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  return url;
+}
+
+function renderNextAd() {
   const container = document.getElementById('dash-ad-container');
-  if(!container || !currentUser) return;
-  try {
-    const snap = await getDocs(query(collection(db,'ads'),where('isActive','==',true)));
-    const ads  = snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!ads.length) return;
-    const ad = ads[Math.floor(Math.random()*ads.length)];
-    // Track impression
-    try { await updateDoc(doc(db,'ads',ad.id),{
-      impressions:(ad.impressions||0)+1, lastSeen:serverTimestamp()
-    }); } catch {}
-    // Build media
-    let media = '';
-    if(ad.videoUrl?.trim()) {
-      media = `<video class="ad-video" src="${ad.videoUrl}" autoplay muted loop playsinline></video>`;
-    } else if(ad.imageUrl?.trim()) {
-      let url = ad.imageUrl;
-      const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-      if(m) url = `https://lh3.googleusercontent.com/d/${m[1]}`;
-      media = `<img class="ad-img" src="${url}" alt="${ad.title||''}" onerror="this.style.display='none'"/>`;
-    } else {
-      media = `<div class="ad-placeholder">📢</div>`;
-    }
-    const link = ad.linkUrl?.trim() ? ad.linkUrl : '';
-    container.innerHTML = `
-      <div class="ad-card" onclick="tapAd('${ad.id}','${link.replace(/'/g,"\'")}')">
-        <span class="ad-label">AD</span>${media}
-        <div class="ad-body">
+  if(!container || !_allAds.length) return;
+  const ad  = _allAds[_adIndex % _allAds.length];
+  const link = ad.linkUrl?.trim() || '';
+  // Build media
+  let media = '';
+  if(ad.videoUrl?.trim()) {
+    media = `<video class="ad-video" src="${ad.videoUrl}" autoplay muted loop playsinline style="width:100%;max-height:180px;object-fit:cover;display:block;background:#000;border-radius:16px 16px 0 0;"></video>`;
+  } else if(ad.imageUrl?.trim()) {
+    const url = toDirectImgUrl(ad.imageUrl);
+    media = `<img class="ad-img" src="${url}" alt="${ad.title||''}" style="border-radius:16px 16px 0 0;" onerror="this.parentElement.querySelector('.ad-placeholder-fb').style.display='flex';this.style.display='none'"/>
+             <div class="ad-placeholder-fb" style="display:none;height:100px;align-items:center;justify-content:center;background:#E3F2FD;border-radius:16px 16px 0 0;font-size:2rem;">📢</div>`;
+  } else {
+    media = `<div style="height:80px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1565C0,#0D47A1);border-radius:16px 16px 0 0;font-size:2rem;">📢</div>`;
+  }
+  container.innerHTML = `
+    <div class="ad-card" style="margin-bottom:1rem;" onclick="tapAd('${ad.id}','${link.replace(/'/g,"\\'")}')">
+      <span class="ad-label">AD</span>
+      ${media}
+      <div class="ad-body" style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;">
+        <div style="flex:1;">
           <div class="ad-title">${ad.title||''}</div>
           ${ad.body?`<div class="ad-text">${ad.body}</div>`:''}
+          ${link?`<div style="font-size:0.75rem;color:var(--primary);font-weight:600;margin-top:0.3rem;">↗ Tap to open</div>`:''}
         </div>
-      </div>`;
-  } catch {}
+        <button onclick="event.stopPropagation();dismissAd()" style="background:none;border:none;font-size:1.1rem;color:var(--text-muted);cursor:pointer;padding:0;line-height:1;flex-shrink:0;">✕</button>
+      </div>
+    </div>`;
+  // Track impression
+  try { updateDoc(doc(db,'ads',ad.id),{
+    impressions: (ad.impressions||0)+1, lastSeen:serverTimestamp()
+  }); } catch {}
 }
+
+function loadDashboardAd() { startAdListener(); }
+
+window.dismissAd = function() {
+  _adDismissed = true;
+  const c = document.getElementById('dash-ad-container');
+  if(c) c.innerHTML = '';
+  // Show next ad after 30s
+  setTimeout(()=>{ _adDismissed=false; _adIndex++; renderNextAd(); }, 30000);
+};
+
 window.tapAd = async function(id, link) {
   try { const d=await getDoc(doc(db,'ads',id)); if(d.exists())
     await updateDoc(doc(db,'ads',id),{taps:(d.data().taps||0)+1,lastTap:serverTimestamp()}); } catch {}
