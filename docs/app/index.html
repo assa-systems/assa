@@ -19,6 +19,7 @@
       --text-primary: #1A237E; --text-secondary: #546E7A; --text-muted: #90A4AE;
       --bg: #F0F4FF; --card: #FFFFFF; --border: #E3E8F0;
       --safe-top: env(safe-area-inset-top,0px); --safe-bottom: env(safe-area-inset-bottom,0px);
+      --purple: #6A1B9A; --teal: #00897B;
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:var(--bg);color:#1a1a2e;-webkit-tap-highlight-color:transparent}
@@ -61,9 +62,11 @@
 
     /* LAYOUT */
     #screen-dashboard,#screen-request,#screen-myrequests,#screen-notifications,
-    #screen-lostfound,#screen-report,#screen-admin,#screen-driver{overflow-y:auto}
+    #screen-lostfound,#screen-report,#screen-admin,#screen-driver,
+    #screen-gamehub,#screen-puzzle,#screen-quiz,#screen-tap,
+    #screen-leaderboard{overflow-y:auto}
 
-    /* TOPBAR — matches Android app gradient */
+    /* TOPBAR */
     .topbar{background:linear-gradient(135deg,#1565C0 0%,#0D47A1 100%);padding:calc(var(--safe-top) + 1rem) 1.2rem 1.2rem;flex-shrink:0;border-radius:0 0 24px 24px}
     .topbar-row{display:flex;align-items:center;gap:0.75rem}
     .topbar-avatar{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:white;flex-shrink:0;border:2px solid rgba(255,255,255,0.3)}
@@ -77,16 +80,9 @@
     .status-dot.online{background:#69F0AE}
     .status-dot.offline{background:#FFD740}
     .status-text{color:white;font-size:0.75rem;font-weight:600}
-
-    /* OFFLINE BANNER */
     .offline-banner{background:var(--warning);padding:0.6rem 1rem;display:flex;align-items:center;gap:0.5rem;flex-shrink:0}
-    .offline-banner span{color:white;font-size:0.8rem;font-weight:600}
     .offline-banner.hidden{display:none}
-
-    /* CONTENT */
     .content{flex:1;overflow-y:auto;padding:1rem 1rem calc(var(--safe-bottom) + 5rem);-webkit-overflow-scrolling:touch}
-
-    /* CARDS — match Android blue gradient card */
     .card{background:var(--card);border-radius:18px;padding:1.2rem;box-shadow:0 2px 12px rgba(0,0,0,0.06);margin-bottom:1rem;border:1px solid var(--border)}
     .card-title{font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem}
 
@@ -123,7 +119,7 @@
     .back-btn{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
     .sub-title{color:white;font-size:1.05rem;font-weight:700}
 
-    /* REQUEST SCREEN — location chips like Android */
+    /* LOCATION CHIPS */
     .mode-badge{display:inline-flex;align-items:center;gap:0.4rem;border-radius:50px;padding:0.35rem 0.9rem;font-size:0.75rem;font-weight:600;margin-bottom:1rem}
     .mode-badge.online{background:var(--success-light);color:var(--success)}
     .mode-badge.offline{background:var(--warning-light);color:var(--warning)}
@@ -145,100 +141,73 @@
     .summary-key{color:var(--text-muted);min-width:80px;font-size:0.8rem}
     .summary-val{font-weight:600;color:var(--text-primary)}
 
-    /* LIST ITEMS */
-    .list-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;margin-bottom:0.75rem}
-    .list-item-row{display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem}
-    .list-item-title{font-size:0.9rem;font-weight:600;color:var(--text-primary)}
-    .list-item-sub{font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem}
-    .status-badge{display:inline-block;padding:0.25rem 0.7rem;border-radius:50px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
-    .badge-pending{background:#FFF8E1;color:#F57F17}
-    .badge-approved{background:#E8F5E9;color:#2E7D32}
-    .badge-rejected,.badge-cancelled{background:#FFEBEE;color:#C62828}
-    .badge-completed{background:#E3F2FD;color:#1565C0}
-    .badge-open{background:#FFF8E1;color:#F57F17}
-    .badge-resolved{background:#E8F5E9;color:#2E7D32}
+    /* FEEDBACK DIALOG STAGES */
+    .stage-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:8px;border-radius:12px;background:#F8FAFF}
+    .stage-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#E3F2FD;color:var(--primary);flex-shrink:0}
+    .stage-dot.done{background:var(--success);color:white}
+    .stage-dot.active{background:var(--primary);color:white;animation:pulse 1s infinite}
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+    .stage-label{font-size:13px;font-weight:700;color:var(--text-primary)}
+    .stage-sub{font-size:11px;color:var(--text-muted)}
+    .stage-check{width:18px;height:18px;border-radius:50%;background:var(--success);color:white;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
 
-    /* NOTIFICATIONS */
-    .notif-item{display:flex;gap:0.75rem;padding:1rem;background:var(--card);border-radius:14px;margin-bottom:0.6rem;border:1px solid var(--border);cursor:pointer;transition:background 0.15s}
-    .notif-item:active{background:#F0F4FF}
-    .notif-dot{width:9px;height:9px;border-radius:50%;background:var(--primary);margin-top:0.35rem;flex-shrink:0}
-    .notif-dot.read{background:transparent;border:1.5px solid var(--border)}
-    .notif-title{font-size:0.88rem;font-weight:600;color:var(--text-primary)}
-    .notif-body{font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem}
-    .notif-time{font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem}
-    .notif-unread{background:#F0F4FF}
+    /* GAME HUB */
+    .game-card{background:linear-gradient(135deg,var(--purple),#4A148C);border-radius:20px;padding:18px;margin-bottom:14px;cursor:pointer;transition:transform 0.15s}
+    .game-card:active{transform:scale(0.98)}
+    .game-card.quiz{background:linear-gradient(135deg,#1565C0,#0D47A1)}
+    .game-card.tap{background:linear-gradient(135deg,var(--teal),#00695C)}
+    .score-summary{background:#1A1F2E;border-radius:18px;padding:18px;margin-bottom:16px;border:1px solid #2A3040}
+    .score-number{font-size:32px;font-weight:900;color:white}
+    .budget-bar{height:6px;background:#2A3040;border-radius:3px;overflow:hidden;margin-top:8px}
+    .budget-fill{height:100%;background:var(--teal);border-radius:3px;width:0%}
+    .face-banner{background:linear-gradient(135deg,#FFD700,#FFA000);border-radius:16px;padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+    .face-avatar{width:56px;height:56px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:28px}
+    .face-name{font-size:16px;font-weight:800;color:#5D4037}
+    .face-score{font-size:12px;color:#8D6E63}
 
-    /* EMPTY STATE */
-    .empty-state{text-align:center;padding:3rem 1rem}
-    .empty-icon{font-size:3rem;margin-bottom:1rem}
-    .empty-title{font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.4rem}
-    .empty-sub{font-size:0.82rem;color:var(--text-muted)}
+    /* PUZZLE */
+    .puzzle-grid{display:grid;gap:2px;background:#1A237E;border-radius:12px;padding:2px}
+    .puzzle-tile{background:linear-gradient(135deg,var(--primary),var(--primary-dark));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;color:white;cursor:pointer;transition:all 0.1s}
+    .puzzle-tile:active{transform:scale(0.96)}
+    .puzzle-tile.empty{background:#0D1B6E;cursor:default}
 
-    /* ADMIN */
-    .admin-section-title{font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin:1rem 0 0.5rem;padding-left:0.2rem}
-    .admin-row{display:flex;align-items:center;gap:0.75rem;padding:0.9rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:0.5rem;cursor:pointer;transition:background 0.15s}
-    .admin-row:active{background:#F0F4FF}
-    .admin-row-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
-    .admin-row-label{flex:1;font-size:0.9rem;font-weight:600;color:var(--text-primary)}
-    .admin-row-arrow{color:var(--text-muted);font-size:1rem}
+    /* QUIZ */
+    .quiz-option{padding:16px;border:2px solid var(--border);border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all 0.15s}
+    .quiz-option.correct{background:#E8F5E9;border-color:var(--success);color:var(--success)}
+    .quiz-option.wrong{background:#FFEBEE;border-color:var(--danger);color:var(--danger)}
+    .quiz-timer{height:6px;background:#E0E0E0;border-radius:3px;overflow:hidden;margin-bottom:16px}
+    .quiz-timer-fill{height:100%;background:var(--primary);border-radius:3px;width:100%}
 
-    /* MODAL */
+    /* TAP CHALLENGE */
+    .tap-target{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.05s linear;box-shadow:0 0 20px rgba(0,137,123,0.6)}
+    .tap-target:active{transform:scale(0.95)}
+
+    /* LEADERBOARD */
+    .leaderboard-podium{display:flex;align-items:flex-end;justify-content:center;gap:16px;margin-bottom:24px}
+    .podium-item{text-align:center;flex:1}
+    .podium-avatar{width:64px;height:64px;border-radius:50%;background:gold;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px}
+    .podium-rank{font-size:12px;color:var(--text-muted)}
+    .podium-name{font-size:13px;font-weight:700}
+    .podium-score{font-size:11px;color:var(--success)}
+
+    /* LOST & FOUND IMAGE */
+    .lf-image{width:100%;height:160px;object-fit:cover;display:block}
+    .lf-placeholder{height:100px;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-size:2rem}
+
+    /* TOAST & MODAL */
+    .toast{position:fixed;bottom:calc(var(--safe-bottom) + 5rem);left:1rem;right:1rem;background:#1a1a2e;color:white;padding:0.9rem 1.2rem;border-radius:14px;font-size:0.85rem;font-weight:500;z-index:400;transform:translateY(20px);opacity:0;transition:all 0.25s;pointer-events:none}
+    .toast.show{transform:translateY(0);opacity:1}
+    .toast.success{background:var(--success)}
+    .toast.error{background:var(--danger)}
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s}
     .modal-overlay.show{opacity:1;pointer-events:all}
     .modal{background:white;border-radius:28px 28px 0 0;padding:1.5rem 1.5rem calc(var(--safe-bottom) + 1.5rem);width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1)}
     .modal-overlay.show .modal{transform:translateY(0)}
     .modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 1.2rem}
     .modal-title{font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:1rem}
-
-    /* DRIVER */
-    .driver-request-card{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:1.1rem;margin-bottom:0.75rem}
-    .driver-route{font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:0.5rem}
-    .driver-meta{display:flex;flex-wrap:wrap;gap:0.4rem}
-    .driver-chip{background:#F0F4FF;color:var(--primary);border-radius:50px;padding:0.2rem 0.65rem;font-size:0.72rem;font-weight:600}
-
-    /* LOADING */
-    .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.9);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
+    .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.95);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
     .loading-overlay.hidden{display:none}
     .loading-spinner{width:40px;height:40px;border:4px solid #E3F2FD;border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite}
-    .loading-text{font-size:0.85rem;color:var(--text-secondary);font-weight:500}
-
-    /* TOAST */
-    .toast{position:fixed;bottom:calc(var(--safe-bottom) + 5rem);left:1rem;right:1rem;background:#1a1a2e;color:white;padding:0.9rem 1.2rem;border-radius:14px;font-size:0.85rem;font-weight:500;z-index:400;transform:translateY(20px);opacity:0;transition:all 0.25s;pointer-events:none}
-    .toast.show{transform:translateY(0);opacity:1}
-    .toast.success{background:var(--success)}
-    .toast.error{background:var(--danger)}
-
-    /* SUCCESS DIALOG */
-    .success-dialog .modal{text-align:center;padding:2rem 1.5rem calc(var(--safe-bottom) + 2rem)}
-    .success-icon{font-size:4rem;margin-bottom:1rem}
-    .success-title{font-size:1.3rem;font-weight:800;color:var(--text-primary);margin-bottom:0.5rem}
-    .success-msg{font-size:0.88rem;color:var(--text-muted);margin-bottom:1.2rem;line-height:1.5}
-    .success-detail{background:#F0F4FF;border-radius:14px;padding:1rem;margin-bottom:1.2rem;text-align:left}
-    .success-detail-row{display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;border-bottom:1px solid var(--border);font-size:0.82rem}
-    .success-detail-row:last-child{border-bottom:none}
-    .success-detail-row .key{color:var(--text-muted)}
-    .success-detail-row .val{font-weight:600;color:var(--text-primary)}
-    textarea.form-input{resize:none;min-height:90px}
-    /* ADS */
-    .ad-card{background:white;border-radius:16px;overflow:hidden;margin-bottom:1rem;border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,0.06);cursor:pointer;position:relative}
-    .ad-label{position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.45);color:white;font-size:9px;font-weight:700;letter-spacing:1.5px;padding:2px 7px;border-radius:4px;border:1px solid rgba(255,255,255,0.3)}
-    .ad-img{width:100%;height:140px;object-fit:cover;display:block}
-    .ad-placeholder{width:100%;height:100px;display:flex;align-items:center;justify-content:center;font-size:2rem;background:#F0F4FF}
-    .ad-body{padding:0.75rem 0.9rem 0.9rem}
-    .ad-title{font-size:0.88rem;font-weight:700;color:var(--text-primary);margin-bottom:0.2rem}
-    .ad-text{font-size:0.75rem;color:var(--text-muted);line-height:1.4}
-    .ad-video{width:100%;max-height:180px;object-fit:cover;display:block;background:#000}
-    /* INTENT BANNER */
-    .intent-banner{background:linear-gradient(135deg,#1B5E20,#2E7D32);border-radius:18px;padding:1.2rem;margin-bottom:1rem;box-shadow:0 6px 20px rgba(27,94,32,0.4)}
-    .intent-badge{display:inline-flex;align-items:center;gap:0.35rem;background:rgba(255,255,255,0.2);border-radius:50px;padding:0.25rem 0.7rem;font-size:0.7rem;font-weight:700;color:white;letter-spacing:0.05em;margin-bottom:0.6rem}
-    .intent-dot{width:6px;height:6px;border-radius:50%;background:#69F0AE;animation:blink-g 1s infinite}
-    @keyframes blink-g{0%,100%{opacity:1}50%{opacity:0.3}}
-    .intent-row{font-size:0.8rem;color:rgba(255,255,255,0.85);margin-bottom:0.2rem}
-    .intent-row strong{color:white}
-    .intent-btns{display:flex;gap:0.6rem;margin-top:0.9rem}
-    .intent-reject{flex:1;padding:0.7rem;border:1px solid rgba(255,255,255,0.3);border-radius:12px;background:transparent;color:white;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit}
-    .intent-accept{flex:2;padding:0.7rem;border:none;border-radius:12px;background:white;color:#1B5E20;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit}
-    /* CONFIRM DIALOG */
     .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:1.5rem;opacity:0;pointer-events:none;transition:opacity 0.2s}
     .confirm-overlay.show{opacity:1;pointer-events:all}
     .confirm-box{background:white;border-radius:20px;padding:1.5rem;width:100%;max-width:340px;transform:scale(0.92);transition:transform 0.2s}
@@ -247,21 +216,19 @@
     .confirm-title{font-size:1rem;font-weight:800;color:var(--text-primary);text-align:center;margin-bottom:0.4rem}
     .confirm-msg{font-size:0.83rem;color:var(--text-muted);text-align:center;margin-bottom:1.2rem;line-height:1.5}
     .confirm-btns{display:flex;gap:0.6rem}
-    /* CHAT */
-    .chat-bubble{max-width:78%;padding:0.65rem 0.9rem;border-radius:18px;margin-bottom:0.5rem;font-size:0.88rem;line-height:1.45;word-break:break-word}
-    .chat-bubble.mine{background:var(--primary);color:white;border-radius:18px 18px 4px 18px;margin-left:auto;}
-    .chat-bubble.theirs{background:white;color:var(--text-primary);border:1px solid var(--border);border-radius:18px 18px 18px 4px;margin-right:auto;}
-    .chat-meta{font-size:0.65rem;opacity:0.7;margin-top:0.25rem}
-    .chat-sender{font-size:0.72rem;font-weight:700;margin-bottom:0.2rem;color:var(--primary)}
-    .chat-wrap{display:flex;flex-direction:column;margin-bottom:0.75rem}
-    .chat-wrap.mine{align-items:flex-end}
-    .chat-wrap.theirs{align-items:flex-start}
-    .chat-day-divider{text-align:center;font-size:0.72rem;color:var(--text-muted);margin:0.75rem 0;font-weight:600}
-
-    /* WHILE YOU WAIT TIP */
-    .wait-tip{background:#E8F5E9;border-radius:12px;padding:0.9rem;margin-bottom:1.2rem;text-align:left}
-    .wait-tip-title{font-size:0.8rem;font-weight:700;color:var(--success);margin-bottom:0.4rem;display:flex;align-items:center;gap:0.4rem}
-    .wait-tip p{font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.2rem;line-height:1.5}
+    .status-badge{display:inline-block;padding:0.25rem 0.7rem;border-radius:50px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
+    .badge-pending{background:#FFF8E1;color:#F57F17}
+    .badge-approved{background:#E8F5E9;color:#2E7D32}
+    .badge-rejected,.badge-cancelled{background:#FFEBEE;color:#C62828}
+    .badge-completed{background:#E3F2FD;color:#1565C0}
+    .empty-state{text-align:center;padding:3rem 1rem}
+    .empty-icon{font-size:3rem;margin-bottom:1rem}
+    .empty-title{font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.4rem}
+    .empty-sub{font-size:0.82rem;color:var(--text-muted)}
+    .list-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem;margin-bottom:0.75rem}
+    .list-item-row{display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem}
+    .list-item-title{font-size:0.9rem;font-weight:600;color:var(--text-primary)}
+    .list-item-sub{font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem}
   </style>
 </head>
 <body>
@@ -282,14 +249,8 @@
       <div class="auth-card">
         <div class="auth-title">Welcome back</div>
         <div class="error-msg" id="login-error"></div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input class="form-input" id="login-email" type="email" placeholder="your@email.com" autocomplete="email"/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password"/>
-        </div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="login-email" type="email" placeholder="your@email.com"/></div>
+        <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="login-password" type="password" placeholder="••••••••"/></div>
         <button class="btn btn-primary" id="login-btn">Sign In</button>
       </div>
       <div class="auth-switch">Don't have an account? <a href="#" id="go-register">Register</a></div>
@@ -304,25 +265,10 @@
       <div class="auth-card">
         <div class="auth-title">Get started</div>
         <div class="error-msg" id="register-error"></div>
-        <div class="form-group">
-          <label class="form-label">Full Name</label>
-          <input class="form-input" id="reg-name" type="text" placeholder="Your full name"/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input class="form-input" id="reg-email" type="email" placeholder="your@email.com" autocomplete="email"/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <input class="form-input" id="reg-password" type="password" placeholder="Min. 6 characters" autocomplete="new-password"/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Role</label>
-          <select class="form-input form-select" id="reg-role">
-            <option value="user">User</option>
-            <option value="driver">Driver</option>
-          </select>
-        </div>
+        <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="reg-name" type="text" placeholder="Your full name"/></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="reg-email" type="email" placeholder="your@email.com"/></div>
+        <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="reg-password" type="password" placeholder="Min. 6 characters"/></div>
+        <div class="form-group"><label class="form-label">Role</label><select class="form-input form-select" id="reg-role"><option value="user">User</option><option value="driver">Driver</option></select></div>
         <button class="btn btn-primary" id="register-btn">Create Account</button>
       </div>
       <div class="auth-switch">Already have an account? <a href="#" id="go-login">Sign In</a></div>
@@ -331,365 +277,85 @@
 
   <!-- DASHBOARD -->
   <div id="screen-dashboard" class="screen">
-    <div class="topbar">
-      <div class="topbar-row">
-        <div class="topbar-avatar" id="dash-avatar">?</div>
-        <div style="flex:1">
-          <div class="topbar-greeting" id="dash-greeting">Good morning</div>
-          <div class="topbar-name" id="dash-name">Loading...</div>
-        </div>
-        <button class="topbar-icon" onclick="showScreen('notifications')" style="position:relative;">
-          🔔<span class="notif-badge hidden" id="dash-notif-badge">0</span>
-        </button>
-        <button class="topbar-icon" onclick="showSettings()">⚙️</button>
-      </div>
-      <div class="status-pill">
-        <div class="status-dot online" id="dash-status-dot"></div>
-        <span class="status-text" id="dash-status-text">Checking...</span>
-      </div>
-    </div>
-    <div class="offline-banner hidden" id="dash-offline-banner">
-      <span>📵</span><span>Offline Mode — Campus WiFi only</span>
-    </div>
+    <div class="topbar"><div class="topbar-row"><div class="topbar-avatar" id="dash-avatar">?</div><div style="flex:1"><div class="topbar-greeting" id="dash-greeting">Good morning</div><div class="topbar-name" id="dash-name">Loading...</div></div><button class="topbar-icon" onclick="showScreen('notifications')" style="position:relative;">🔔<span class="notif-badge hidden" id="dash-notif-badge">0</span></button><button class="topbar-icon" onclick="showSettings()">⚙️</button></div><div class="status-pill"><div class="status-dot online" id="dash-status-dot"></div><span class="status-text" id="dash-status-text">Checking...</span></div></div>
+    <div class="offline-banner hidden" id="dash-offline-banner"><span>📵</span><span>Offline Mode — Campus WiFi only</span></div>
     <div class="content">
-      <div class="pickup-card">
-        <div class="pickup-icon">🪪</div>
-        <div>
-          <div class="pickup-label">Your Pickup ID</div>
-          <div class="pickup-id" id="dash-pickup-id">---</div>
-          <div class="pickup-hint">Show this to your driver</div>
-        </div>
-        <button class="pickup-copy" onclick="copyPickupId()">Copy</button>
-      </div>
+      <div class="pickup-card"><div class="pickup-icon">🪪</div><div><div class="pickup-label">Your Pickup ID</div><div class="pickup-id" id="dash-pickup-id">---</div><div class="pickup-hint">Show this to your driver</div></div><button class="pickup-copy" onclick="copyPickupId()">Copy</button></div>
       <div class="section-title">Quick Actions</div>
       <div class="quick-grid">
-        <div class="quick-btn" onclick="showScreen('request')">
-          <div class="icon icon-blue">🚐</div>
-          <div class="label">Request Ride</div>
-          <div class="sub">Book a shuttle</div>
-        </div>
-        <div class="quick-btn" onclick="showScreen('myrequests')">
-          <div class="icon icon-green">📋</div>
-          <div class="label">My Requests</div>
-          <div class="sub">View history</div>
-        </div>
-        <div class="quick-btn" onclick="showScreen('lostfound')">
-          <div class="icon icon-orange">🔍</div>
-          <div class="label">Lost & Found</div>
-          <div class="sub">Report items</div>
-        </div>
-        <div class="quick-btn" onclick="showScreen('report')">
-          <div class="icon icon-red">⚠️</div>
-          <div class="label">Report Issue</div>
-          <div class="sub">Contact admin</div>
-        </div>
+        <div class="quick-btn" onclick="showScreen('request')"><div class="icon icon-blue">🚐</div><div class="label">Request Ride</div><div class="sub">Book a shuttle</div></div>
+        <div class="quick-btn" onclick="showScreen('myrequests')"><div class="icon icon-green">📋</div><div class="label">My Requests</div><div class="sub">View history</div></div>
+        <div class="quick-btn" onclick="showScreen('gamehub')"><div class="icon icon-purple">🎮</div><div class="label">Game Hub</div><div class="sub">Play & win</div></div>
+        <div class="quick-btn" onclick="showScreen('lostfound')"><div class="icon icon-orange">🔍</div><div class="label">Lost & Found</div><div class="sub">Report items</div></div>
+        <div class="quick-btn" onclick="showScreen('report')"><div class="icon icon-red">⚠️</div><div class="label">Report Issue</div><div class="sub">Contact admin</div></div>
       </div>
       <div id="admin-quick-wrap"></div>
       <div id="dash-ad-container"></div>
     </div>
-    <div class="bottom-nav">
-      <button class="nav-item active" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
-      <button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button>
-      <button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button>
-      <button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button>
-    </div>
+    <div class="bottom-nav"><button class="nav-item active" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button><button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button><button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button><button class="nav-item" data-nav="gamehub" onclick="showScreen('gamehub')"><span class="nav-icon">🎮</span><span class="nav-label">Game</span></button><button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button></div>
   </div>
 
   <!-- REQUEST RIDE -->
   <div id="screen-request" class="screen">
-    <div class="sub-header">
-      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
-      <div class="sub-title">Book a Ride</div>
-      <div id="req-mode-chip" style="margin-left:auto;background:rgba(255,255,255,0.15);border-radius:50px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:600;color:white;">Checking...</div>
-    </div>
-    <div class="offline-banner hidden" id="req-offline-banner">
-      <span>📵</span><span>Campus WiFi Mode — Hostel pickups only</span>
-    </div>
-    <div class="content">
-      <div id="req-checking" style="text-align:center;padding:3rem 1rem;color:var(--text-muted);font-size:0.85rem;">
-        <div class="loading-spinner" style="margin:0 auto 1rem;"></div>Checking connection...
-      </div>
-      <div id="req-form" style="display:none;">
-        <div class="card">
-          <div class="card-title">Pickup Location</div>
-          <div class="location-chips" id="req-pickup-chips"></div>
-          <div id="req-offline-note" style="display:none;font-size:0.75rem;color:var(--warning);margin-top:0.3rem;">⚠ Campus WiFi: hostel pickups only</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Destination</div>
-          <div class="info-tip">💡 Select the zone closest to your destination. You can negotiate your exact drop-off point with the driver on arrival.</div>
-          <div class="location-chips" id="req-dest-chips"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">Ride Type</div>
-          <div class="ride-type-row">
-            <button class="ride-type-btn active" id="rt-shared" onclick="setRideType('Shared')">
-              <span style="font-size:1.3rem;">👥</span>Shared Ride<span style="font-size:0.72rem;opacity:0.7;">1–4 passengers</span>
-            </button>
-            <button class="ride-type-btn" id="rt-chartered" onclick="setRideType('Chartered')">
-              <span style="font-size:1.3rem;">🚌</span>Chartered<span style="font-size:0.72rem;opacity:0.7;">Private shuttle</span>
-            </button>
-          </div>
-        </div>
-        <div class="card" id="pax-card">
-          <div class="card-title">Number of Passengers</div>
-          <div class="info-tip" style="margin-bottom:0.75rem;">👥 Others at your stop? Select your total group size — one shuttle picks you all up together.</div>
-          <div class="pax-row" id="pax-row">
-            <div onclick="setPax(1)" class="pax-circle active" data-pax="1" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">1<span class="pax-label">Just me</span></div>
-            <div onclick="setPax(2)" class="pax-circle" data-pax="2" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">2<span class="pax-label"></span></div>
-            <div onclick="setPax(3)" class="pax-circle" data-pax="3" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">3<span class="pax-label"></span></div>
-            <div onclick="setPax(4)" class="pax-circle" data-pax="4" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">4<span class="pax-label"></span></div>
-          </div>
-        </div>
-        <div class="summary-card hidden" id="req-summary">
-          <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary);margin-bottom:0.75rem;">Request Summary</div>
-          <div class="summary-row"><span class="summary-key">📍 From</span><span class="summary-val" id="sum-from">-</span></div>
-          <div class="summary-row"><span class="summary-key">🏁 To</span><span class="summary-val" id="sum-to">-</span></div>
-          <div class="summary-row"><span class="summary-key">🚐 Type</span><span class="summary-val" id="sum-type">-</span></div>
-        </div>
-        <button class="btn btn-primary" id="req-submit-btn" onclick="submitRequest()" style="margin-bottom:0.75rem;">
-          ➤ Send Request
-        </button>
-        <button class="btn btn-cancel" onclick="showScreen('dashboard')">Cancel</button>
-      </div>
-    </div>
-    <div class="bottom-nav">
-      <button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
-      <button class="nav-item active" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button>
-      <button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button>
-      <button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button>
-    </div>
+    <div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title">Book a Ride</div><div id="req-mode-chip" style="margin-left:auto;background:rgba(255,255,255,0.15);border-radius:50px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:600;color:white;">Checking...</div></div>
+    <div class="offline-banner hidden" id="req-offline-banner"><span>📵</span><span>Campus WiFi Mode — Hostel pickups only</span></div>
+    <div class="content"><div id="req-checking" style="text-align:center;padding:3rem 1rem;"><div class="loading-spinner" style="margin:0 auto 1rem;"></div>Checking connection...</div><div id="req-form" style="display:none;"><div class="card"><div class="card-title">Pickup Location</div><div class="location-chips" id="req-pickup-chips"></div><div id="req-offline-note" style="display:none;font-size:0.75rem;color:var(--warning);margin-top:0.3rem;">⚠ Campus WiFi: hostel pickups only</div></div><div class="card"><div class="card-title">Destination</div><div class="info-tip">💡 Select the zone closest to your destination. You can negotiate your exact drop-off point with the driver on arrival.</div><div class="location-chips" id="req-dest-chips"></div></div><div class="card"><div class="card-title">Ride Type</div><div class="ride-type-row"><button class="ride-type-btn active" id="rt-shared" onclick="setRideType('Shared')"><span style="font-size:1.3rem;">👥</span>Shared Ride<span style="font-size:0.72rem;opacity:0.7;">1–4 passengers</span></button><button class="ride-type-btn" id="rt-chartered" onclick="setRideType('Chartered')"><span style="font-size:1.3rem;">🚌</span>Chartered<span style="font-size:0.72rem;opacity:0.7;">Private shuttle</span></button></div></div><div class="card" id="pax-card"><div class="card-title">Number of Passengers</div><div class="info-tip" style="margin-bottom:0.75rem;">👥 Others at your stop? Select your total group size — one shuttle picks you all up together.</div><div class="pax-row" id="pax-row"><div onclick="setPax(1)" class="pax-circle active" data-pax="1" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">1<span class="pax-label">Just me</span></div><div onclick="setPax(2)" class="pax-circle" data-pax="2" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">2<span class="pax-label"></span></div><div onclick="setPax(3)" class="pax-circle" data-pax="3" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">3<span class="pax-label"></span></div><div onclick="setPax(4)" class="pax-circle" data-pax="4" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">4<span class="pax-label"></span></div></div></div><div class="summary-card hidden" id="req-summary"><div style="font-size:0.85rem;font-weight:700;margin-bottom:0.75rem;">Request Summary</div><div class="summary-row"><span class="summary-key">📍 From</span><span class="summary-val" id="sum-from">-</span></div><div class="summary-row"><span class="summary-key">🏁 To</span><span class="summary-val" id="sum-to">-</span></div><div class="summary-row"><span class="summary-key">🚐 Type</span><span class="summary-val" id="sum-type">-</span></div></div><button class="btn btn-primary" id="req-submit-btn" onclick="submitRequest()" style="margin-bottom:0.75rem;">➤ Send Request</button><button class="btn btn-cancel" onclick="showScreen('dashboard')">Cancel</button></div></div>
+    <div class="bottom-nav"><button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button><button class="nav-item active" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button><button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button><button class="nav-item" data-nav="gamehub" onclick="showScreen('gamehub')"><span class="nav-icon">🎮</span><span class="nav-label">Game</span></button><button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button></div>
   </div>
+
+  <!-- FEEDBACK DIALOG MODAL -->
+  <div class="modal-overlay" id="modal-feedback" onclick="closeModal('feedback')"><div class="modal" onclick="event.stopPropagation()"><div class="modal-handle"></div><div id="feedback-content"></div><button class="btn btn-primary" onclick="closeModal('feedback');showScreen('dashboard')" style="margin-top:16px;">Done</button></div></div>
 
   <!-- MY REQUESTS -->
-  <div id="screen-myrequests" class="screen">
-    <div class="sub-header">
-      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
-      <div class="sub-title">My Requests</div>
-    </div>
-    <div class="content" id="myrequests-content">
-      <div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>
-    </div>
-    <div class="bottom-nav">
-      <button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
-      <button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button>
-      <button class="nav-item active" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button>
-      <button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button>
-    </div>
-  </div>
+  <div id="screen-myrequests" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title">My Requests</div></div><div class="content" id="myrequests-content"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div><div class="bottom-nav"><button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button><button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button><button class="nav-item active" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button><button class="nav-item" data-nav="gamehub" onclick="showScreen('gamehub')"><span class="nav-icon">🎮</span><span class="nav-label">Game</span></button><button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button></div></div>
 
-  <!-- NOTIFICATIONS -->
-  <div id="screen-notifications" class="screen">
-    <div class="sub-header">
-      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
-      <div class="sub-title" id="notif-screen-title">Notifications</div>
-      <button onclick="markAllRead()" id="mark-read-btn" style="margin-left:auto;background:rgba(255,255,255,0.15);border:none;color:white;font-size:0.75rem;font-weight:600;cursor:pointer;border-radius:50px;padding:0.3rem 0.75rem;">Mark all read</button>
-    </div>
-    <!-- Tab switcher -->
-    <div style="display:flex;background:white;border-bottom:1px solid var(--border);flex-shrink:0;">
-      <button id="tab-notifs" onclick="switchNotifTab('notifs')" style="flex:1;padding:0.75rem;border:none;background:none;font-family:inherit;font-size:0.85rem;font-weight:700;color:var(--primary);border-bottom:2.5px solid var(--primary);cursor:pointer;">🔔 Alerts</button>
-      <button id="tab-chat" onclick="switchNotifTab('chat')" style="flex:1;padding:0.75rem;border:none;background:none;font-family:inherit;font-size:0.85rem;font-weight:600;color:var(--text-muted);border-bottom:2.5px solid transparent;cursor:pointer;">💬 Chat</button>
-    </div>
-    <div class="content" id="notif-content">
-      <div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>
-    </div>
-    <!-- CHAT PANEL -->
-    <div id="chat-panel" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
-      <div id="chat-messages" style="flex:1;overflow-y:auto;padding:1rem 1rem 0.5rem;-webkit-overflow-scrolling:touch;"></div>
-      <div style="padding:0.75rem 1rem calc(var(--safe-bottom) + 4.5rem);background:white;border-top:1px solid var(--border);display:flex;gap:0.5rem;flex-shrink:0;">
-        <input id="chat-input" class="form-input" type="text" placeholder="Type a message..." style="flex:1;padding:0.65rem 1rem;font-size:0.9rem;"/>
-        <button onclick="sendChatMessage()" style="background:var(--primary);border:none;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;flex-shrink:0;">➤</button>
-      </div>
-    </div>
-    <div class="bottom-nav">
-      <button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
-      <button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button>
-      <button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button>
-      <button class="nav-item active" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button>
-    </div>
-  </div>
+  <!-- GAME HUB -->
+  <div id="screen-gamehub" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title">Game Hub</div><div style="font-size:24px;">🎮</div></div><div class="content" id="gamehub-content"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div><div class="bottom-nav"><button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button><button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button><button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button><button class="nav-item active" data-nav="gamehub" onclick="showScreen('gamehub')"><span class="nav-icon">🎮</span><span class="nav-label">Game</span></button><button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button></div></div>
+
+  <!-- PUZZLE SCREEN -->
+  <div id="screen-puzzle" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('gamehub')">←</button><div class="sub-title">Puzzle Game</div><button class="topbar-icon" onclick="showLeaderboard('puzzle')" style="margin-left:auto;">🏆</button></div><div class="content" id="puzzle-content"></div></div>
+
+  <!-- QUIZ SCREEN -->
+  <div id="screen-quiz" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('gamehub')">←</button><div class="sub-title">Quiz Game</div><button class="topbar-icon" onclick="showLeaderboard('quiz')" style="margin-left:auto;">🏆</button></div><div class="content" id="quiz-content"></div></div>
+
+  <!-- TAP CHALLENGE -->
+  <div id="screen-tap" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('gamehub')">←</button><div class="sub-title">Tap Challenge</div><button class="topbar-icon" onclick="showLeaderboard('tap')" style="margin-left:auto;">🏆</button></div><div class="content" id="tap-content" style="position:relative;min-height:500px;"></div></div>
+
+  <!-- LEADERBOARD -->
+  <div id="screen-leaderboard" class="screen"><div class="sub-header"><button class="back-btn" onclick="goBackFromLeaderboard()">←</button><div class="sub-title" id="leaderboard-title">Leaderboard</div></div><div class="content" id="leaderboard-content"></div></div>
 
   <!-- LOST & FOUND -->
-  <div id="screen-lostfound" class="screen">
-    <div class="sub-header">
-      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
-      <div class="sub-title">Lost & Found</div>
-    </div>
-    <div class="content">
-      <div style="display:flex;gap:0.75rem;margin-bottom:1rem;">
-        <button class="btn btn-primary" style="flex:1;" onclick="showLostFoundForm('lost')">📦 Report Lost</button>
-        <button class="btn" style="flex:1;background:#E8F5E9;color:var(--success);border:1px solid #A5D6A7;" onclick="showLostFoundForm('found')">✅ Report Found</button>
-      </div>
-      <div class="section-title">Recent Reports</div>
-      <div id="lostfound-list"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div>
-    </div>
-  </div>
+  <div id="screen-lostfound" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title">Lost & Found</div></div><div class="content"><div style="display:flex;gap:0.75rem;margin-bottom:1rem;"><button class="btn btn-primary" style="flex:1;" onclick="showLostFoundForm('lost')">📦 Report Lost</button><button class="btn" style="flex:1;background:#E8F5E9;color:var(--success);border:1px solid #A5D6A7;" onclick="showLostFoundForm('found')">✅ Report Found</button></div><div class="section-title">Recent Reports</div><div id="lostfound-list"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div></div></div>
 
   <!-- REPORT ISSUE -->
-  <div id="screen-report" class="screen">
-    <div class="sub-header">
-      <button class="back-btn" onclick="showScreen('dashboard')">←</button>
-      <div class="sub-title">Report an Issue</div>
-    </div>
-    <div class="content">
-      <div class="card">
-        <div class="card-title">Subject</div>
-        <input class="form-input" id="report-subject" type="text" placeholder="Brief description of issue"/>
-      </div>
-      <div class="card">
-        <div class="card-title">Message</div>
-        <textarea class="form-input" id="report-message" placeholder="Describe the issue in detail..."></textarea>
-      </div>
-      <button class="btn btn-primary" onclick="submitReport()" style="margin-bottom:1rem;">Send Report</button>
-      <div class="section-title" style="margin-top:0.5rem;">My Previous Reports</div>
-      <div id="reports-list"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div>
-    </div>
-  </div>
+  <div id="screen-report" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title">Report an Issue</div></div><div class="content"><div class="card"><div class="card-title">Subject</div><input class="form-input" id="report-subject" type="text" placeholder="Brief description of issue"/></div><div class="card"><div class="card-title">Message</div><textarea class="form-input" id="report-message" placeholder="Describe the issue in detail..."></textarea></div><button class="btn btn-primary" onclick="submitReport()" style="margin-bottom:1rem;">Send Report</button><div class="section-title" style="margin-top:0.5rem;">My Previous Reports</div><div id="reports-list"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div></div></div>
+
+  <!-- NOTIFICATIONS + CHAT -->
+  <div id="screen-notifications" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title" id="notif-screen-title">Notifications</div><button onclick="markAllRead()" id="mark-read-btn" style="margin-left:auto;background:rgba(255,255,255,0.15);border:none;color:white;font-size:0.75rem;font-weight:600;cursor:pointer;border-radius:50px;padding:0.3rem 0.75rem;">Mark all read</button></div><div style="display:flex;background:white;border-bottom:1px solid var(--border);flex-shrink:0;"><button id="tab-notifs" onclick="switchNotifTab('notifs')" style="flex:1;padding:0.75rem;border:none;background:none;font-family:inherit;font-size:0.85rem;font-weight:700;color:var(--primary);border-bottom:2.5px solid var(--primary);cursor:pointer;">🔔 Alerts</button><button id="tab-chat" onclick="switchNotifTab('chat')" style="flex:1;padding:0.75rem;border:none;background:none;font-family:inherit;font-size:0.85rem;font-weight:600;color:var(--text-muted);border-bottom:2.5px solid transparent;cursor:pointer;">💬 Chat</button></div><div class="content" id="notif-content"></div><div id="chat-panel" style="display:none;flex:1;flex-direction:column;overflow:hidden;"><div id="chat-messages" style="flex:1;overflow-y:auto;padding:1rem;"></div><div style="padding:0.75rem 1rem;background:white;border-top:1px solid var(--border);display:flex;gap:0.5rem;"><input id="chat-input" class="form-input" type="text" placeholder="Type a message..." style="flex:1;"/><button onclick="sendChatMessage()" style="background:var(--primary);border:none;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;">➤</button></div></div><div class="bottom-nav"><button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button><button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button><button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button><button class="nav-item" data-nav="gamehub" onclick="showScreen('gamehub')"><span class="nav-icon">🎮</span><span class="nav-label">Game</span></button><button class="nav-item active" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button></div></div>
 
   <!-- ADMIN PANEL -->
-  <div id="screen-admin" class="screen">
-    <div class="topbar">
-      <div class="topbar-row">
-        <div class="topbar-avatar" id="admin-avatar">A</div>
-        <div style="flex:1"><div class="topbar-greeting">Admin Panel</div><div class="topbar-name" id="admin-name">Admin</div></div>
-        <button class="topbar-icon" onclick="logout()">🚪</button>
-      </div>
-    </div>
-    <div class="content">
-      <div class="admin-section-title">Manage</div>
-      <div class="admin-row" onclick="adminShowBookings()"><div class="admin-row-icon icon-blue">📋</div><span class="admin-row-label">All Ride Requests</span><span class="admin-row-arrow">›</span></div>
-      <div class="admin-row" onclick="adminShowUsers()"><div class="admin-row-icon icon-green">👥</div><span class="admin-row-label">Users</span><span class="admin-row-arrow">›</span></div>
-      <div class="admin-row" onclick="adminShowDrivers()"><div class="admin-row-icon icon-orange">🚐</div><span class="admin-row-label">Drivers</span><span class="admin-row-arrow">›</span></div>
-      <div class="admin-row" onclick="adminShowLostFound()"><div class="admin-row-icon icon-purple">🔍</div><span class="admin-row-label">Lost & Found</span><span class="admin-row-arrow">›</span></div>
-      <div class="admin-row" onclick="adminShowComplaints()"><div class="admin-row-icon icon-red">⚠️</div><span class="admin-row-label">Complaints</span><span class="admin-row-arrow">›</span></div>
-      <div class="admin-row" onclick="adminShowChats()"><div class="admin-row-icon icon-blue">💬</div><span class="admin-row-label">User Chats</span><span class="admin-row-arrow">›</span></div>
-      <div class="admin-row" onclick="adminSendNotification()"><div class="admin-row-icon icon-teal">📢</div><span class="admin-row-label">Send Notification</span><span class="admin-row-arrow">›</span></div>
-      <div id="admin-content"></div>
-    </div>
-  </div>
+  <div id="screen-admin" class="screen"><div class="topbar"><div class="topbar-row"><div class="topbar-avatar" id="admin-avatar">A</div><div style="flex:1"><div class="topbar-greeting">Admin Panel</div><div class="topbar-name" id="admin-name">Admin</div></div><button class="topbar-icon" onclick="logout()">🚪</button></div></div><div class="content"><div class="admin-section-title">Manage</div><div class="admin-row" onclick="adminShowBookings()"><div class="admin-row-icon icon-blue">📋</div><span class="admin-row-label">All Ride Requests</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminShowUsers()"><div class="admin-row-icon icon-green">👥</div><span class="admin-row-label">Users</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminShowDrivers()"><div class="admin-row-icon icon-orange">🚐</div><span class="admin-row-label">Drivers</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminShowLostFound()"><div class="admin-row-icon icon-purple">🔍</div><span class="admin-row-label">Lost & Found</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminShowComplaints()"><div class="admin-row-icon icon-red">⚠️</div><span class="admin-row-label">Complaints</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminShowChats()"><div class="admin-row-icon icon-blue">💬</div><span class="admin-row-label">User Chats</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminSendNotification()"><div class="admin-row-icon icon-teal">📢</div><span class="admin-row-label">Send Notification</span><span class="admin-row-arrow">›</span></div><div id="admin-content"></div></div></div>
 
   <!-- DRIVER PANEL -->
-  <div id="screen-driver" class="screen">
-    <div class="topbar">
-      <div class="topbar-row">
-        <div class="topbar-avatar" id="driver-avatar">D</div>
-        <div style="flex:1"><div class="topbar-greeting">Driver Dashboard</div><div class="topbar-name" id="driver-name">Driver</div></div>
-        <button class="topbar-icon" onclick="loadDriverRequests()" title="Refresh">🔄</button>
-        <button class="topbar-icon" onclick="logout()">🚪</button>
-      </div>
-    </div>
-    <div class="content">
-      <div id="driver-intents-container"></div>
-      <div class="section-title">Assigned Requests</div>
-      <div id="driver-requests"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div>
-    </div>
-  </div>
+  <div id="screen-driver" class="screen"><div class="topbar"><div class="topbar-row"><div class="topbar-avatar" id="driver-avatar">D</div><div style="flex:1"><div class="topbar-greeting">Driver Dashboard</div><div class="topbar-name" id="driver-name">Driver</div></div><button class="topbar-icon" onclick="loadDriverRequests()">🔄</button><button class="topbar-icon" onclick="logout()">🚪</button></div></div><div class="content"><div id="driver-intents-container"></div><div class="section-title">Assigned Requests</div><div id="driver-requests"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div></div></div>
 
   <!-- MODALS -->
-  <div class="modal-overlay" id="modal-settings" onclick="closeModal('settings')">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-handle"></div>
-      <div class="modal-title">Settings</div>
-      <div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#F0F4FF;border-radius:14px;margin-bottom:1rem;">
-        <div style="width:54px;height:54px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.3rem;color:white;" id="settings-avatar">?</div>
-        <div>
-          <div style="font-weight:700;color:var(--text-primary);" id="settings-name">-</div>
-          <div style="font-size:0.78rem;color:var(--text-muted);" id="settings-email">-</div>
-          <div style="font-size:0.72rem;color:var(--primary);font-weight:700;margin-top:0.2rem;" id="settings-role">USER</div>
-        </div>
-      </div>
-      <div style="background:#F0F4FF;border-radius:14px;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Pickup ID</div>
-          <div style="font-size:1.8rem;font-weight:800;color:var(--primary);" id="settings-pickup-id">---</div>
-        </div>
-        <button onclick="copyPickupId()" style="background:var(--primary);color:white;border:none;border-radius:10px;padding:0.5rem 1rem;font-size:0.8rem;font-weight:700;cursor:pointer;">Copy</button>
-      </div>
-      <button class="btn btn-danger" onclick="logout()">🚪 Sign Out</button>
-    </div>
-  </div>
+  <div class="modal-overlay" id="modal-settings" onclick="closeModal('settings')"><div class="modal" onclick="event.stopPropagation()"><div class="modal-handle"></div><div class="modal-title">Settings</div><div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#F0F4FF;border-radius:14px;margin-bottom:1rem;"><div style="width:54px;height:54px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.3rem;color:white;" id="settings-avatar">?</div><div><div style="font-weight:700;color:var(--text-primary);" id="settings-name">-</div><div style="font-size:0.78rem;color:var(--text-muted);" id="settings-email">-</div><div style="font-size:0.72rem;color:var(--primary);font-weight:700;margin-top:0.2rem;" id="settings-role">USER</div></div></div><div style="background:#F0F4FF;border-radius:14px;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Pickup ID</div><div style="font-size:1.8rem;font-weight:800;color:var(--primary);" id="settings-pickup-id">---</div></div><button onclick="copyPickupId()" style="background:var(--primary);color:white;border:none;border-radius:10px;padding:0.5rem 1rem;font-size:0.8rem;font-weight:700;cursor:pointer;">Copy</button></div><button class="btn btn-danger" onclick="logout()">🚪 Sign Out</button></div></div>
 
-  <!-- Success Dialog -->
-  <div class="modal-overlay success-dialog" id="modal-success" onclick="closeModal('success')">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-handle"></div>
-      <div class="success-icon">✅</div>
-      <div class="success-title" id="success-title">Request Sent!</div>
-      <div class="success-msg" id="success-msg">A driver will pick you up shortly.</div>
-      <div class="success-detail" id="success-detail"></div>
-      <div class="wait-tip">
-        <div class="wait-tip-title">💡 While you wait...</div>
-        <p>🎮 Try our puzzle game and climb the leaderboard!</p>
-        <p>🔍 Check Lost & Found — someone may have found something of yours!</p>
-      </div>
-      <button class="btn btn-primary" style="margin-bottom:0.75rem;" onclick="closeModal('success');showScreen('myrequests')">View My Requests</button>
-      <button class="btn btn-secondary" onclick="closeModal('success');showScreen('dashboard')">Back to Home</button>
-    </div>
-  </div>
+  <div class="modal-overlay" id="modal-lostfound" onclick="closeModal('lostfound')"><div class="modal" onclick="event.stopPropagation()"><div class="modal-handle"></div><div class="modal-title" id="lf-modal-title">Report Lost Item</div><div class="form-group"><label class="form-label">Item Name</label><input class="form-input" id="lf-item" type="text" placeholder="e.g. Black backpack"/></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="lf-desc" placeholder="Describe the item..."></textarea></div><div class="form-group"><label class="form-label">Location</label><input class="form-input" id="lf-location" type="text" placeholder="Where was it lost/found?"/></div><div class="form-group"><label class="form-label">Photo URL</label><input class="form-input" id="lf-image" type="url" placeholder="Google Drive image link"/><div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">Google Drive → Share → Anyone with link → Copy link → Paste here</div></div><button class="btn btn-primary" onclick="submitLostFound()">Submit Report</button></div></div>
 
-  <!-- Lost & Found Form -->
-  <div class="modal-overlay" id="modal-lostfound" onclick="closeModal('lostfound')">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-handle"></div>
-      <div class="modal-title" id="lf-modal-title">Report Lost Item</div>
-      <div class="form-group"><label class="form-label">Item Name</label><input class="form-input" id="lf-item" type="text" placeholder="e.g. Black backpack"/></div>
-      <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="lf-desc" placeholder="Describe the item..."></textarea></div>
-      <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="lf-location" type="text" placeholder="Where was it lost/found?"/></div>
-      <div class="form-group">
-        <label class="form-label">Photo (optional)</label>
-        <input class="form-input" id="lf-image" type="url" placeholder="Google Drive image link"/>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">Google Drive → Share → Anyone with link → Copy link → Paste here</div>
-      </div>
-      <button class="btn btn-primary" onclick="submitLostFound()">Submit Report</button>
-    </div>
-  </div>
+  <div class="modal-overlay" id="modal-send-notif" onclick="closeModal('send-notif')"><div class="modal" onclick="event.stopPropagation()"><div class="modal-handle"></div><div class="modal-title">Send Notification</div><div class="form-group"><label class="form-label">Title</label><input class="form-input" id="sn-title" type="text" placeholder="Notification title"/></div><div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="sn-body" placeholder="Message body..."></textarea></div><div class="form-group"><label class="form-label">Send To</label><select class="form-input form-select" id="sn-target"><option value="all">All Users</option><option value="driver">Drivers Only</option></select></div><button class="btn btn-primary" onclick="sendAdminNotification()">Send</button></div></div>
 
-  <!-- Admin Send Notification -->
-  <div class="modal-overlay" id="modal-send-notif" onclick="closeModal('send-notif')">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-handle"></div>
-      <div class="modal-title">Send Notification</div>
-      <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="sn-title" type="text" placeholder="Notification title"/></div>
-      <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="sn-body" placeholder="Message body..."></textarea></div>
-      <div class="form-group">
-        <label class="form-label">Send To</label>
-        <select class="form-input form-select" id="sn-target">
-          <option value="all">All Users</option>
-          <option value="driver">Drivers Only</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" onclick="sendAdminNotification()">Send</button>
-    </div>
-  </div>
-
-  <!-- Loading -->
-  <div class="loading-overlay hidden" id="loading-overlay">
-    <div class="loading-spinner"></div>
-    <div class="loading-text" id="loading-text">Please wait...</div>
-  </div>
-
-  <!-- Toast -->
+  <div class="loading-overlay hidden" id="loading-overlay"><div class="loading-spinner"></div><div class="loading-text" id="loading-text">Please wait...</div></div>
   <div class="toast" id="toast"></div>
-  <!-- Confirm Dialog -->
-  <div class="confirm-overlay" id="confirm-overlay">
-    <div class="confirm-box">
-      <div class="confirm-icon" id="confirm-icon">❓</div>
-      <div class="confirm-title" id="confirm-title">Are you sure?</div>
-      <div class="confirm-msg" id="confirm-msg"></div>
-      <div class="confirm-btns">
-        <button class="btn btn-secondary" style="flex:1;" id="confirm-cancel-btn">Cancel</button>
-        <button class="btn btn-primary" style="flex:1;" id="confirm-ok-btn">Confirm</button>
-      </div>
-    </div>
-  </div>
+  <div class="confirm-overlay" id="confirm-overlay"><div class="confirm-box"><div class="confirm-icon" id="confirm-icon">❓</div><div class="confirm-title" id="confirm-title">Are you sure?</div><div class="confirm-msg" id="confirm-msg"></div><div class="confirm-btns"><button class="btn btn-secondary" style="flex:1;" id="confirm-cancel-btn">Cancel</button><button class="btn btn-primary" style="flex:1;" id="confirm-ok-btn">Confirm</button></div></div></div>
 </div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, collection,
-  query, where, onSnapshot, serverTimestamp, getDocs, writeBatch }
+import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, onSnapshot, serverTimestamp, getDocs, writeBatch, orderBy, limit }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -701,921 +367,150 @@ const firebaseConfig = {
   appId: "1:419651451775:ios:166e02856ad950fd15b84a"
 };
 const fbApp = initializeApp(firebaseConfig);
-const auth  = getAuth(fbApp);
-const db    = getFirestore(fbApp);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
 
-// ── CONSTANTS ─────────────────────────────────────────────────────────
-const ALL_LOCATIONS = [
-  'AFIT Gates','45x1 Hostel','Old Girls Hostel','TETFUND Hostel',
-  'BK','Boys Hostel','Alfa Hall','EED','AFIT Mosque',
-  'New Mechanical','Centre of Entrepreneurship','Hall A'
-];
+// CONSTANTS
+const ALL_LOCATIONS = ['AFIT Gates','45x1 Hostel','Old Girls Hostel','TETFUND Hostel','BK','Boys Hostel','Alfa Hall','EED','AFIT Mosque','New Mechanical','Centre of Entrepreneurship','Hall A'];
 const OFFLINE_PICKUPS = ['45x1 Hostel','Old Girls Hostel','Boys Hostel'];
-const LOCATION_CODES = {
-  'AFIT Gates':1,'45x1 Hostel':2,'Old Girls Hostel':3,'TETFUND Hostel':4,
-  'BK':5,'Boys Hostel':6,'Alfa Hall':7,'EED':8,'AFIT Mosque':9,
-  'New Mechanical':10,'Centre of Entrepreneurship':11,'Hall A':12
-};
-const ESP32_IP = '192.168.4.1';
+const LOCATION_CODES = {'AFIT Gates':1,'45x1 Hostel':2,'Old Girls Hostel':3,'TETFUND Hostel':4,'BK':5,'Boys Hostel':6,'Alfa Hall':7,'EED':8,'AFIT Mosque':9,'New Mechanical':10,'Centre of Entrepreneurship':11,'Hall A':12};
 
-// ── STATE ─────────────────────────────────────────────────────────────
 let currentUser = null, userData = null;
 let isOnline = true, rideType = 'Shared', paxCount = 1, lfType = 'lost';
 let selectedPickup = null, selectedDest = null;
-let notifUnsub = null;
+let notifUnsub = null, activeFeedbackListener = null;
+let puzzleGame = null, quizQuestions = [], tapInterval = null;
 
-// ── HELPERS ───────────────────────────────────────────────────────────
-const getInitials = n => n ? n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
-const getGreeting = () => { const h=new Date().getHours(); return h<12?'Good morning':h<17?'Good afternoon':'Good evening'; };
-function generatePickupId(uid) {
-  const letters='ABCDEFGHJKLMNPQRSTUVWXYZ';
-  let hash=0; for(let i=0;i<uid.length;i++) hash=(hash*31+uid.charCodeAt(i))|0;
-  return letters[Math.abs(hash)%letters.length] + String(Math.abs(hash)%100).padStart(2,'0');
-}
-function formatTime(ts) {
-  if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts);
-  return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-}
-function statusBadge(s) {
-  const m={0:['Pending','badge-pending'],1:['Approved','badge-approved'],2:['In Progress','badge-approved'],
-    3:['Completed','badge-completed'],4:['Rejected','badge-rejected'],5:['Cancelled','badge-cancelled'],
-    'open':['Open','badge-open'],'in_progress':['In Progress','badge-pending'],'resolved':['Resolved','badge-resolved'],
-    'lost':['Lost','badge-pending'],'found':['Found','badge-approved']};
-  const [l,c]=m[s]??[String(s),'badge-pending'];
-  return `<span class="status-badge ${c}">${l}</span>`;
-}
+// HELPERS
+function getInitials(n) { return n ? n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?'; }
+function getGreeting() { const h=new Date().getHours(); return h<12?'Good morning':h<17?'Good afternoon':'Good evening'; }
+function generatePickupId(uid) { const letters='ABCDEFGHJKLMNPQRSTUVWXYZ'; let hash=0; for(let i=0;i<uid.length;i++) hash=(hash*31+uid.charCodeAt(i))|0; return letters[Math.abs(hash)%letters.length] + String(Math.abs(hash)%100).padStart(2,'0'); }
+function formatTime(ts) { if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+function statusBadge(s) { const m={0:['Pending','badge-pending'],1:['Assigned','badge-approved'],2:['En Route','badge-approved'],3:['Arrived','badge-completed'],4:['Completed','badge-completed'],5:['Cancelled','badge-cancelled'],'open':['Open','badge-pending'],'resolved':['Resolved','badge-approved'],'lost':['Lost','badge-pending'],'found':['Found','badge-approved']}; const [l,c]=m[s]??[String(s),'badge-pending']; return `<span class="status-badge ${c}">${l}</span>`; }
+function toDirectImgUrl(url) { if(!url) return ''; const m=url.match(/\/d\/([a-zA-Z0-9_-]+)/); return m?`https://lh3.googleusercontent.com/d/${m[1]}`:url; }
 
-// ── UI HELPERS ────────────────────────────────────────────────────────
-window.showScreen = function(id) {
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-'+id).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===id));
-  if(id==='myrequests') loadMyRequests();
-  if(id==='notifications') loadNotifications();
-  if(id==='lostfound') loadLostFound();
-  if(id==='report') loadReports();
-  if(id==='request') initRequestScreen();
-  if(id==='driver') loadDriverRequests();
-};
-window.closeModal = id => document.getElementById('modal-'+id).classList.remove('show');
+window.showScreen = function(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); const el=document.getElementById('screen-'+id); if(el) el.classList.add('active'); document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===id)); if(id==='myrequests') loadMyRequests(); if(id==='notifications') loadNotifications(); if(id==='lostfound') loadLostFound(); if(id==='report') loadReports(); if(id==='request') initRequestScreen(); if(id==='driver') loadDriverRequests(); if(id==='gamehub') loadGameHub(); };
+window.closeModal = id => { const m=document.getElementById('modal-'+id); if(m) m.classList.remove('show'); if(activeFeedbackListener) { activeFeedbackListener(); activeFeedbackListener=null; } };
 function openModal(id) { document.getElementById('modal-'+id).classList.add('show'); }
 function showLoading(msg) { document.getElementById('loading-text').textContent=msg||'Please wait...'; document.getElementById('loading-overlay').classList.remove('hidden'); }
 function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
 let _tt; function showToast(msg,type='') { const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+type; clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('show'),3000); }
-window.showSettings = function() {
-  if(!userData) return;
-  document.getElementById('settings-avatar').textContent=getInitials(userData.name);
-  document.getElementById('settings-name').textContent=userData.name||'-';
-  document.getElementById('settings-email').textContent=currentUser.email||'-';
-  document.getElementById('settings-role').textContent=(userData.role||'user').toUpperCase();
-  document.getElementById('settings-pickup-id').textContent=userData.pickupId||'---';
-  openModal('settings');
-};
-window.copyPickupId = function() {
-  const id=userData?.pickupId||'---';
-  navigator.clipboard?.writeText(id).then(()=>showToast('Pickup ID copied!','success')).catch(()=>showToast(id));
-};
-
-// ── CONNECTIVITY FIX ────────────────────────────────────────────────────────
-// ROOT CAUSE: fetch() to external URLs is blocked in PWA (CORS/mixed content).
-// navigator.onLine is the correct reliable API — returns false when on ESP32
-// WiFi (no internet route), true when on real mobile data or internet WiFi.
+window.showSettings = function() { if(!userData) return; document.getElementById('settings-avatar').textContent=getInitials(userData.name); document.getElementById('settings-name').textContent=userData.name||'-'; document.getElementById('settings-email').textContent=currentUser.email||'-'; document.getElementById('settings-role').textContent=(userData.role||'user').toUpperCase(); document.getElementById('settings-pickup-id').textContent=userData.pickupId||'---'; openModal('settings'); };
+window.copyPickupId = function() { const id=userData?.pickupId||'---'; navigator.clipboard?.writeText(id).then(()=>showToast('Pickup ID copied!','success')).catch(()=>showToast(id)); };
 function checkConnectivity() { return navigator.onLine; }
-function updateOnlineStatus() {
-  isOnline = navigator.onLine;
-  const dot=document.getElementById('dash-status-dot');
-  const txt=document.getElementById('dash-status-text');
-  const ban=document.getElementById('dash-offline-banner');
-  const reqChip=document.getElementById('req-mode-chip');
-  const reqBan=document.getElementById('req-offline-banner');
-  const offNote=document.getElementById('req-offline-note');
-  if(dot){
-    dot.className='status-dot '+(isOnline?'online':'offline');
-    txt.textContent=isOnline?'Online':'Campus WiFi Mode';
-    ban?.classList.toggle('hidden',isOnline);
-  }
-  if(reqChip){
-    reqChip.textContent=isOnline?'🟢 Online':'🟡 Campus WiFi';
-    reqChip.style.background=isOnline?'rgba(46,125,50,0.3)':'rgba(245,127,23,0.3)';
-    reqBan?.classList.toggle('hidden',isOnline);
-    if(offNote) offNote.style.display=isOnline?'none':'block';
-    buildLocationChips();
-  }
-  return isOnline;
-}
-window.addEventListener('online',  ()=>{ isOnline=true;  updateOnlineStatus(); showToast('Back online ✓','success'); });
+function updateOnlineStatus() { isOnline = navigator.onLine; const dot=document.getElementById('dash-status-dot'); const txt=document.getElementById('dash-status-text'); const ban=document.getElementById('dash-offline-banner'); const reqChip=document.getElementById('req-mode-chip'); const reqBan=document.getElementById('req-offline-banner'); const offNote=document.getElementById('req-offline-note'); if(dot){ dot.className='status-dot '+(isOnline?'online':'offline'); txt.textContent=isOnline?'Online':'Campus WiFi Mode'; ban?.classList.toggle('hidden',isOnline); } if(reqChip){ reqChip.textContent=isOnline?'🟢 Online':'🟡 Campus WiFi'; reqChip.style.background=isOnline?'rgba(46,125,50,0.3)':'rgba(245,127,23,0.3)'; reqBan?.classList.toggle('hidden',isOnline); if(offNote) offNote.style.display=isOnline?'none':'block'; buildLocationChips(); } return isOnline; }
+window.addEventListener('online', ()=>{ isOnline=true; updateOnlineStatus(); showToast('Back online ✓','success'); });
 window.addEventListener('offline', ()=>{ isOnline=false; updateOnlineStatus(); showToast('Offline — Campus WiFi Mode',''); });
 
-// ── AUTH ──────────────────────────────────────────────────────────────
-onAuthStateChanged(auth, async user => {
-  if(user){ currentUser=user; await loadUserData(user.uid); }
-  else { currentUser=null; userData=null; showScreen('login'); }
-});
+// AUTH
+onAuthStateChanged(auth, async user => { if(user){ currentUser=user; await loadUserData(user.uid); } else { currentUser=null; userData=null; showScreen('login'); } });
+async function loadUserData(uid) { try { showScreen('splash'); const ref=doc(db,'users',uid); let snap; try { snap=await Promise.race([getDoc(ref),new Promise((_,rej)=>setTimeout(()=>rej('timeout'),5000))]); } catch { snap=await new Promise(res=>{ const u=onSnapshot(ref,{source:'cache'},s=>{u();res(s)},()=>res(null)); }); } let data=snap?.data?.()??snap?.data??null; if(data&&(!data.pickupId||data.pickupId==='')){ data.pickupId=generatePickupId(uid); try{ await updateDoc(ref,{pickupId:data.pickupId}); }catch{} } if(!data){ data={name:currentUser.email?.split('@')[0]||'User',email:currentUser.email,role:'user',pickupId:generatePickupId(uid),platform:'pwa',createdAt:new Date().toISOString()}; try{ await setDoc(ref,{...data,createdAt:serverTimestamp(),platform:'pwa'}); }catch{} } userData=data; updateOnlineStatus(); routeByRole(data.role); startNotifListener(uid); } catch(e){ showScreen('login'); } }
+function routeByRole(role) { if(role==='admin'){ document.getElementById('admin-avatar').textContent=getInitials(userData.name); document.getElementById('admin-name').textContent=userData.name||'Admin'; showScreen('admin'); } else if(role==='driver'){ document.getElementById('driver-name').textContent=userData.name||'Driver'; document.getElementById('driver-avatar').textContent=getInitials(userData.name); showScreen('driver'); loadDriverRequests(); startIntentListener(currentUser.uid); } else { showScreen('dashboard'); loadDashboard(); } }
+function loadDashboard() { if(!userData) return; document.getElementById('dash-avatar').textContent=getInitials(userData.name); document.getElementById('dash-name').textContent=userData.name||'User'; document.getElementById('dash-greeting').textContent=getGreeting(); document.getElementById('dash-pickup-id').textContent=userData.pickupId||'---'; updateOnlineStatus(); if(userData.role==='admin'&&!document.getElementById('admin-quick-btn')){ document.getElementById('admin-quick-wrap').innerHTML='<div class="quick-btn" id="admin-quick-btn" onclick="showScreen(\'admin\')"><div class="icon icon-teal">🛡️</div><div class="label">Admin Panel</div><div class="sub">Manage system</div></div>'; } startAdListener(); }
+function startNotifListener(uid) { if(notifUnsub) notifUnsub(); const q=query(collection(db,'notifications'),where('userId','==',uid),where('read','==',false)); notifUnsub=onSnapshot(q, snap=>{ const count=snap.size; const badge=document.getElementById('dash-notif-badge'); if(badge){ badge.textContent=count; badge.classList.toggle('hidden',count===0); } }); }
 
-async function loadUserData(uid) {
-  try {
-    showScreen('splash');
-    const ref = doc(db,'users',uid);
-    let snap;
-    try {
-      snap = await Promise.race([
-        getDoc(ref),
-        new Promise((_,rej)=>setTimeout(()=>rej('timeout'),5000))
-      ]);
-    } catch {
-      // timeout — try cache
-      snap = await new Promise(res=>{ const u=onSnapshot(ref,{source:'cache'},s=>{u();res(s)},()=>res(null)); });
-    }
-    let data = snap?.data?.()??snap?.data??null;
-    if(data&&(!data.pickupId||data.pickupId==='')){
-      data.pickupId=generatePickupId(uid);
-      try{ await updateDoc(ref,{pickupId:data.pickupId}); }catch{}
-    }
-    if(!data){
-      // FIX 2: Store platform:'pwa' and all required fields so admin sees PWA users
-      data={name:currentUser.email?.split('@')[0]||'User',email:currentUser.email,role:'user',
-            pickupId:generatePickupId(uid),platform:'pwa',createdAt:new Date().toISOString()};
-      try{ await setDoc(ref,{...data,createdAt:serverTimestamp(),platform:'pwa'}); }catch{}
-    }
-    userData=data;
-    updateOnlineStatus();
-    routeByRole(data.role);
-    // FIX 3: Use real-time listener for notifications — not just once
-    startNotifListener(uid);
-  } catch(e){ showScreen('login'); }
-}
+// REQUEST SCREEN
+function initRequestScreen() { selectedPickup=null; selectedDest=null; document.getElementById('req-summary').classList.add('hidden'); isOnline=checkConnectivity(); updateOnlineStatus(); buildLocationChips(); document.getElementById('req-checking').style.display='none'; document.getElementById('req-form').style.display='block'; }
+function buildLocationChips() { const pickups=isOnline?ALL_LOCATIONS:OFFLINE_PICKUPS; const pc=document.getElementById('req-pickup-chips'); const dc=document.getElementById('req-dest-chips'); pc.innerHTML=pickups.map(l=>`<div class="loc-chip" data-loc="${l}" onclick="selectPickup('${l}')">${l}</div>`).join(''); dc.innerHTML=ALL_LOCATIONS.map(l=>`<div class="loc-chip" data-loc="${l}" onclick="selectDest('${l}')">${l}</div>`).join(''); }
+window.selectPickup = function(loc) { selectedPickup=loc; document.querySelectorAll('#req-pickup-chips .loc-chip').forEach(c=>{ c.classList.toggle('selected',c.dataset.loc===loc); c.classList.toggle('disabled',c.dataset.loc===selectedDest); }); document.querySelectorAll('#req-dest-chips .loc-chip').forEach(c=>c.classList.toggle('disabled',c.dataset.loc===loc)); updateSummary(); };
+window.selectDest = function(loc) { selectedDest=loc; document.querySelectorAll('#req-dest-chips .loc-chip').forEach(c=>{ c.classList.toggle('selected',c.dataset.loc===loc); c.classList.toggle('disabled',c.dataset.loc===selectedPickup); }); document.querySelectorAll('#req-pickup-chips .loc-chip').forEach(c=>c.classList.toggle('disabled',c.dataset.loc===loc)); updateSummary(); };
+function updateSummary() { if(!selectedPickup||!selectedDest) return; document.getElementById('sum-from').textContent=selectedPickup; document.getElementById('sum-to').textContent=selectedDest; document.getElementById('sum-type').textContent=rideType+(rideType==='Shared'?' · '+paxCount+' passenger'+(paxCount>1?'s':''):''); document.getElementById('req-summary').classList.remove('hidden'); }
+window.setRideType = function(type) { rideType=type; document.getElementById('rt-shared').classList.toggle('active',type==='Shared'); document.getElementById('rt-chartered').classList.toggle('active',type==='Chartered'); document.getElementById('pax-card').style.display=type==='Shared'?'block':'none'; updateSummary(); };
+window.setPax = function(n) { paxCount=n; document.querySelectorAll('.pax-circle').forEach(c=>c.classList.toggle('active',parseInt(c.dataset.pax)===n)); updateSummary(); };
+window.submitRequest = async function() { if(!selectedPickup||!selectedDest){ showToast('Please select pickup and destination','error'); return; } if(selectedPickup===selectedDest){ showToast('Pickup and destination cannot be the same','error'); return; } showLoading('Submitting request...'); isOnline=checkConnectivity(); try { if(isOnline) await submitOnlineRequest(selectedPickup,selectedDest); else await submitOfflineRequest(selectedPickup,selectedDest); } catch(e){ showToast('Failed to submit. Try again.','error'); } finally { hideLoading(); } };
+async function submitOnlineRequest(pickup,dest) { const pax=rideType==='Chartered'?1:paxCount; const docRef=await addDoc(collection(db,'ride_requests'),{ userId:currentUser.uid, userName:userData.name, pickupId:userData.pickupId, pickupLocation:pickup, destination:dest, rideType, passengerCount:pax, status:0, requestType:'online', platform:'pwa', timestamp:serverTimestamp() }); showFeedbackDialog(docRef.id, pickup, dest, rideType, pax); }
+async function submitOfflineRequest(pickup,dest) { const pax=rideType==='Chartered'?1:paxCount; const docRef=await addDoc(collection(db,'offline_queue'),{ userId:currentUser.uid, userName:userData.name, pickupId:userData.pickupId, pickupLocation:pickup, destination:dest, rideType, passengerCount:pax, requestType:'offline', isSynced:false, createdAt:serverTimestamp() }); showToast('Request saved offline — will sync when online.',''); showFeedbackDialog(null, pickup, dest, rideType, pax, true); }
+function showFeedbackDialog(bookingId, pickup, dest, rideType, pax, isOffline=false) { const modal=document.getElementById('modal-feedback'); const content=document.getElementById('feedback-content'); content.innerHTML=`<div class="success-icon">✅</div><div class="success-title">Request Sent!</div><div class="success-msg">${isOffline?'Your request has been saved offline and will sync when you reconnect.':'Waiting for a shuttle to accept your request...'}</div><div class="stage-row"><div class="stage-dot done">✓</div><div><div class="stage-label">Request Received</div><div class="stage-sub">Your request has been sent to the shuttle network</div></div></div><div class="stage-row" id="stage-accept"><div class="stage-dot" id="stage-accept-dot">○</div><div><div class="stage-label" id="stage-accept-label">Awaiting Acceptance</div><div class="stage-sub" id="stage-accept-sub">Waiting for a shuttle to accept...</div></div></div><div class="stage-row" id="stage-assign"><div class="stage-dot" id="stage-assign-dot">○</div><div><div class="stage-label" id="stage-assign-label">Shuttle Assignment</div><div class="stage-sub" id="stage-assign-sub">A shuttle will be assigned when accepted</div></div></div><div class="wait-tip" style="margin-top:16px;"><div class="wait-tip-title">💡 While you wait...</div><p>🎮 Try our puzzle game and climb the leaderboard!</p><p>🔍 Check Lost & Found — someone may have found something of yours!</p></div>`; openModal('feedback'); if(bookingId && !isOffline){ if(activeFeedbackListener) activeFeedbackListener(); activeFeedbackListener=onSnapshot(doc(db,'ride_requests',bookingId), snap=>{ if(!snap.exists) return; const d=snap.data(); const status=d.status||0; const shuttleId=d.shuttleIdFeedback||''; const acceptDot=document.getElementById('stage-accept-dot'); const acceptLabel=document.getElementById('stage-accept-label'); const acceptSub=document.getElementById('stage-accept-sub'); const assignDot=document.getElementById('stage-assign-dot'); const assignLabel=document.getElementById('stage-assign-label'); const assignSub=document.getElementById('stage-assign-sub'); if(status>=1){ acceptDot.innerHTML='✓'; acceptDot.className='stage-dot done'; acceptLabel.textContent='Request Accepted'; acceptSub.textContent='A shuttle has been assigned to pick you up'; } if(shuttleId){ assignDot.innerHTML='✓'; assignDot.className='stage-dot done'; assignLabel.textContent='Shuttle Assigned'; assignSub.textContent=`Shuttle ${shuttleId} is on its way!`; } }); } }
+function showSuccessDialog(msg) { showToast(msg,'success'); }
 
-function routeByRole(role) {
-  if(role==='admin'){ document.getElementById('admin-avatar').textContent=getInitials(userData.name); document.getElementById('admin-name').textContent=userData.name||'Admin'; showScreen('admin'); }
-  else if(role==='driver'){ document.getElementById('driver-name').textContent=userData.name||'Driver'; document.getElementById('driver-avatar').textContent=getInitials(userData.name); showScreen('driver'); loadDriverRequests(); }
-  else { showScreen('dashboard'); loadDashboard(); }
-}
+// MY REQUESTS
+async function loadMyRequests() { const el=document.getElementById('myrequests-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const q=query(collection(db,'ride_requests'),where('userId','==',currentUser.uid)); const snap=await getDocs(q); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0)); if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🚐</div><div class="empty-title">No requests yet</div><div class="empty-sub">Submit your first ride request</div></div>'; return; } el.innerHTML=docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.pickupLocation||''} → ${r.destination||''}</div><div class="list-item-sub">${r.rideType||''} · ${r.passengerCount||1} pax · ${formatTime(r.timestamp)}${r.shuttleIdFeedback?` · Shuttle: ${r.shuttleIdFeedback}`:''}</div></div>${statusBadge(r.status)}</div>${r.status===0?`<button class="btn btn-cancel" style="margin-top:0.6rem;padding:0.5rem;" onclick="cancelRequest('${r.id}')">Cancel Request</button>`:''}</div>`).join(''); } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; } }
+window.cancelRequest = async function(id) { const ok=await showConfirm({icon:'🚫',title:'Cancel Request',msg:'Are you sure?',okText:'Yes, Cancel',okClass:'btn-danger'}); if(!ok) return; showLoading('Cancelling...'); try { await updateDoc(doc(db,'ride_requests',id),{status:5}); showToast('Request cancelled','success'); loadMyRequests(); } catch(e){ showToast('Failed to cancel','error'); } finally { hideLoading(); } };
 
-function loadDashboard() {
-  if(!userData) return;
-  document.getElementById('dash-avatar').textContent=getInitials(userData.name);
-  document.getElementById('dash-name').textContent=userData.name||'User';
-  document.getElementById('dash-greeting').textContent=getGreeting();
-  document.getElementById('dash-pickup-id').textContent=userData.pickupId||'---';
-  updateOnlineStatus();
-  if(userData.role==='admin'&&!document.getElementById('admin-quick-btn')){
-    const w=document.getElementById('admin-quick-wrap');
-    w.innerHTML='<div class="quick-btn" id="admin-quick-btn" onclick="showScreen(\'admin\')"><div class="icon icon-teal">🛡️</div><div class="label">Admin Panel</div><div class="sub">Manage system</div></div>';
-  }
-}
+// GAME HUB
+async function loadGameHub() { const el=document.getElementById('gamehub-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const weekKey=getWeekKey(); const scoresSnap=await getDoc(doc(db,'game_scores',currentUser.uid)); const scores=scoresSnap.data()||{}; const totalPts=(scores.puzzle_weeklyPoints||0)+(scores.quiz_weeklyPoints||0)+(scores.tap_weeklyPoints||0); const remainingBudget=720-(scores.dailyTxCount||0); const budgetPercent=(remainingBudget/720)*100; el.innerHTML=`<div class="face-banner"><div class="face-avatar">🏆</div><div><div class="face-name">Face of the Week</div><div class="face-score">Compete to be featured!</div></div></div><div class="score-summary"><div style="display:flex;justify-content:space-between;"><span style="color:white70;">This Week's Points</span><span style="color:white38;">${weekKey}</span></div><div class="score-number">${totalPts} pts</div><div style="display:flex;justify-content:space-between;margin-top:12px;"><div><div style="color:#6A1B9A;font-size:10px;">PUZZLE</div><div style="color:white;font-size:16px;font-weight:800;">${scores.puzzle_weeklyPoints||0}</div></div><div><div style="color:#1565C0;font-size:10px;">QUIZ</div><div style="color:white;font-size:16px;font-weight:800;">${scores.quiz_weeklyPoints||0}</div></div><div><div style="color:#00897B;font-size:10px;">TAP</div><div style="color:white;font-size:16px;font-weight:800;">${scores.tap_weeklyPoints||0}</div></div></div><div class="budget-bar"><div class="budget-fill" style="width:${budgetPercent}%;"></div></div><div style="font-size:10px;color:white38;margin-top:6px;">Daily TX budget: ${remainingBudget}/${720} remaining</div></div><div class="game-card" onclick="startPuzzle()"><div style="display:flex;align-items:center;gap:16px;"><div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;">🧩</div><div><div style="font-size:17px;font-weight:800;color:white;">Puzzle Game</div><div style="font-size:12px;color:rgba(255,255,255,0.75);">${scores.puzzle_weeklyPoints||0} pts this week</div></div></div></div><div class="game-card quiz" onclick="startQuiz()"><div style="display:flex;align-items:center;gap:16px;"><div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;">❓</div><div><div style="font-size:17px;font-weight:800;color:white;">Quiz Game</div><div style="font-size:12px;color:rgba(255,255,255,0.75);">${scores.quiz_weeklyPoints||0} pts this week</div></div></div></div><div class="game-card tap" onclick="startTapChallenge()"><div style="display:flex;align-items:center;gap:16px;"><div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;">👆</div><div><div style="font-size:17px;font-weight:800;color:white;">Tap Challenge</div><div style="font-size:12px;color:rgba(255,255,255,0.75);">${scores.tap_weeklyPoints||0} pts this week</div></div></div></div>`; } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Game Hub</div><div class="empty-sub">Play games and earn points</div></div>'; } }
+function getWeekKey() { const now=new Date(); const monday=new Date(now); monday.setDate(now.getDate()-now.getDay()+1); const week=Math.ceil((monday-new Date(monday.getFullYear(),0,1))/86400000/7); return `${monday.getFullYear()}-W${week}`; }
+window.startPuzzle = function() { showScreen('puzzle'); loadPuzzle(); };
+window.startQuiz = function() { showScreen('quiz'); loadQuiz(); };
+window.startTapChallenge = function() { showScreen('tap'); startTapGame(); };
+window.showLeaderboard = function(gameType) { window.currentLeaderboardGame=gameType; document.getElementById('leaderboard-title').textContent=gameType==='puzzle'?'Puzzle Leaderboard':gameType==='quiz'?'Quiz Leaderboard':'Tap Leaderboard'; showScreen('leaderboard'); loadLeaderboard(gameType); };
+window.goBackFromLeaderboard = function() { showScreen('gamehub'); };
 
-// ── FIX 3: REAL-TIME NOTIFICATION LISTENER ────────────────────────────
-function startNotifListener(uid) {
-  if(notifUnsub) notifUnsub();
-  const q=query(collection(db,'notifications'),where('userId','==',uid),where('read','==',false));
-  notifUnsub=onSnapshot(q, snap=>{
-    const count=snap.size;
-    const badge=document.getElementById('dash-notif-badge');
-    if(badge){ badge.textContent=count; badge.classList.toggle('hidden',count===0); }
-  }, ()=>{});
-}
+// PUZZLE
+async function loadPuzzle() { const el=document.getElementById('puzzle-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const imgSnap=await getDocs(query(collection(db,'puzzle_images'),where('isActive','==',true),limit(1))); const imgUrl=imgSnap.docs[0]?.data()?.imageUrl||''; el.innerHTML=`<div class="card"><div class="card-title">3x3 Puzzle</div><div id="puzzle-stats" style="display:flex;justify-content:space-between;margin-bottom:16px;"><span>Moves: <span id="puzzle-moves">0</span></span><span>Time: <span id="puzzle-time">00:00</span></span></div><div id="puzzle-grid" class="puzzle-grid" style="grid-template-columns:repeat(3,1fr);aspect-ratio:1/1;"></div><button class="btn btn-primary" style="margin-top:16px;" onclick="shufflePuzzle()">Shuffle</button><button class="btn btn-secondary" style="margin-top:8px;" onclick="showScreen('gamehub')">Back to Game Hub</button></div>`; initPuzzle(imgUrl); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🧩</div><div class="empty-title">Puzzle Game</div><div class="empty-sub">Arrange the tiles to solve the puzzle</div><button class="btn btn-primary" style="margin-top:16px;" onclick="showScreen(\'gamehub\')">Back to Game Hub</button></div>'; } }
+let puzzleTiles=[], puzzleMoves=0, puzzleSeconds=0, puzzleTimer=null, puzzleImageUrl='';
+function initPuzzle(imgUrl) { puzzleImageUrl=imgUrl; puzzleTiles=[1,2,3,4,5,6,7,8,0]; shufflePuzzle(); }
+function shufflePuzzle() { for(let i=puzzleTiles.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [puzzleTiles[i],puzzleTiles[j]]=[puzzleTiles[j],puzzleTiles[i]]; } puzzleMoves=0; puzzleSeconds=0; document.getElementById('puzzle-moves').textContent='0'; if(puzzleTimer) clearInterval(puzzleTimer); puzzleTimer=setInterval(()=>{ puzzleSeconds++; const m=Math.floor(puzzleSeconds/60); const s=puzzleSeconds%60; document.getElementById('puzzle-time').textContent=`${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; },1000); renderPuzzleGrid(); }
+function renderPuzzleGrid() { const grid=document.getElementById('puzzle-grid'); if(!grid) return; grid.innerHTML=''; const size=3; for(let i=0;i<puzzleTiles.length;i++){ const tile=puzzleTiles[i]; const isEmpty=tile===0; const tileDiv=document.createElement('div'); tileDiv.className='puzzle-tile'+(isEmpty?' empty':''); tileDiv.style.aspectRatio='1/1'; tileDiv.style.display='flex'; tileDiv.style.alignItems='center'; tileDiv.style.justifyContent='center'; tileDiv.style.fontSize='24px'; tileDiv.style.fontWeight='800'; if(!isEmpty){ tileDiv.textContent=tile.toString(); if(puzzleImageUrl){ tileDiv.style.backgroundImage=`url(${toDirectImgUrl(puzzleImageUrl)})`; tileDiv.style.backgroundSize='300% 300%'; const row=Math.floor((tile-1)/size); const col=(tile-1)%size; tileDiv.style.backgroundPosition=`${col*50}% ${row*50}%`; tileDiv.style.backgroundRepeat='no-repeat'; tileDiv.textContent=''; } } tileDiv.onclick=()=>moveTile(i); grid.appendChild(tileDiv); } }
+function moveTile(idx) { const emptyIdx=puzzleTiles.indexOf(0); const row=Math.floor(idx/3), col=idx%3; const emptyRow=Math.floor(emptyIdx/3), emptyCol=emptyIdx%3; if((Math.abs(row-emptyRow)+Math.abs(col-emptyCol))===1){ [puzzleTiles[idx],puzzleTiles[emptyIdx]]=[puzzleTiles[emptyIdx],puzzleTiles[idx]]; puzzleMoves++; document.getElementById('puzzle-moves').textContent=puzzleMoves; renderPuzzleGrid(); if(isPuzzleSolved()){ clearInterval(puzzleTimer); const score=Math.max(1,Math.floor(1000*(60/puzzleSeconds))); saveGameScore('puzzle',score); showToast(`Puzzle solved! Score: ${score} pts`,'success'); } } }
+function isPuzzleSolved(){ for(let i=0;i<puzzleTiles.length-1;i++) if(puzzleTiles[i]!==i+1) return false; return true; }
 
-// ── REQUEST SCREEN — location chips like Android app ──────────────────
-function initRequestScreen() {
-  selectedPickup=null; selectedDest=null;
-  document.getElementById('req-summary').classList.add('hidden');
-  // No async delay needed — navigator.onLine is synchronous and instant
-  isOnline = checkConnectivity();
-  updateOnlineStatus();
-  buildLocationChips();
-  document.getElementById('req-checking').style.display='none';
-  document.getElementById('req-form').style.display='block';
-}
+// QUIZ
+async function loadQuiz() { const el=document.getElementById('quiz-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const qSnap=await getDocs(query(collection(db,'game_questions'),where('isActive','==',true))); quizQuestions=qSnap.docs.map(d=>({id:d.id,...d.data()})).sort(()=>0.5-Math.random()).slice(0,10); if(quizQuestions.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">❓</div><div class="empty-title">No questions yet</div><div class="empty-sub">Admin will add questions soon</div><button class="btn btn-primary" style="margin-top:16px;" onclick="showScreen(\'gamehub\')">Back to Game Hub</button></div>'; return; } window.quizIndex=0; window.quizScore=0; renderQuizQuestion(); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">❓</div><div class="empty-title">Quiz Game</div><div class="empty-sub">Test your knowledge</div><button class="btn btn-primary" style="margin-top:16px;" onclick="showScreen(\'gamehub\')">Back to Game Hub</button></div>'; } }
+function renderQuizQuestion() { const el=document.getElementById('quiz-content'); if(window.quizIndex>=quizQuestions.length){ const totalScore=window.quizScore; saveGameScore('quiz',totalScore); el.innerHTML=`<div class="card"><div class="success-icon">🎉</div><div class="success-title">Quiz Complete!</div><div class="success-msg">You scored ${totalScore} points</div><button class="btn btn-primary" onclick="loadQuiz()">Play Again</button><button class="btn btn-secondary" style="margin-top:8px;" onclick="showScreen(\'gamehub\')">Back to Game Hub</button></div>`; return; } const q=quizQuestions[window.quizIndex]; const isMcq=q.type!=='tf'; const options=isMcq?q.options:['True','False']; const timeLeft=20; el.innerHTML=`<div class="card"><div class="quiz-timer"><div class="quiz-timer-fill" id="quiz-timer-fill" style="width:100%;"></div></div><div style="font-size:18px;font-weight:700;margin-bottom:16px;">${q.question}</div><div id="quiz-options">${options.map(opt=>`<div class="quiz-option" onclick="selectQuizAnswer('${opt.replace(/'/g,"\\'")}')">${opt}</div>`).join('')}</div><div style="margin-top:16px;">Question ${window.quizIndex+1}/${quizQuestions.length}</div></div>`; let timer=timeLeft; const timerFill=document.getElementById('quiz-timer-fill'); const interval=setInterval(()=>{ timer--; if(timerFill) timerFill.style.width=`${(timer/timeLeft)*100}%`; if(timer<=0){ clearInterval(interval); selectQuizAnswer(null); } },1000); window.quizTimerInterval=interval; }
+window.selectQuizAnswer = function(answer) { if(window.quizTimerInterval) clearInterval(window.quizTimerInterval); if(answer!==null){ const q=quizQuestions[window.quizIndex]; const isCorrect=answer===q.answer; if(isCorrect) window.quizScore+=10; } window.quizIndex++; renderQuizQuestion(); };
 
-function buildLocationChips() {
-  const pickups=isOnline?ALL_LOCATIONS:OFFLINE_PICKUPS;
-  const pc=document.getElementById('req-pickup-chips');
-  const dc=document.getElementById('req-dest-chips');
-  pc.innerHTML=pickups.map(l=>`<div class="loc-chip" data-loc="${l}" onclick="selectPickup('${l}')">${l}</div>`).join('');
-  dc.innerHTML=ALL_LOCATIONS.map(l=>`<div class="loc-chip" data-loc="${l}" onclick="selectDest('${l}')">${l}</div>`).join('');
-}
+// TAP CHALLENGE
+let tapScore=0, tapTimeLeft=30, tapTargetX=100, tapTargetY=200, tapTargetSize=72, tapGameActive=false, tapMoveInterval=null, tapTimerInterval=null;
+function startTapGame() { tapScore=0; tapTimeLeft=30; tapGameActive=true; const container=document.getElementById('tap-content'); container.innerHTML=`<div style="position:relative;width:100%;height:500px;background:#0A1A14;border-radius:20px;overflow:hidden;"><div style="position:absolute;top:10px;left:16px;right:16px;display:flex;justify-content:space-between;"><div style="background:rgba(0,200,83,0.2);padding:8px 14px;border-radius:10px;"><span style="color:#00C853;font-weight:800;">Taps: <span id="tap-count">0</span></span></div><div style="background:rgba(255,215,0,0.2);padding:8px 14px;border-radius:10px;"><span style="color:#FFD700;font-weight:800;">Score: <span id="tap-score">0</span></span></div><div style="background:rgba(255,255,255,0.1);padding:8px 14px;border-radius:10px;"><span style="color:white;font-weight:800;"><span id="tap-time">30</span>s</span></div></div><div id="tap-target" style="position:absolute;left:${tapTargetX}px;top:${tapTargetY}px;width:${tapTargetSize}px;height:${tapTargetSize}px;background:radial-gradient(circle,#69F0AE,#00897B);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 20px rgba(0,137,123,0.6);transition:all 0.05s linear;"><span style="font-size:28px;">👆</span></div></div>`; const target=document.getElementById('tap-target'); target.onclick=()=>{ if(!tapGameActive) return; tapScore+=tapTimeLeft<10?8:tapTimeLeft<20?5:3; document.getElementById('tap-count').textContent=parseInt(document.getElementById('tap-count').textContent)+1; document.getElementById('tap-score').textContent=tapScore; const maxX=container.clientWidth-tapTargetSize; const maxY=500-tapTargetSize; tapTargetX=Math.random()*maxX; tapTargetY=Math.random()*maxY; target.style.left=`${tapTargetX}px`; target.style.top=`${tapTargetY}px`; }; tapTimerInterval=setInterval(()=>{ if(!tapGameActive) return; tapTimeLeft--; document.getElementById('tap-time').textContent=tapTimeLeft; if(tapTimeLeft<=0){ endTapGame(); } },1000); tapMoveInterval=setInterval(()=>{ if(!tapGameActive) return; const maxX=container.clientWidth-tapTargetSize; const maxY=500-tapTargetSize; tapTargetX=Math.random()*maxX; tapTargetY=Math.random()*maxY; if(target) target.style.cssText+=`left:${tapTargetX}px;top:${tapTargetY}px;`; },800); }
+function endTapGame() { tapGameActive=false; if(tapTimerInterval) clearInterval(tapTimerInterval); if(tapMoveInterval) clearInterval(tapMoveInterval); saveGameScore('tap',tapScore); showToast(`Tap Challenge complete! Score: ${tapScore} pts`,'success'); showScreen('gamehub'); }
 
-window.selectPickup = function(loc) {
-  selectedPickup=loc;
-  document.querySelectorAll('#req-pickup-chips .loc-chip').forEach(c=>{ c.classList.toggle('selected',c.dataset.loc===loc); c.classList.toggle('disabled',c.dataset.loc===selectedDest); });
-  document.querySelectorAll('#req-dest-chips .loc-chip').forEach(c=>c.classList.toggle('disabled',c.dataset.loc===loc));
-  updateSummary();
-};
-window.selectDest = function(loc) {
-  selectedDest=loc;
-  document.querySelectorAll('#req-dest-chips .loc-chip').forEach(c=>{ c.classList.toggle('selected',c.dataset.loc===loc); c.classList.toggle('disabled',c.dataset.loc===selectedPickup); });
-  document.querySelectorAll('#req-pickup-chips .loc-chip').forEach(c=>c.classList.toggle('disabled',c.dataset.loc===loc));
-  updateSummary();
-};
-function updateSummary() {
-  if(!selectedPickup||!selectedDest) return;
-  document.getElementById('sum-from').textContent=selectedPickup;
-  document.getElementById('sum-to').textContent=selectedDest;
-  document.getElementById('sum-type').textContent=rideType+(rideType==='Shared'?' · '+paxCount+' passenger'+(paxCount>1?'s':''):'');
-  document.getElementById('req-summary').classList.remove('hidden');
-}
+// LEADERBOARD
+async function loadLeaderboard(gameType) { const el=document.getElementById('leaderboard-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const weekKey=getWeekKey(); const q=query(collection(db,'game_leaderboard'),where('gameType','==',gameType),where('weekKey','==',weekKey)); const snap=await getDocs(q); const entries=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.points||0)-(a.points||0)); if(entries.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-title">No scores yet</div><div class="empty-sub">Be the first to play!</div></div>'; return; } const top3=entries.slice(0,3); const rest=entries.slice(3); let podiumHtml='<div class="leaderboard-podium">'; for(let i=0;i<top3.length;i++){ const medals=['🥇','🥈','🥉']; podiumHtml+=`<div class="podium-item"><div class="podium-avatar">${medals[i]}</div><div class="podium-rank">#${i+1}</div><div class="podium-name">${top3[i].userName||'User'}</div><div class="podium-score">${top3[i].points} pts</div></div>`; } podiumHtml+='</div>'; let restHtml='<div class="section-title">Other Players</div>'; rest.forEach((e,idx)=>{ restHtml+=`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${e.userName||'User'}</div><div class="list-item-sub">#${idx+4} · ${e.points} pts</div></div></div></div>`; }); el.innerHTML=podiumHtml+restHtml; } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-title">Leaderboard</div><div class="empty-sub">Could not load rankings</div></div>'; } }
+async function saveGameScore(gameType,score) { if(!currentUser) return; try { await setDoc(doc(db,'game_scores',currentUser.uid),{ [`${gameType}_weeklyPoints`]:FieldValue.increment(score), lastUpdated:serverTimestamp() },{merge:true}); const weekKey=getWeekKey(); await setDoc(doc(db,'game_leaderboard',`${gameType}_${weekKey}_${currentUser.uid}`),{ userId:currentUser.uid, userName:userData.name, gameType, points:FieldValue.increment(score), weekKey, updatedAt:serverTimestamp() },{merge:true}); } catch(e){} }
 
-window.setRideType = function(type) {
-  rideType=type;
-  document.getElementById('rt-shared').classList.toggle('active',type==='Shared');
-  document.getElementById('rt-chartered').classList.toggle('active',type==='Chartered');
-  document.getElementById('pax-card').style.display=type==='Shared'?'block':'none';
-  updateSummary();
-};
-window.setPax = function(n) {
-  paxCount=n;
-  document.querySelectorAll('.pax-circle').forEach(c=>c.classList.toggle('active',parseInt(c.dataset.pax)===n));
-  updateSummary();
-};
+// LOST & FOUND
+async function loadLostFound() { const el=document.getElementById('lostfound-list'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'lost_found')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No reports yet</div></div>'; return; } el.innerHTML=docs.map(r=>{ let imgHtml=''; if(r.imageUrl){ const url=toDirectImgUrl(r.imageUrl); imgHtml=`<img src="${url}" class="lf-image" onerror="this.style.display=\'none\'"><div class="lf-placeholder" style="display:none;">📷</div>`; } return `<div class="list-item" style="padding:0;overflow:hidden;">${imgHtml?`<div style="position:relative;">${imgHtml}<div style="position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(transparent,rgba(0,0,0,0.5));"></div></div>`:''}<div style="padding:0.9rem 1rem;"><div class="list-item-row"><div><div class="list-item-title">${r.itemName||''}</div><div class="list-item-sub">${r.description||''}</div><div class="list-item-sub">📍 ${r.location||''} · ${formatTime(r.createdAt)}</div><div class="list-item-sub">👤 ${r.contactName||userData?.name||''}</div></div>${statusBadge(r.type)}</div></div></div>`; }).join(''); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; } }
+window.showLostFoundForm = function(type) { lfType=type; document.getElementById('lf-modal-title').textContent=type==='lost'?'Report Lost Item':'Report Found Item'; ['lf-item','lf-desc','lf-location','lf-image'].forEach(id=>{ const inp=document.getElementById(id); if(inp) inp.value=''; }); openModal('lostfound'); };
+window.submitLostFound = async function() { const item=document.getElementById('lf-item').value.trim(); if(!item){ showToast('Please enter item name','error'); return; } showLoading('Submitting...'); try { await addDoc(collection(db,'lost_found'),{ type:lfType, itemName:item, description:document.getElementById('lf-desc').value.trim(), location:document.getElementById('lf-location').value.trim(), imageUrl:document.getElementById('lf-image').value.trim(), contactName:userData.name, userId:currentUser.uid, createdAt:serverTimestamp() }); closeModal('lostfound'); showToast('Report submitted!','success'); loadLostFound(); } catch(e){ showToast('Failed. Try again.','error'); } finally { hideLoading(); } };
 
-window.submitRequest = async function() {
-  if(!selectedPickup||!selectedDest){ showToast('Please select pickup and destination','error'); return; }
-  if(selectedPickup===selectedDest){ showToast('Pickup and destination cannot be the same','error'); return; }
-  showLoading('Submitting request...');
-  isOnline = checkConnectivity(); // synchronous — instant
-  try {
-    if(isOnline) await submitOnlineRequest(selectedPickup,selectedDest);
-    else await submitOfflineRequest(selectedPickup,selectedDest);
-  } catch { showToast('Failed to submit. Try again.','error'); }
-  finally { hideLoading(); }
-};
+// REPORT
+async function loadReports() { const el=document.getElementById('reports-list'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const q=query(collection(db,'complaints'),where('userId','==',currentUser.uid)); const snap=await getDocs(q); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">No reports yet</div></div>'; return; } el.innerHTML=docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.subject||''}</div><div class="list-item-sub">${(r.message||'').slice(0,60)}</div>${r.adminReply?`<div class="list-item-sub" style="color:var(--primary);">Admin: ${r.adminReply}</div>`:''}</div>${statusBadge(r.status)}</div></div>`).join(''); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; } }
+window.submitReport = async function() { const subject=document.getElementById('report-subject').value.trim(); const message=document.getElementById('report-message').value.trim(); if(!subject||!message){ showToast('Please fill in all fields','error'); return; } showLoading('Submitting...'); try { await addDoc(collection(db,'complaints'),{ userId:currentUser.uid, userName:userData.name, subject, message, status:'open', adminReply:'', platform:'pwa', createdAt:serverTimestamp() }); document.getElementById('report-subject').value=''; document.getElementById('report-message').value=''; showToast('Report submitted!','success'); loadReports(); } catch(e){ showToast('Failed. Try again.','error'); } finally { hideLoading(); } };
 
-async function submitOnlineRequest(pickup,dest) {
-  const pax=rideType==='Chartered'?1:paxCount;
-  await addDoc(collection(db,'ride_requests'),{
-    userId:currentUser.uid, userName:userData.name, pickupId:userData.pickupId,
-    pickupLocation:pickup, destination:dest, rideType, passengerCount:pax,
-    status:0, requestType:'online', platform:'pwa', timestamp:serverTimestamp()
-  });
-  // Send intent to available driver
-  try {
-    const dSnap=await getDocs(query(collection(db,'users'),
-      where('role','==','driver'),where('status','==','approved')));
-    if(dSnap.docs.length>0){
-      const drv=dSnap.docs[0];
-      await updateDoc(doc(db,'driver_intents',ref.id),{
-        driverId:drv.id, driverName:drv.data().name||'Driver'
-      }).catch(async()=>{
-        await setDoc(doc(db,'driver_intents',ref.id),{
-          requestId:ref.id, driverId:drv.id, driverName:drv.data().name||'Driver',
-          status:'pending_intent', requestType:'online',
-          pickupLocation:pickup, destination:dest, rideType,
-          passengerCount:pax, pickupId:userData.pickupId,
-          userName:userData.name, userId:currentUser.uid,
-          createdAt:serverTimestamp(), expiresAt:new Date(Date.now()+60000)
-        });
-      });
-      await addDoc(collection(db,'notifications'),{
-        userId:drv.id, title:'🚨 Request Coming In!',
-        body:`${pickup} → ${dest} · ${rideType} · ${pax} pax`,
-        type:'ride_intent', requestId:ref.id, read:false, createdAt:serverTimestamp()
-      });
-    }
-  } catch {}
-  showSuccessDialog({pickup,dest,mode:'Online',rideType,pax});
-}
+// NOTIFICATIONS + CHAT
+async function loadNotifications() { const el=document.getElementById('notif-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const q=query(collection(db,'notifications'),where('userId','==',currentUser.uid)); const snap=await getDocs(q); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🔔</div><div class="empty-title">No notifications</div><div class="empty-sub">You\'re all caught up</div></div>'; return; } el.innerHTML=docs.map(n=>`<div class="notif-item ${n.read?'':'notif-unread'}" onclick="markRead('${n.id}')"><div class="notif-dot ${n.read?'read':''}"></div><div><div class="notif-title">${n.title||'Notification'}</div><div class="notif-body">${n.body||''}</div><div class="notif-time">${formatTime(n.createdAt)}</div></div></div>`).join(''); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; } }
+window.markRead = async function(id) { try { await updateDoc(doc(db,'notifications',id),{read:true}); loadNotifications(); } catch(e){} };
+window.markAllRead = async function() { showLoading('Marking all as read...'); try { const q=query(collection(db,'notifications'),where('userId','==',currentUser.uid),where('read','==',false)); const snap=await getDocs(q); const batch=writeBatch(db); snap.docs.forEach(d=>batch.update(d.ref,{read:true})); await batch.commit(); loadNotifications(); showToast('All marked as read','success'); } catch(e){ showToast('Failed','error'); } finally { hideLoading(); } };
+let chatUnsub=null; window.switchNotifTab = function(tab) { const notifContent=document.getElementById('notif-content'); const chatPanel=document.getElementById('chat-panel'); const tabNotifs=document.getElementById('tab-notifs'); const tabChat=document.getElementById('tab-chat'); const markBtn=document.getElementById('mark-read-btn'); const title=document.getElementById('notif-screen-title'); if(tab==='notifs'){ notifContent.style.display='block'; chatPanel.style.display='none'; tabNotifs.style.color=tabNotifs.style.borderBottomColor='var(--primary)'; tabNotifs.style.fontWeight='700'; tabChat.style.color='var(--text-muted)'; tabChat.style.borderBottomColor='transparent'; tabChat.style.fontWeight='600'; markBtn.style.display='block'; title.textContent='Notifications'; loadNotifications(); } else { notifContent.style.display='none'; chatPanel.style.display='flex'; tabChat.style.color=tabChat.style.borderBottomColor='var(--primary)'; tabChat.style.fontWeight='700'; tabNotifs.style.color='var(--text-muted)'; tabNotifs.style.borderBottomColor='transparent'; tabNotifs.style.fontWeight='600'; markBtn.style.display='none'; title.textContent='Chat'; loadChat(); } };
+function loadChat() { const el=document.getElementById('chat-messages'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; if(chatUnsub) chatUnsub(); const q=query(collection(db,'chats',currentUser.uid,'messages')); chatUnsub=onSnapshot(q, snap=>{ const msgs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0)); if(msgs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-title">No messages yet</div><div class="empty-sub">Start a conversation with admin</div></div>'; return; } let lastDate=''; el.innerHTML=msgs.map(m=>{ const mine=m.senderId===currentUser.uid; const d=m.createdAt?.toDate?m.createdAt.toDate():new Date(); const dateStr=d.toLocaleDateString(); const timeStr=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); let divider=dateStr!==lastDate?`<div class="chat-day-divider">${dateStr}</div>`:''; if(dateStr!==lastDate) lastDate=dateStr; return `${divider}<div class="chat-wrap ${mine?'mine':'theirs'}">${!mine?`<div class="chat-sender">${m.senderName||'Admin'}</div>`:''}<div class="chat-bubble ${mine?'mine':'theirs'}">${m.text||''}<div class="chat-meta">${timeStr}</div></div></div>`; }).join(''); el.scrollTop=el.scrollHeight; }); }
+window.sendChatMessage = async function() { const input=document.getElementById('chat-input'); const text=input.value.trim(); if(!text) return; input.value=''; try { await addDoc(collection(db,'chats',currentUser.uid,'messages'),{ senderId:currentUser.uid, senderName:userData.name, senderRole:userData.role||'user', text, createdAt:serverTimestamp() }); } catch(e){ showToast('Failed to send','error'); input.value=text; } }
 
-async function submitOfflineRequest(pickup,dest) {
-  // MIXED CONTENT FIX: Browsers block HTTP fetch from HTTPS PWA pages.
-  // fetch('http://192.168.4.1/request') will always fail from a PWA.
-  // The correct approach: write to Firestore offline_requests collection.
-  // Firestore has built-in offline persistence — it queues the write locally
-  // and syncs to the server when internet returns (after leaving ESP32 WiFi).
-  // The Gateway will pick it up via Firebase polling and forward to Shuttle.
-  const pax = rideType==='Chartered'?1:paxCount;
-  try {
-    await addDoc(collection(db,'offline_requests'),{
-      userId:currentUser.uid, userName:userData.name,
-      pickupId:userData.pickupId, offlineUUID:userData.pickupId,
-      pickupLocation:pickup, destination:dest, rideType,
-      passengerCount:pax, status:0,
-      requestType:'offline', platform:'pwa', timestamp:serverTimestamp()
-    });
-    showSuccessDialog({pickup,dest,mode:'Campus WiFi (Offline)',rideType,pax});
-  } catch(e) {
-    showToast('Request saved locally — will sync when online.','');
-    showSuccessDialog({pickup,dest,mode:'Saved Offline',rideType,pax});
-  }
-}
+// DRIVER
+async function loadDriverRequests() { const el=document.getElementById('driver-requests'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const q=query(collection(db,'ride_requests'),where('status','==',0)); const snap=await getDocs(q); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.timestamp?.seconds||0)-(b.timestamp?.seconds||0)); if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No pending requests</div></div>'; return; } el.innerHTML=docs.map(r=>`<div class="driver-request-card"><div class="driver-route">${r.pickupLocation||''} → ${r.destination||''}</div><div class="driver-meta"><span class="driver-chip">ID: ${r.pickupId||'-'}</span><span class="driver-chip">${r.rideType||''}</span><span class="driver-chip">${r.passengerCount||1} pax</span><span class="driver-chip">${r.userName||'-'}</span></div><div style="display:flex;gap:0.5rem;margin-top:0.75rem;"><button class="btn btn-success" style="flex:1;padding:0.6rem;" onclick="updateRequestStatus('${r.id}',1)">✓ Accept</button><button class="btn btn-danger" style="flex:1;padding:0.6rem;" onclick="updateRequestStatus('${r.id}',4)">✗ Reject</button></div></div>`).join(''); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; } }
+window.updateRequestStatus = async function(id,status) { showLoading('Updating...'); try { await updateDoc(doc(db,'ride_requests',id),{ status, statusName:status===1?'Assigned':'Rejected', shuttleIdFeedback:userData.shuttleId||'AFIT-001' }); showToast(status===1?'Request accepted!':'Request rejected',status===1?'success':'error'); loadDriverRequests(); } catch(e){ showToast('Failed','error'); } finally { hideLoading(); } };
+let intentUnsub=null; function startIntentListener(driverId) { if(intentUnsub) intentUnsub(); const q=query(collection(db,'driver_intents'),where('driverId','==',driverId),where('status','==','pending_intent')); intentUnsub=onSnapshot(q, snap=>{ const intents=snap.docs.map(d=>({id:d.id,...d.data()})); const container=document.getElementById('driver-intents-container'); if(!container) return; if(intents.length===0){ container.innerHTML=''; return; } container.innerHTML=intents.map(i=>`<div class="intent-banner"><div class="intent-badge"><span class="intent-dot"></span>NEW REQUEST</div><div class="driver-route">${i.pickupLocation||''} → ${i.destination||''}</div><div class="driver-meta"><span class="driver-chip">${i.rideType||''}</span><span class="driver-chip">${i.passengerCount||1} pax</span><span class="driver-chip">${i.userName||''}</span></div><div style="display:flex;gap:0.5rem;margin-top:0.75rem;"><button class="btn btn-danger" style="flex:1;padding:0.6rem;" onclick="rejectIntent('${i.id}')">Reject</button><button class="btn btn-success" style="flex:1;padding:0.6rem;" onclick="acceptIntent('${i.id}')">Accept</button></div></div>`).join(''); }); }
+window.acceptIntent = async function(intentId) { showLoading('Accepting...'); try { const intentSnap=await getDoc(doc(db,'driver_intents',intentId)); const intent=intentSnap.data(); if(!intent) return; const batch=writeBatch(db); batch.update(doc(db,'driver_intents',intentId),{status:'accepted',acceptedAt:serverTimestamp()}); if(intent.requestId){ batch.update(doc(db,'ride_requests',intent.requestId),{ status:1, statusName:'Assigned', driverId:currentUser.uid, driverName:userData.name, shuttleIdFeedback:userData.shuttleId||'AFIT-001', assignedAt:serverTimestamp() }); } await batch.commit(); showToast('Request accepted! Passenger notified.','success'); loadDriverRequests(); } catch(e){ showToast('Failed to accept','error'); } finally { hideLoading(); } };
+window.rejectIntent = async function(intentId) { showLoading('Rejecting...'); try { await updateDoc(doc(db,'driver_intents',intentId),{status:'rejected',rejectedAt:serverTimestamp()}); showToast('Request rejected',''); loadDriverRequests(); } catch(e){ showToast('Failed','error'); } finally { hideLoading(); } };
 
-function showSuccessDialog({pickup,dest,mode,rideType,pax}) {
-  document.getElementById('success-detail').innerHTML=`
-    <div class="success-detail-row"><span class="key">From</span><span class="val">${pickup}</span></div>
-    <div class="success-detail-row"><span class="key">To</span><span class="val">${dest}</span></div>
-    <div class="success-detail-row"><span class="key">Type</span><span class="val">${rideType}</span></div>
-    <div class="success-detail-row"><span class="key">Passengers</span><span class="val">${pax}</span></div>
-    <div class="success-detail-row"><span class="key">Mode</span><span class="val">${mode}</span></div>`;
-  openModal('success');
-}
-
-// ── MY REQUESTS — with cancel for pending ─────────────────────────────
-async function loadMyRequests() {
-  const el=document.getElementById('myrequests-content');
-  el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    const q=query(collection(db,'ride_requests'),where('userId','==',currentUser.uid));
-    const snap=await getDocs(q);
-    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
-    if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🚐</div><div class="empty-title">No requests yet</div><div class="empty-sub">Submit your first ride request</div></div>'; return; }
-    el.innerHTML=docs.map(r=>`
-      <div class="list-item">
-        <div class="list-item-row">
-          <div style="flex:1;">
-            <div class="list-item-title">${r.pickupLocation||''} → ${r.destination||''}</div>
-            <div class="list-item-sub">${r.rideType||''} · ${r.passengerCount||1} pax · ${formatTime(r.timestamp)}</div>
-          </div>
-          ${statusBadge(r.status)}
-        </div>
-        ${r.status===0?`<button class="btn btn-cancel" style="margin-top:0.6rem;padding:0.5rem;" onclick="cancelRequest('${r.id}')">Cancel Request</button>`:''}
-      </div>`).join('');
-  } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; }
-}
-
-window.cancelRequest = async function(id) {
-  showLoading('Cancelling...');
-  try { await updateDoc(doc(db,'ride_requests',id),{status:5}); showToast('Request cancelled','success'); loadMyRequests(); }
-  catch { showToast('Failed to cancel','error'); }
-  finally { hideLoading(); }
-};
-
-// ── NOTIFICATIONS + CHAT ─────────────────────────────────────────────────────
-let currentChatTab = 'notifs';
-let chatUnsub = null;
-
-window.switchNotifTab = function(tab) {
-  currentChatTab = tab;
-  const notifContent = document.getElementById('notif-content');
-  const chatPanel    = document.getElementById('chat-panel');
-  const tabNotifs    = document.getElementById('tab-notifs');
-  const tabChat      = document.getElementById('tab-chat');
-  const markBtn      = document.getElementById('mark-read-btn');
-  const title        = document.getElementById('notif-screen-title');
-  if(tab==='notifs'){
-    notifContent.style.display='block'; chatPanel.style.display='none';
-    tabNotifs.style.color=tabNotifs.style.borderBottomColor='var(--primary)'; tabNotifs.style.fontWeight='700';
-    tabChat.style.color='var(--text-muted)'; tabChat.style.borderBottomColor='transparent'; tabChat.style.fontWeight='600';
-    markBtn.style.display='block'; title.textContent='Notifications';
-    loadNotifications();
-  } else {
-    notifContent.style.display='none'; chatPanel.style.display='flex'; chatPanel.style.flexDirection='column';
-    tabChat.style.color=tabChat.style.borderBottomColor='var(--primary)'; tabChat.style.fontWeight='700';
-    tabNotifs.style.color='var(--text-muted)'; tabNotifs.style.borderBottomColor='transparent'; tabNotifs.style.fontWeight='600';
-    markBtn.style.display='none'; title.textContent='Chat';
-    loadChat();
-  }
-};
-
-async function loadNotifications() {
-  const el=document.getElementById('notif-content');
-  el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    const q=query(collection(db,'notifications'),where('userId','==',currentUser.uid));
-    const snap=await getDocs(q);
-    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-    if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🔔</div><div class="empty-title">No notifications</div><div class="empty-sub">You\'re all caught up</div></div>'; return; }
-    el.innerHTML=docs.map(n=>`
-      <div class="notif-item ${n.read?'':'notif-unread'}" id="notif-${n.id}" onclick="markRead('${n.id}')">
-        <div class="notif-dot ${n.read?'read':''}"></div>
-        <div style="flex:1;">
-          <div class="notif-title">${n.title||'Notification'}</div>
-          <div class="notif-body">${n.body||''}</div>
-          <div class="notif-time">${formatTime(n.createdAt)}</div>
-        </div>
-      </div>`).join('');
-  } catch(e) { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load notifications</div><div class="empty-sub">Check your connection</div></div>'; }
-}
-
-// ── CHAT — real-time Firestore messages between user and admin ────────────────
-// Collection: chats/{userId}/messages/{msgId}
-// Fields: senderId, senderName, senderRole, text, createdAt
-function loadChat() {
-  const el = document.getElementById('chat-messages');
-  el.innerHTML = '<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  if(chatUnsub) chatUnsub();
-  const uid = currentUser.uid;
-  // Each user has their own chat thread — admin can see all threads
-  const chatRef = collection(db, 'chats', uid, 'messages');
-  const q = query(chatRef);
-  chatUnsub = onSnapshot(q, snap => {
-    const msgs = snap.docs.map(d=>({id:d.id,...d.data()}))
-      .sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
-    if(msgs.length===0){
-      el.innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-title">No messages yet</div><div class="empty-sub">Start a conversation with admin</div></div>';
-      return;
-    }
-    let lastDate='';
-    el.innerHTML = msgs.map(m=>{
-      const mine = m.senderId === uid;
-      const d = m.createdAt?.toDate ? m.createdAt.toDate() : new Date();
-      const dateStr = d.toLocaleDateString();
-      const timeStr = d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-      let divider='';
-      if(dateStr!==lastDate){ lastDate=dateStr; divider=`<div class="chat-day-divider">${dateStr}</div>`; }
-      return `${divider}<div class="chat-wrap ${mine?'mine':'theirs'}">
-        ${!mine?`<div class="chat-sender">${m.senderName||'Admin'}</div>`:''}
-        <div class="chat-bubble ${mine?'mine':'theirs'}">${m.text||''}
-          <div class="chat-meta">${timeStr}</div>
-        </div>
-      </div>`;
-    }).join('');
-    el.scrollTop = el.scrollHeight;
-  }, ()=>{
-    el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load chat</div></div>';
-  });
-}
-
-window.sendChatMessage = async function() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if(!text) return;
-  input.value = '';
-  try {
-    await addDoc(collection(db,'chats',currentUser.uid,'messages'),{
-      senderId:   currentUser.uid,
-      senderName: userData.name || currentUser.email,
-      senderRole: userData.role || 'user',
-      text, createdAt: serverTimestamp()
-    });
-  } catch { showToast('Failed to send','error'); input.value=text; }
-};
-
-// Send on Enter key
-document.getElementById('chat-input')?.addEventListener('keydown', e=>{
-  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendChatMessage(); }
-});
-
-window.markRead = async function(id) {
-  const el=document.getElementById('notif-'+id); if(!el) return;
-  el.querySelector('.notif-dot')?.classList.add('read');
-  el.classList.remove('notif-unread');
-  try { await updateDoc(doc(db,'notifications',id),{read:true}); } catch {}
-};
-
-window.markAllRead = async function() {
-  showLoading('Marking all as read...');
-  try {
-    const q=query(collection(db,'notifications'),where('userId','==',currentUser.uid),where('read','==',false));
-    const snap=await getDocs(q);
-    const batch=writeBatch(db);
-    snap.docs.forEach(d=>batch.update(d.ref,{read:true}));
-    await batch.commit();
-    loadNotifications();
-    showToast('All marked as read','success');
-  } catch { showToast('Failed','error'); }
-  finally { hideLoading(); }
-};
-
-// ── LOST & FOUND ──────────────────────────────────────────────────────
-async function loadLostFound() {
-  const el=document.getElementById('lostfound-list');
-  el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    const snap=await getDocs(collection(db,'lost_found'));
-    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-    if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No reports yet</div></div>'; return; }
-    el.innerHTML=docs.map(r=>{
-      let imgHtml='';
-      if(r.imageUrl){
-        let url=r.imageUrl;
-        const dm=url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        if(dm) url=`https://lh3.googleusercontent.com/d/${dm[1]}`;
-        imgHtml=`<div style="position:relative;"><img src="${url}" style="width:100%;height:160px;object-fit:cover;border-radius:0;display:block;" onerror="this.style.display='none'"/>
-          <div style="position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(transparent,rgba(0,0,0,0.5));border-radius:0;"></div></div>`;
-      }
-      return `<div class="list-item" style="padding:0;overflow:hidden;">
-        ${imgHtml}
-        <div style="padding:0.9rem 1rem;">
-          <div class="list-item-row">
-            <div><div class="list-item-title">${r.itemName||r.description||''}</div>
-            <div class="list-item-sub">${r.description||''}</div>
-            <div class="list-item-sub">📍 ${r.locationName||r.location||''} · ${formatTime(r.createdAt)}</div>
-            <div class="list-item-sub">👤 ${r.userName||r.contactName||''}</div></div>
-            ${statusBadge(r.itemType||r.type)}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; }
-}
-window.showLostFoundForm = function(type) {
-  lfType=type;
-  document.getElementById('lf-modal-title').textContent=type==='lost'?'Report Lost Item':'Report Found Item';
-  ['lf-item','lf-desc','lf-location'].forEach(id=>document.getElementById(id).value='');
-  openModal('lostfound');
-};
-window.submitLostFound = async function() {
-  const item=document.getElementById('lf-item').value.trim();
-  if(!item){ showToast('Please enter item name','error'); return; }
-  showLoading('Submitting...'); try {
-    await addDoc(collection(db,'lost_found'),{type:lfType,itemName:item,description:document.getElementById('lf-desc').value.trim(),location:document.getElementById('lf-location').value.trim(),contactName:userData.name,userId:currentUser.uid,createdAt:serverTimestamp()});
-    closeModal('lostfound'); showToast('Report submitted!','success'); loadLostFound();
-  } catch { showToast('Failed. Try again.','error'); } finally { hideLoading(); }
-};
-
-// ── REPORT ────────────────────────────────────────────────────────────
-async function loadReports() {
-  const el=document.getElementById('reports-list');
-  el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    const snap=await getDocs(query(collection(db,'complaints'),where('userId','==',currentUser.uid)));
-    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-    if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">No reports yet</div></div>'; return; }
-    el.innerHTML=docs.map(r=>`<div class="list-item"><div class="list-item-row"><div style="flex:1;"><div class="list-item-title">${r.subject||''}</div><div class="list-item-sub">${(r.message||'').slice(0,60)}</div>${r.adminReply?`<div class="list-item-sub" style="color:var(--primary);margin-top:0.3rem;">Admin: ${r.adminReply}</div>`:''}</div>${statusBadge(r.status)}</div></div>`).join('');
-  } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; }
-}
-window.submitReport = async function() {
-  const subject=document.getElementById('report-subject').value.trim();
-  const message=document.getElementById('report-message').value.trim();
-  if(!subject||!message){ showToast('Please fill in all fields','error'); return; }
-  showLoading('Submitting...'); try {
-    await addDoc(collection(db,'complaints'),{userId:currentUser.uid,userName:userData.name,subject,message,status:'open',adminReply:'',platform:'pwa',createdAt:serverTimestamp()});
-    document.getElementById('report-subject').value=''; document.getElementById('report-message').value='';
-    showToast('Report submitted!','success'); loadReports();
-  } catch { showToast('Failed. Try again.','error'); } finally { hideLoading(); }
-};
-
-// ── DRIVER ────────────────────────────────────────────────────────────
-async function loadDriverRequests() {
-  const el=document.getElementById('driver-requests');
-  el.innerHTML='<div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    const snap=await getDocs(query(collection(db,'ride_requests'),where('status','==',0)));
-    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.timestamp?.seconds||0)-(b.timestamp?.seconds||0));
-    if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No pending requests</div></div>'; return; }
-    el.innerHTML=docs.map(r=>`<div class="driver-request-card"><div class="driver-route">${r.pickupLocation||''} → ${r.destination||''}</div><div class="driver-meta"><span class="driver-chip">ID: ${r.pickupId||'-'}</span><span class="driver-chip">${r.rideType||''}</span><span class="driver-chip">${r.passengerCount||1} pax</span><span class="driver-chip">${r.userName||'-'}</span><span class="driver-chip" style="background:#E0F7FA;color:#00838F;">${r.platform==='pwa'?'iOS PWA':'Android'}</span></div><div style="display:flex;gap:0.5rem;margin-top:0.75rem;"><button class="btn btn-success" style="flex:1;padding:0.6rem;" onclick="updateStatus('${r.id}',1)">✓ Accept</button><button class="btn btn-danger" style="flex:1;padding:0.6rem;" onclick="updateStatus('${r.id}',4)">✗ Reject</button></div></div>`).join('');
-  } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; }
-}
-window.loadDriverRequests = loadDriverRequests;
-window.updateStatus = async function(id,status) {
-  showLoading('Updating...'); try { await updateDoc(doc(db,'ride_requests',id),{status}); showToast(status===1?'Request accepted!':'Request rejected',status===1?'success':'error'); loadDriverRequests(); }
-  catch { showToast('Failed','error'); } finally { hideLoading(); }
-};
-
-// ── ADMIN ─────────────────────────────────────────────────────────────
-// FIX 2: Admin queries BOTH platforms — users collection shows all registrations
-window.adminShowUsers = async function() {
-  const el=document.getElementById('admin-content');
-  el.innerHTML='<div class="admin-section-title">All Users</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    const snap=await getDocs(collection(db,'users'));
-    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='user');
-    el.innerHTML=`<div class="admin-section-title">Users (${docs.length})</div>`+
-      (docs.length===0?'<div class="empty-state"><div class="empty-title">No users</div></div>':
-      docs.map(u=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${u.name||u.email||'-'}</div><div class="list-item-sub">${u.email||''} · ID: ${u.pickupId||'-'}</div></div><span class="status-badge badge-approved" style="background:#E0F7FA;color:#00695C;">${u.platform==='pwa'?'iOS PWA':'Android'}</span></div></div>`).join(''));
-  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
-};
-window.adminShowDrivers = async function() {
-  const el=document.getElementById('admin-content');
-  el.innerHTML='<div class="admin-section-title">Drivers</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    const snap=await getDocs(collection(db,'users'));
-    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='driver');
-    el.innerHTML=`<div class="admin-section-title">Drivers (${docs.length})</div>`+
-      (docs.length===0?'<div class="empty-state"><div class="empty-title">No drivers</div></div>':
-      docs.map(u=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${u.name||u.email||'-'}</div><div class="list-item-sub">${u.email||''}</div></div><span class="status-badge badge-pending">DRIVER</span></div></div>`).join(''));
-  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
-};
-window.adminShowBookings = async function() {
-  const el=document.getElementById('admin-content');
-  el.innerHTML='<div class="admin-section-title">All Ride Requests</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    const snap=await getDocs(collection(db,'ride_requests'));
-    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
-    el.innerHTML=`<div class="admin-section-title">Requests (${docs.length})</div>`+
-      (docs.length===0?'<div class="empty-state"><div class="empty-title">No requests</div></div>':
-      docs.map(r=>`<div class="list-item"><div class="list-item-row"><div style="flex:1;"><div class="list-item-title">${r.pickupLocation||''} → ${r.destination||''}</div><div class="list-item-sub">${r.userName||'-'} · ${r.rideType||''} · ID:${r.pickupId||'-'} · ${r.platform==='pwa'?'PWA':'App'}</div><div class="list-item-sub">${formatTime(r.timestamp)}</div></div>${statusBadge(r.status)}</div><div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;"><button class="btn btn-success" style="flex:1;min-width:70px;padding:0.45rem;font-size:0.78rem;" onclick="updateStatus('${r.id}',1)">Accept</button><button class="btn btn-danger" style="flex:1;min-width:70px;padding:0.45rem;font-size:0.78rem;" onclick="updateStatus('${r.id}',4)">Reject</button><button class="btn btn-secondary" style="flex:1;min-width:70px;padding:0.45rem;font-size:0.78rem;" onclick="updateStatus('${r.id}',3)">Complete</button></div></div>`).join(''));
-  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
-};
-window.adminShowLostFound = async function() {
-  const el=document.getElementById('admin-content');
-  el.innerHTML='<div class="admin-section-title">Lost & Found</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    const snap=await getDocs(collection(db,'lost_found'));
-    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-    el.innerHTML=`<div class="admin-section-title">Lost & Found (${docs.length})</div>`+
-      (docs.length===0?'<div class="empty-state"><div class="empty-title">No reports</div></div>':
-      docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.itemName||''}</div><div class="list-item-sub">${r.description||''} · ${r.location||''}</div><div class="list-item-sub">By: ${r.contactName||'-'}</div></div>${statusBadge(r.type)}</div></div>`).join(''));
-  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
-};
-window.adminShowComplaints = async function() {
-  const el=document.getElementById('admin-content');
-  el.innerHTML='<div class="admin-section-title">Complaints</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    const snap=await getDocs(collection(db,'complaints'));
-    const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-    el.innerHTML=`<div class="admin-section-title">Complaints (${docs.length})</div>`+
-      (docs.length===0?'<div class="empty-state"><div class="empty-title">No complaints</div></div>':
-      docs.map(r=>`<div class="list-item"><div class="list-item-row"><div style="flex:1;"><div class="list-item-title">${r.subject||''}</div><div class="list-item-sub">${r.userName||'-'} · ${formatTime(r.createdAt)}</div><div class="list-item-sub">${(r.message||'').slice(0,80)}</div>${r.adminReply?`<div class="list-item-sub" style="color:var(--primary);">Reply: ${r.adminReply}</div>`:''}</div>${statusBadge(r.status)}</div><div style="display:flex;gap:0.4rem;margin-top:0.5rem;"><input class="form-input" id="reply-${r.id}" placeholder="Reply..." style="flex:1;padding:0.5rem;font-size:0.82rem;"/><button class="btn btn-primary" style="width:auto;padding:0.5rem 0.75rem;font-size:0.78rem;" onclick="replyComplaint('${r.id}')">Send</button></div></div>`).join(''));
-  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
-};
-window.replyComplaint = async function(id) {
-  const reply=document.getElementById('reply-'+id)?.value.trim();
-  if(!reply) return;
-  showLoading('Sending...'); try { await updateDoc(doc(db,'complaints',id),{adminReply:reply,status:'in_progress'}); showToast('Reply sent!','success'); adminShowComplaints(); }
-  catch { showToast('Failed','error'); } finally { hideLoading(); }
-};
-window.adminShowChats = async function() {
-  const el=document.getElementById('admin-content');
-  el.innerHTML='<div class="admin-section-title">User Chats</div><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
-  try {
-    // Get all users to list their chat threads
-    const snap=await getDocs(collection(db,'users'));
-    const users=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='user'||u.role==='driver');
-    if(users.length===0){ el.innerHTML='<div class="admin-section-title">User Chats</div><div class="empty-state"><div class="empty-title">No users</div></div>'; return; }
-    el.innerHTML='<div class="admin-section-title">Select a user to chat</div>'+
-      users.map(u=>`<div class="admin-row" onclick="adminOpenChat('${u.id}','${(u.name||u.email||'User').replace(/'/g,"\'")}')">
-        <div class="admin-row-icon" style="background:#E3F2FD;font-size:1.1rem;">${(u.name||'?')[0].toUpperCase()}</div>
-        <div><div class="admin-row-label">${u.name||u.email||'-'}</div><div style="font-size:0.72rem;color:var(--text-muted);">ID: ${u.pickupId||'-'} · ${u.platform==='pwa'?'iOS PWA':'Android'}</div></div>
-        <span class="admin-row-arrow">💬</span></div>`).join('');
-  } catch { el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; }
-};
-
+// ADMIN
+window.adminShowUsers = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">All Users</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'users')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='user'); el.innerHTML=`<div class="admin-section-title">Users (${docs.length})</div>`+(docs.length===0?'<div class="empty-state"><div class="empty-title">No users</div></div>':docs.map(u=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${u.name||u.email||'-'}</div><div class="list-item-sub">${u.email||''} · ID: ${u.pickupId||'-'}</div></div><span class="status-badge badge-approved">${u.platform==='pwa'?'PWA':'Android'}</span></div></div>`).join('')); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
+window.adminShowDrivers = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">Drivers</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'users')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='driver'); el.innerHTML=`<div class="admin-section-title">Drivers (${docs.length})</div>`+(docs.length===0?'<div class="empty-state"><div class="empty-title">No drivers</div></div>':docs.map(u=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${u.name||u.email||'-'}</div><div class="list-item-sub">${u.email||''}</div></div><span class="status-badge badge-pending">DRIVER</span></div></div>`).join('')); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
+window.adminShowBookings = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">All Ride Requests</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'ride_requests')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0)); el.innerHTML=`<div class="admin-section-title">Requests (${docs.length})</div>`+(docs.length===0?'<div class="empty-state"><div class="empty-title">No requests</div></div>':docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.pickupLocation||''} → ${r.destination||''}</div><div class="list-item-sub">${r.userName||'-'} · ${r.rideType||''} · ${r.platform==='pwa'?'PWA':'App'}${r.shuttleIdFeedback?` · Shuttle: ${r.shuttleIdFeedback}`:''}</div><div class="list-item-sub">${formatTime(r.timestamp)}</div></div>${statusBadge(r.status)}</div><div style="display:flex;gap:0.4rem;margin-top:0.5rem;"><button class="btn btn-success" style="flex:1;padding:0.45rem;font-size:0.78rem;" onclick="updateRequestStatus('${r.id}',1)">Accept</button><button class="btn btn-danger" style="flex:1;padding:0.45rem;font-size:0.78rem;" onclick="updateRequestStatus('${r.id}',4)">Reject</button></div></div>`).join('')); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
+window.adminShowLostFound = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">Lost & Found</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'lost_found')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); el.innerHTML=`<div class="admin-section-title">Lost & Found (${docs.length})</div>`+(docs.length===0?'<div class="empty-state"><div class="empty-title">No reports</div></div>':docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.itemName||''}</div><div class="list-item-sub">${r.description||''} · ${r.location||''}</div><div class="list-item-sub">By: ${r.contactName||'-'}</div></div>${statusBadge(r.type)}</div></div>`).join('')); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
+window.adminShowComplaints = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">Complaints</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'complaints')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); el.innerHTML=`<div class="admin-section-title">Complaints (${docs.length})</div>`+(docs.length===0?'<div class="empty-state"><div class="empty-title">No complaints</div></div>':docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.subject||''}</div><div class="list-item-sub">${r.userName||'-'} · ${formatTime(r.createdAt)}</div><div class="list-item-sub">${(r.message||'').slice(0,80)}</div>${r.adminReply?`<div class="list-item-sub" style="color:var(--primary);">Reply: ${r.adminReply}</div>`:''}</div>${statusBadge(r.status)}</div><div style="display:flex;gap:0.4rem;margin-top:0.5rem;"><input class="form-input" id="reply-${r.id}" placeholder="Reply..." style="flex:1;padding:0.5rem;font-size:0.82rem;"/><button class="btn btn-primary" style="width:auto;padding:0.5rem 0.75rem;font-size:0.78rem;" onclick="replyComplaint('${r.id}')">Send</button></div></div>`).join('')); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
+window.replyComplaint = async function(id) { const reply=document.getElementById('reply-'+id)?.value.trim(); if(!reply) return; showLoading('Sending...'); try { await updateDoc(doc(db,'complaints',id),{adminReply:reply,status:'resolved'}); showToast('Reply sent!','success'); adminShowComplaints(); } catch(e){ showToast('Failed','error'); } finally { hideLoading(); } };
+window.adminShowChats = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">User Chats</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'users')); const users=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='user'); if(users.length===0){ el.innerHTML='<div class="admin-section-title">User Chats</div><div class="empty-state"><div class="empty-title">No users</div></div>'; return; } el.innerHTML='<div class="admin-section-title">Select a user to chat</div>'+users.map(u=>`<div class="admin-row" onclick="adminOpenChat('${u.id}','${(u.name||u.email||'User').replace(/'/g,"\\'")}')"><div class="admin-row-icon">${(u.name||'?')[0].toUpperCase()}</div><div><div class="admin-row-label">${u.name||u.email||'-'}</div><div style="font-size:0.72rem;color:var(--text-muted);">ID: ${u.pickupId||'-'}</div></div><span class="admin-row-arrow">💬</span></div>`).join(''); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
 let adminChatUnsub=null, adminChatUserId=null;
-window.adminOpenChat = function(uid, name) {
-  adminChatUserId=uid;
-  const el=document.getElementById('admin-content');
-  el.innerHTML=`
-    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
-      <button onclick="adminShowChats()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;">←</button>
-      <div style="font-weight:700;color:var(--text-primary);">Chat with ${name}</div>
-    </div>
-    <div id="admin-chat-msgs" style="height:55vh;overflow-y:auto;padding:0.5rem;background:#F8FAFF;border-radius:14px;border:1px solid var(--border);margin-bottom:0.75rem;"></div>
-    <div style="display:flex;gap:0.5rem;">
-      <input id="admin-chat-input" class="form-input" type="text" placeholder="Type a message..." style="flex:1;padding:0.65rem 1rem;"/>
-      <button onclick="adminSendChat()" style="background:var(--primary);border:none;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;flex-shrink:0;">➤</button>
-    </div>`;
-  document.getElementById('admin-chat-input')?.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();adminSendChat();} });
-  if(adminChatUnsub) adminChatUnsub();
-  const q=query(collection(db,'chats',uid,'messages'));
-  adminChatUnsub=onSnapshot(q, snap=>{
-    const msgs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
-    const el2=document.getElementById('admin-chat-msgs');
-    if(!el2) return;
-    if(msgs.length===0){ el2.innerHTML='<div class="empty-state" style="padding:2rem;"><div class="empty-icon">💬</div><div class="empty-title">No messages yet</div></div>'; return; }
-    el2.innerHTML=msgs.map(m=>{
-      const mine=m.senderRole==='admin';
-      const d=m.createdAt?.toDate?m.createdAt.toDate():new Date();
-      return `<div class="chat-wrap ${mine?'mine':'theirs'}">
-        ${!mine?`<div class="chat-sender">${m.senderName||'User'}</div>`:''}
-        <div class="chat-bubble ${mine?'mine':'theirs'}">${m.text||''}
-          <div class="chat-meta">${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
-        </div></div>`;
-    }).join('');
-    el2.scrollTop=el2.scrollHeight;
-  });
-};
+window.adminOpenChat = function(uid, name) { adminChatUserId=uid; const el=document.getElementById('admin-content'); el.innerHTML=`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;"><button onclick="adminShowChats()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;">←</button><div style="font-weight:700;">Chat with ${name}</div></div><div id="admin-chat-msgs" style="height:55vh;overflow-y:auto;padding:0.5rem;background:#F8FAFF;border-radius:14px;border:1px solid var(--border);margin-bottom:0.75rem;"></div><div style="display:flex;gap:0.5rem;"><input id="admin-chat-input" class="form-input" type="text" placeholder="Type a message..." style="flex:1;"/><button onclick="adminSendChat()" style="background:var(--primary);border:none;border-radius:12px;width:44px;height:44px;cursor:pointer;">➤</button></div>`; document.getElementById('admin-chat-input')?.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();adminSendChat();} }); if(adminChatUnsub) adminChatUnsub(); const q=query(collection(db,'chats',uid,'messages')); adminChatUnsub=onSnapshot(q, snap=>{ const msgs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0)); const el2=document.getElementById('admin-chat-msgs'); if(!el2) return; if(msgs.length===0){ el2.innerHTML='<div class="empty-state" style="padding:2rem;"><div class="empty-icon">💬</div><div class="empty-title">No messages yet</div></div>'; return; } el2.innerHTML=msgs.map(m=>{ const mine=m.senderRole==='admin'; const d=m.createdAt?.toDate?m.createdAt.toDate():new Date(); return `<div class="chat-wrap ${mine?'mine':'theirs'}">${!mine?`<div class="chat-sender">${m.senderName||'User'}</div>`:''}<div class="chat-bubble ${mine?'mine':'theirs'}">${m.text||''}<div class="chat-meta">${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div></div>`; }).join(''); el2.scrollTop=el2.scrollHeight; }); };
+window.adminSendChat = async function() { const input=document.getElementById('admin-chat-input'); const text=input?.value.trim(); if(!text||!adminChatUserId) return; input.value=''; try { await addDoc(collection(db,'chats',adminChatUserId,'messages'),{ senderId:currentUser.uid, senderName:userData.name||'Admin', senderRole:'admin', text, createdAt:serverTimestamp() }); await addDoc(collection(db,'notifications'),{ userId:adminChatUserId, title:'New message from Admin', body:text.slice(0,60), type:'chat', read:false, createdAt:serverTimestamp() }); } catch(e){ showToast('Failed to send','error'); if(input) input.value=text; } };
+window.adminSendNotification = function() { document.getElementById('sn-title').value=''; document.getElementById('sn-body').value=''; openModal('send-notif'); };
+window.sendAdminNotification = async function() { const title=document.getElementById('sn-title').value.trim(); const body=document.getElementById('sn-body').value.trim(); const target=document.getElementById('sn-target').value; if(!title||!body){ showToast('Fill in all fields','error'); return; } showLoading('Sending...'); try { const snap=await getDocs(collection(db,'users')); const users=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>target==='all'?u.role==='user':u.role===target); const batch=writeBatch(db); users.forEach(u=>{ const ref=doc(collection(db,'notifications')); batch.set(ref,{ userId:u.id, title, body, type:'admin', read:false, createdAt:serverTimestamp() }); }); await batch.commit(); closeModal('send-notif'); showToast(`Sent to ${users.length} user${users.length!==1?'s':''}!`,'success'); } catch(e){ showToast('Failed','error'); } finally { hideLoading(); } };
 
-window.adminSendChat = async function() {
-  const input=document.getElementById('admin-chat-input');
-  const text=input?.value.trim(); if(!text||!adminChatUserId) return;
-  input.value='';
-  try {
-    await addDoc(collection(db,'chats',adminChatUserId,'messages'),{
-      senderId:currentUser.uid, senderName:userData.name||'Admin',
-      senderRole:'admin', text, createdAt:serverTimestamp()
-    });
-    // Also notify the user
-    await addDoc(collection(db,'notifications'),{
-      userId:adminChatUserId, title:'New message from Admin',
-      body:text.slice(0,60), type:'chat', read:false, createdAt:serverTimestamp()
-    });
-  } catch { showToast('Failed to send','error'); if(input) input.value=text; }
-};
+// ADS
+let _allAds=[], _adIndex=0, _adUnsub=null, _adDismissed=false;
+function startAdListener() { if(_adUnsub) _adUnsub(); const q=query(collection(db,'ads'),where('isActive','==',true)); _adUnsub=onSnapshot(q, snap=>{ _allAds=snap.docs.map(d=>({id:d.id,...d.data()})); if(_allAds.length>0 && !_adDismissed) renderNextAd(); }); }
+function renderNextAd() { const container=document.getElementById('dash-ad-container'); if(!container || !_allAds.length) return; const ad=_allAds[_adIndex % _allAds.length]; const link=ad.linkUrl?.trim()||''; let media=''; if(ad.videoUrl?.trim()){ media=`<video class="ad-video" src="${ad.videoUrl}" autoplay muted loop playsinline style="width:100%;max-height:180px;object-fit:cover;border-radius:16px 16px 0 0;"></video>`; } else if(ad.imageUrl?.trim()){ const url=toDirectImgUrl(ad.imageUrl); media=`<img class="ad-img" src="${url}" style="width:100%;height:140px;object-fit:cover;border-radius:16px 16px 0 0;" onerror="this.parentElement.querySelector('.ad-placeholder-fb').style.display='flex';this.style.display='none'"/><div class="ad-placeholder-fb" style="display:none;height:100px;align-items:center;justify-content:center;background:#E3F2FD;border-radius:16px 16px 0 0;font-size:2rem;">📢</div>`; } else { media=`<div style="height:80px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1565C0,#0D47A1);border-radius:16px 16px 0 0;font-size:2rem;">📢</div>`; } container.innerHTML=`<div class="ad-card" onclick="tapAd('${ad.id}','${link.replace(/'/g,"\\'")}')"><span class="ad-label">AD</span>${media}<div class="ad-body" style="display:flex;align-items:flex-start;justify-content:space-between;"><div><div class="ad-title">${ad.title||''}</div>${ad.body?`<div class="ad-text">${ad.body}</div>`:''}${link?`<div style="font-size:0.75rem;color:var(--primary);margin-top:0.3rem;">↗ Tap to open</div>`:''}</div><button onclick="event.stopPropagation();dismissAd()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;">✕</button></div></div>`; try { updateDoc(doc(db,'ads',ad.id),{ impressions:(ad.impressions||0)+1, lastSeen:serverTimestamp() }); } catch(e){} }
+window.dismissAd = function() { _adDismissed=true; const c=document.getElementById('dash-ad-container'); if(c) c.innerHTML=''; setTimeout(()=>{ _adDismissed=false; _adIndex++; renderNextAd(); },30000); };
+window.tapAd = async function(id,link) { try { const d=await getDoc(doc(db,'ads',id)); if(d.exists()) await updateDoc(doc(db,'ads',id),{ taps:(d.data().taps||0)+1, lastTap:serverTimestamp() }); } catch(e){} if(link) window.open(link.startsWith('http')?link:'https://'+link,'_blank'); };
 
-window.adminSendNotification = function() {
-  ['sn-title','sn-body'].forEach(id=>document.getElementById(id).value='');
-  openModal('send-notif');
-};
-window.sendAdminNotification = async function() {
-  const title=document.getElementById('sn-title').value.trim();
-  const body=document.getElementById('sn-body').value.trim();
-  const target=document.getElementById('sn-target').value;
-  if(!title||!body){ showToast('Fill in all fields','error'); return; }
-  showLoading('Sending...'); try {
-    const snap=await getDocs(collection(db,'users'));
-    const users=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>target==='all'?u.role==='user':u.role===target);
-    const batch=writeBatch(db);
-    users.forEach(u=>{ const ref=doc(collection(db,'notifications')); batch.set(ref,{userId:u.id,title,body,type:'admin',read:false,createdAt:serverTimestamp()}); });
-    await batch.commit();
-    closeModal('send-notif'); showToast(`Sent to ${users.length} user${users.length!==1?'s':''}!`,'success');
-  } catch { showToast('Failed','error'); } finally { hideLoading(); }
-};
-
-// ── AUTH EVENTS ───────────────────────────────────────────────────────
-document.getElementById('login-btn').addEventListener('click', async () => {
-  const email=document.getElementById('login-email').value.trim();
-  const pass=document.getElementById('login-password').value;
-  const err=document.getElementById('login-error'); err.classList.remove('show');
-  if(!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; }
-  showLoading('Signing in...'); try { await signInWithEmailAndPassword(auth,email,pass); }
-  catch(e){ err.textContent=e.code==='auth/invalid-credential'?'Invalid email or password.':e.message; err.classList.add('show'); }
-  finally { hideLoading(); }
-});
-document.getElementById('register-btn').addEventListener('click', async () => {
-  const name=document.getElementById('reg-name').value.trim();
-  const email=document.getElementById('reg-email').value.trim();
-  const pass=document.getElementById('reg-password').value;
-  const role=document.getElementById('reg-role').value;
-  const err=document.getElementById('register-error'); err.classList.remove('show');
-  if(!name||!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; }
-  if(pass.length<6){ err.textContent='Password must be at least 6 characters.'; err.classList.add('show'); return; }
-  showLoading('Creating account...'); try {
-    const cred=await createUserWithEmailAndPassword(auth,email,pass);
-    const uid=cred.user.uid; const pickupId=generatePickupId(uid);
-    // FIX 2: Always write full user doc with platform:'pwa' so admin sees them
-    await setDoc(doc(db,'users',uid),{name,email,role,pickupId,platform:'pwa',shortId:0,fcmToken:'',createdAt:serverTimestamp()});
-  } catch(e){ err.textContent=e.code==='auth/email-already-in-use'?'Email already registered.':e.message; err.classList.add('show'); }
-  finally { hideLoading(); }
-});
+// AUTH EVENTS
+document.getElementById('login-btn').addEventListener('click', async()=>{ const email=document.getElementById('login-email').value.trim(); const pass=document.getElementById('login-password').value; const err=document.getElementById('login-error'); err.classList.remove('show'); if(!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; } showLoading('Signing in...'); try { await signInWithEmailAndPassword(auth,email,pass); } catch(e){ err.textContent=e.code==='auth/invalid-credential'?'Invalid email or password.':e.message; err.classList.add('show'); } finally { hideLoading(); } });
+document.getElementById('register-btn').addEventListener('click', async()=>{ const name=document.getElementById('reg-name').value.trim(); const email=document.getElementById('reg-email').value.trim(); const pass=document.getElementById('reg-password').value; const role=document.getElementById('reg-role').value; const err=document.getElementById('register-error'); err.classList.remove('show'); if(!name||!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; } if(pass.length<6){ err.textContent='Password must be at least 6 characters.'; err.classList.add('show'); return; } showLoading('Creating account...'); try { const cred=await createUserWithEmailAndPassword(auth,email,pass); const uid=cred.user.uid; const pickupId=generatePickupId(uid); await setDoc(doc(db,'users',uid),{ name, email, role, pickupId, platform:'pwa', createdAt:serverTimestamp() }); } catch(e){ err.textContent=e.code==='auth/email-already-in-use'?'Email already registered.':e.message; err.classList.add('show'); } finally { hideLoading(); } });
 document.getElementById('go-register').addEventListener('click',e=>{e.preventDefault();showScreen('register');});
 document.getElementById('go-login').addEventListener('click',e=>{e.preventDefault();showScreen('login');});
-window.logout = async function() { closeModal('settings'); showLoading('Signing out...'); try{ await signOut(auth); }finally{ hideLoading(); } };
-
-// ── CONFIRM DIALOG ───────────────────────────────────────────────────────────
-function showConfirm({icon='❓',title='Are you sure?',msg='',okText='Confirm',okClass='btn-primary'}) {
-  return new Promise(resolve => {
-    document.getElementById('confirm-icon').textContent  = icon;
-    document.getElementById('confirm-title').textContent = title;
-    document.getElementById('confirm-msg').textContent   = msg;
-    const okBtn  = document.getElementById('confirm-ok-btn');
-    const cnBtn  = document.getElementById('confirm-cancel-btn');
-    okBtn.textContent = okText; okBtn.className = 'btn '+okClass;
-    const ov = document.getElementById('confirm-overlay');
-    ov.classList.add('show');
-    const close = v => { ov.classList.remove('show'); resolve(v); };
-    okBtn.onclick = () => close(true);
-    cnBtn.onclick = () => close(false);
-    ov.onclick    = e => { if(e.target===ov) close(false); };
-  });
-}
-
-// ── CONFIRMATIONS — wrap existing actions ─────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  // Cancel request confirmation
-  const _origCancel = window.cancelRequest;
-  window.cancelRequest = async function(id) {
-    const ok = await showConfirm({icon:'🚫',title:'Cancel Request',
-      msg:'Are you sure you want to cancel this ride request?',
-      okText:'Yes, Cancel',okClass:'btn-danger'});
-    if(ok) _origCancel(id);
-  };
-  // Logout confirmation
-  const _origLogout = window.logout;
-  window.logout = async function() {
-    const ok = await showConfirm({icon:'🚪',title:'Sign Out',
-      msg:'Are you sure you want to sign out of ASSA?',
-      okText:'Sign Out',okClass:'btn-danger'});
-    if(ok) _origLogout();
-  };
-});
-
-// ── INTERNAL ADS — synced from admin Firestore in real-time ──────────────────
-// Pulls from same ads collection admin manages via manage_ads_screen on Android.
-// Rotates through active ads, tracks impressions + taps.
-let _allAds = [], _adIndex = 0, _adUnsub = null, _adDismissed = false;
-
-function startAdListener() {
-  if(_adUnsub) _adUnsub();
-  const q = query(collection(db,'ads'), where('isActive','==',true));
-  _adUnsub = onSnapshot(q, snap => {
-    _allAds = snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(_allAds.length > 0 && !_adDismissed) renderNextAd();
-  }, ()=>{});
-}
-
-function toDirectImgUrl(url) {
-  if(!url) return '';
-  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if(m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
-  return url;
-}
-
-function renderNextAd() {
-  const container = document.getElementById('dash-ad-container');
-  if(!container || !_allAds.length) return;
-  const ad  = _allAds[_adIndex % _allAds.length];
-  const link = ad.linkUrl?.trim() || '';
-  // Build media
-  let media = '';
-  if(ad.videoUrl?.trim()) {
-    media = `<video class="ad-video" src="${ad.videoUrl}" autoplay muted loop playsinline style="width:100%;max-height:180px;object-fit:cover;display:block;background:#000;border-radius:16px 16px 0 0;"></video>`;
-  } else if(ad.imageUrl?.trim()) {
-    const url = toDirectImgUrl(ad.imageUrl);
-    media = `<img class="ad-img" src="${url}" alt="${ad.title||''}" style="border-radius:16px 16px 0 0;" onerror="this.parentElement.querySelector('.ad-placeholder-fb').style.display='flex';this.style.display='none'"/>
-             <div class="ad-placeholder-fb" style="display:none;height:100px;align-items:center;justify-content:center;background:#E3F2FD;border-radius:16px 16px 0 0;font-size:2rem;">📢</div>`;
-  } else {
-    media = `<div style="height:80px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1565C0,#0D47A1);border-radius:16px 16px 0 0;font-size:2rem;">📢</div>`;
-  }
-  container.innerHTML = `
-    <div class="ad-card" style="margin-bottom:1rem;" onclick="tapAd('${ad.id}','${link.replace(/'/g,"\\'")}')">
-      <span class="ad-label">AD</span>
-      ${media}
-      <div class="ad-body" style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;">
-        <div style="flex:1;">
-          <div class="ad-title">${ad.title||''}</div>
-          ${ad.body?`<div class="ad-text">${ad.body}</div>`:''}
-          ${link?`<div style="font-size:0.75rem;color:var(--primary);font-weight:600;margin-top:0.3rem;">↗ Tap to open</div>`:''}
-        </div>
-        <button onclick="event.stopPropagation();dismissAd()" style="background:none;border:none;font-size:1.1rem;color:var(--text-muted);cursor:pointer;padding:0;line-height:1;flex-shrink:0;">✕</button>
-      </div>
-    </div>`;
-  // Track impression
-  try { updateDoc(doc(db,'ads',ad.id),{
-    impressions: (ad.impressions||0)+1, lastSeen:serverTimestamp()
-  }); } catch {}
-}
-
-function loadDashboardAd() { startAdListener(); }
-
-window.dismissAd = function() {
-  _adDismissed = true;
-  const c = document.getElementById('dash-ad-container');
-  if(c) c.innerHTML = '';
-  // Show next ad after 30s
-  setTimeout(()=>{ _adDismissed=false; _adIndex++; renderNextAd(); }, 30000);
-};
-
-window.tapAd = async function(id, link) {
-  try { const d=await getDoc(doc(db,'ads',id)); if(d.exists())
-    await updateDoc(doc(db,'ads',id),{taps:(d.data().taps||0)+1,lastTap:serverTimestamp()}); } catch {}
-  if(link) window.open(link.startsWith('http')?link:'https://'+link,'_blank');
-};
-
-// ── DRIVER INTENT SYSTEM ──────────────────────────────────────────────────────
-let intentUnsub = null;
-
-function startIntentListener(driverId) {
-  if(intentUnsub) intentUnsub();
-  const q = query(collection(db,'driver_intents'),
-    where('driverId','==',driverId), where('status','==','pending_intent'));
-  intentUnsub = onSnapshot(q, snap => {
-    const intents = snap.docs.map(d=>({id:d.id,...d.data()}));
-    renderIntents(intents);
-  }, ()=>{});
-}
-
-function renderIntents(intents) {
-  const c = document.getElementById('driver-intents-container');
-  if(!c) return;
-  if(!intents.length){ c.innerHTML=''; return; }
-  c.innerHTML = intents.map(i=>`
-    <div class="intent-banner">
-      <div class="intent-badge"><span class="intent-dot"></span>
-        ${i.requestType==='offline'?'OFFLINE REQUEST':'ONLINE REQUEST'}</div>
-      <div style="font-size:1rem;font-weight:800;color:white;margin-bottom:0.6rem;">🚨 Request Coming In!</div>
-      <div class="intent-row">📍 <strong>From:</strong> ${i.pickupLocation||''}</div>
-      <div class="intent-row">🏁 <strong>To:</strong> ${i.destination||''}</div>
-      <div class="intent-row">🚐 <strong>Type:</strong> ${i.rideType||''} · ${i.passengerCount||1} pax</div>
-      <div class="intent-row">🪪 <strong>Passenger:</strong> ${i.userName||''} (ID: ${i.pickupId||''})</div>
-      <div class="intent-btns">
-        <button class="intent-reject" onclick="rejectIntent('${i.id}')">✗ Reject</button>
-        <button class="intent-accept" onclick="acceptIntent('${i.id}')">✓ Accept Ride</button>
-      </div>
-    </div>`).join('');
-}
-
-window.acceptIntent = async function(requestId) {
-  const ok = await showConfirm({icon:'✅',title:'Accept Ride Request',
-    msg:'Accept this request? You will be assigned to pick up this passenger.',
-    okText:'Accept',okClass:'btn-success'});
-  if(!ok) return;
-  showLoading('Accepting...');
-  try {
-    const uid=currentUser.uid, name=userData.name||'Driver', shuttle=userData.shuttleId||'0';
-    const b=writeBatch(db);
-    b.update(doc(db,'driver_intents',requestId),{status:'accepted',acceptedAt:serverTimestamp()});
-    b.update(doc(db,'ride_requests',requestId),{
-      status:1,statusName:'Assigned',driverId:uid,driverName:name,assignedAt:serverTimestamp(),intentStatus:'accepted'
-    });
-    b.update(doc(db,'users',uid),{driverStatus:'on_ride'});
-    await b.commit();
-    const rSnap=await getDoc(doc(db,'ride_requests',requestId));
-    const userId=rSnap.data()?.userId;
-    if(userId) await addDoc(collection(db,'notifications'),{
-      userId,title:'🚌 Shuttle Assigned!',
-      body:`Driver ${name} accepted your request. Shuttle ${shuttle} is on the way!`,
-      type:'ride_assigned',requestId,read:false,createdAt:serverTimestamp()
-    });
-    showToast('Accepted! Passenger notified.','success');
-  } catch { showToast('Failed to accept. Try again.','error'); }
-  finally { hideLoading(); }
-};
-
-window.rejectIntent = async function(requestId) {
-  const ok = await showConfirm({icon:'❌',title:'Reject Request',
-    msg:'Reject this request? It will be forwarded to the next available driver.',
-    okText:'Reject',okClass:'btn-danger'});
-  if(!ok) return;
-  showLoading('Rejecting...');
-  try {
-    await updateDoc(doc(db,'driver_intents',requestId),{
-      status:'rejected',rejectedAt:serverTimestamp(),rejectedBy:currentUser.uid
-    });
-    await updateDoc(doc(db,'users',currentUser.uid),{driverStatus:'available'});
-    showToast('Request rejected. Forwarded to next driver.','');
-  } catch { showToast('Failed','error'); }
-  finally { hideLoading(); }
-};
+window.logout = async function() { const ok=await showConfirm({icon:'🚪',title:'Sign Out',msg:'Are you sure?',okText:'Sign Out',okClass:'btn-danger'}); if(!ok) return; showLoading('Signing out...'); try{ await signOut(auth); }finally{ hideLoading(); } };
+function showConfirm({icon='❓',title='Are you sure?',msg='',okText='Confirm',okClass='btn-primary'}) { return new Promise(resolve=>{ document.getElementById('confirm-icon').textContent=icon; document.getElementById('confirm-title').textContent=title; document.getElementById('confirm-msg').textContent=msg; const okBtn=document.getElementById('confirm-ok-btn'); const cnBtn=document.getElementById('confirm-cancel-btn'); okBtn.textContent=okText; okBtn.className='btn '+okClass; const ov=document.getElementById('confirm-overlay'); ov.classList.add('show'); const close=v=>{ ov.classList.remove('show'); resolve(v); }; okBtn.onclick=()=>close(true); cnBtn.onclick=()=>close(false); ov.onclick=e=>{ if(e.target===ov) close(false); }; }); }
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/assa/app/sw.js').catch(()=>{});
 </script>
