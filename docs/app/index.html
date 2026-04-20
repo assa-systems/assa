@@ -229,6 +229,19 @@
     .list-item-row{display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem}
     .list-item-title{font-size:0.9rem;font-weight:600;color:var(--text-primary)}
     .list-item-sub{font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem}
+
+    /* ACTIVE BOOKING BANNER */
+    .active-booking-banner{background:linear-gradient(135deg,#2E7D32,#388E3C);border-radius:16px;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.75rem;cursor:pointer}
+    .active-booking-banner.offline-ride{background:linear-gradient(135deg,#E65100,#F57C00)}
+    .active-booking-banner-text{flex:1}
+    .active-booking-banner-title{color:white;font-size:0.85rem;font-weight:700;display:flex;align-items:center;gap:0.5rem}
+    .active-booking-banner-route{color:rgba(255,255,255,0.85);font-size:0.78rem;margin-top:0.2rem}
+    .active-booking-banner-shuttle{color:white;font-size:0.8rem;font-weight:700;margin-top:0.2rem}
+    .banner-status-pill{background:rgba(255,255,255,0.25);border-radius:50px;padding:0.15rem 0.55rem;font-size:0.68rem;font-weight:700;color:white}
+    .banner-cancel-btn{background:rgba(255,255,255,0.2);border:none;border-radius:8px;padding:0.4rem 0.7rem;color:white;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap}
+
+    /* OFFLINE REQUEST CARD TAG */
+    .offline-tag{display:inline-block;background:#FFF3E0;color:#E65100;border-radius:50px;padding:0.15rem 0.55rem;font-size:0.68rem;font-weight:700;margin-bottom:0.25rem}
   </style>
 </head>
 <body>
@@ -281,6 +294,7 @@
     <div class="offline-banner hidden" id="dash-offline-banner"><span>📵</span><span>Offline Mode — Campus WiFi only</span></div>
     <div class="content">
       <div class="pickup-card"><div class="pickup-icon">🪪</div><div><div class="pickup-label">Your Pickup ID</div><div class="pickup-id" id="dash-pickup-id">---</div><div class="pickup-hint">Show this to your driver</div></div><button class="pickup-copy" onclick="copyPickupId()">Copy</button></div>
+      <div id="dash-active-banner"></div>
       <div class="section-title">Quick Actions</div>
       <div class="quick-grid">
         <div class="quick-btn" onclick="showScreen('request')"><div class="icon icon-blue">🚐</div><div class="label">Request Ride</div><div class="sub">Book a shuttle</div></div>
@@ -390,7 +404,7 @@ function statusBadge(s) { const m={0:['Pending','badge-pending'],1:['Assigned','
 function toDirectImgUrl(url) { if(!url) return ''; const m=url.match(/\/d\/([a-zA-Z0-9_-]+)/); return m?`https://lh3.googleusercontent.com/d/${m[1]}`:url; }
 
 window.showScreen = function(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); const el=document.getElementById('screen-'+id); if(el) el.classList.add('active'); document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===id)); if(id==='myrequests') loadMyRequests(); if(id==='notifications') loadNotifications(); if(id==='lostfound') loadLostFound(); if(id==='report') loadReports(); if(id==='request') initRequestScreen(); if(id==='driver') loadDriverRequests(); if(id==='gamehub') loadGameHub(); };
-window.closeModal = id => { const m=document.getElementById('modal-'+id); if(m) m.classList.remove('show'); if(activeFeedbackListener) { activeFeedbackListener(); activeFeedbackListener=null; } };
+window.closeModal = id => { const m=document.getElementById('modal-'+id); if(m) m.classList.remove('show'); if(activeFeedbackListener) { activeFeedbackListener(); activeFeedbackListener=null; } if(window._apPollInterval){ clearInterval(window._apPollInterval); window._apPollInterval=null; } };
 function openModal(id) { document.getElementById('modal-'+id).classList.add('show'); }
 function showLoading(msg) { document.getElementById('loading-text').textContent=msg||'Please wait...'; document.getElementById('loading-overlay').classList.remove('hidden'); }
 function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
@@ -406,7 +420,7 @@ window.addEventListener('offline', ()=>{ isOnline=false; updateOnlineStatus(); s
 onAuthStateChanged(auth, async user => { if(user){ currentUser=user; await loadUserData(user.uid); } else { currentUser=null; userData=null; showScreen('login'); } });
 async function loadUserData(uid) { try { showScreen('splash'); const ref=doc(db,'users',uid); let snap; try { snap=await Promise.race([getDoc(ref),new Promise((_,rej)=>setTimeout(()=>rej('timeout'),5000))]); } catch { snap=await new Promise(res=>{ const u=onSnapshot(ref,{source:'cache'},s=>{u();res(s)},()=>res(null)); }); } let data=snap?.data?.()??snap?.data??null; if(data&&(!data.pickupId||data.pickupId==='')){ data.pickupId=generatePickupId(uid); try{ await updateDoc(ref,{pickupId:data.pickupId}); }catch{} } if(!data){ data={name:currentUser.email?.split('@')[0]||'User',email:currentUser.email,role:'user',pickupId:generatePickupId(uid),platform:'pwa',createdAt:new Date().toISOString()}; try{ await setDoc(ref,{...data,createdAt:serverTimestamp(),platform:'pwa'}); }catch{} } userData=data; updateOnlineStatus(); routeByRole(data.role); startNotifListener(uid); } catch(e){ showScreen('login'); } }
 function routeByRole(role) { if(role==='admin'){ document.getElementById('admin-avatar').textContent=getInitials(userData.name); document.getElementById('admin-name').textContent=userData.name||'Admin'; showScreen('admin'); } else if(role==='driver'){ document.getElementById('driver-name').textContent=userData.name||'Driver'; document.getElementById('driver-avatar').textContent=getInitials(userData.name); showScreen('driver'); loadDriverRequests(); startIntentListener(currentUser.uid); } else { showScreen('dashboard'); loadDashboard(); } }
-function loadDashboard() { if(!userData) return; document.getElementById('dash-avatar').textContent=getInitials(userData.name); document.getElementById('dash-name').textContent=userData.name||'User'; document.getElementById('dash-greeting').textContent=getGreeting(); document.getElementById('dash-pickup-id').textContent=userData.pickupId||'---'; updateOnlineStatus(); if(userData.role==='admin'&&!document.getElementById('admin-quick-btn')){ document.getElementById('admin-quick-wrap').innerHTML='<div class="quick-btn" id="admin-quick-btn" onclick="showScreen(\'admin\')"><div class="icon icon-teal">🛡️</div><div class="label">Admin Panel</div><div class="sub">Manage system</div></div>'; } startAdListener(); }
+function loadDashboard() { if(!userData) return; document.getElementById('dash-avatar').textContent=getInitials(userData.name); document.getElementById('dash-name').textContent=userData.name||'User'; document.getElementById('dash-greeting').textContent=getGreeting(); document.getElementById('dash-pickup-id').textContent=userData.pickupId||'---'; updateOnlineStatus(); if(userData.role==='admin'&&!document.getElementById('admin-quick-btn')){ document.getElementById('admin-quick-wrap').innerHTML='<div class="quick-btn" id="admin-quick-btn" onclick="showScreen(\'admin\')"><div class="icon icon-teal">🛡️</div><div class="label">Admin Panel</div><div class="sub">Manage system</div></div>'; } startAdListener(); refreshDashboardBanner(); }
 function startNotifListener(uid) { if(notifUnsub) notifUnsub(); const q=query(collection(db,'notifications'),where('userId','==',uid),where('read','==',false)); notifUnsub=onSnapshot(q, snap=>{ const count=snap.size; const badge=document.getElementById('dash-notif-badge'); if(badge){ badge.textContent=count; badge.classList.toggle('hidden',count===0); } }); }
 
 // REQUEST SCREEN
@@ -419,12 +433,205 @@ window.setRideType = function(type) { rideType=type; document.getElementById('rt
 window.setPax = function(n) { paxCount=n; document.querySelectorAll('.pax-circle').forEach(c=>c.classList.toggle('active',parseInt(c.dataset.pax)===n)); updateSummary(); };
 window.submitRequest = async function() { if(!selectedPickup||!selectedDest){ showToast('Please select pickup and destination','error'); return; } if(selectedPickup===selectedDest){ showToast('Pickup and destination cannot be the same','error'); return; } showLoading('Submitting request...'); isOnline=checkConnectivity(); try { if(isOnline) await submitOnlineRequest(selectedPickup,selectedDest); else await submitOfflineRequest(selectedPickup,selectedDest); } catch(e){ showToast('Failed to submit. Try again.','error'); } finally { hideLoading(); } };
 async function submitOnlineRequest(pickup,dest) { const pax=rideType==='Chartered'?1:paxCount; const docRef=await addDoc(collection(db,'ride_requests'),{ userId:currentUser.uid, userName:userData.name, pickupId:userData.pickupId, pickupLocation:pickup, destination:dest, rideType, passengerCount:pax, status:0, requestType:'online', platform:'pwa', timestamp:serverTimestamp() }); showFeedbackDialog(docRef.id, pickup, dest, rideType, pax); }
-async function submitOfflineRequest(pickup,dest) { const pax=rideType==='Chartered'?1:paxCount; const docRef=await addDoc(collection(db,'offline_queue'),{ userId:currentUser.uid, userName:userData.name, pickupId:userData.pickupId, pickupLocation:pickup, destination:dest, rideType, passengerCount:pax, requestType:'offline', isSynced:false, createdAt:serverTimestamp() }); showToast('Request saved offline — will sync when online.',''); showFeedbackDialog(null, pickup, dest, rideType, pax, true); }
-function showFeedbackDialog(bookingId, pickup, dest, rideType, pax, isOffline=false) { const modal=document.getElementById('modal-feedback'); const content=document.getElementById('feedback-content'); content.innerHTML=`<div class="success-icon">✅</div><div class="success-title">Request Sent!</div><div class="success-msg">${isOffline?'Your request has been saved offline and will sync when you reconnect.':'Waiting for a shuttle to accept your request...'}</div><div class="stage-row"><div class="stage-dot done">✓</div><div><div class="stage-label">Request Received</div><div class="stage-sub">Your request has been sent to the shuttle network</div></div></div><div class="stage-row" id="stage-accept"><div class="stage-dot" id="stage-accept-dot">○</div><div><div class="stage-label" id="stage-accept-label">Awaiting Acceptance</div><div class="stage-sub" id="stage-accept-sub">Waiting for a shuttle to accept...</div></div></div><div class="stage-row" id="stage-assign"><div class="stage-dot" id="stage-assign-dot">○</div><div><div class="stage-label" id="stage-assign-label">Shuttle Assignment</div><div class="stage-sub" id="stage-assign-sub">A shuttle will be assigned when accepted</div></div></div><div class="wait-tip" style="margin-top:16px;"><div class="wait-tip-title">💡 While you wait...</div><p>🎮 Try our puzzle game and climb the leaderboard!</p><p>🔍 Check Lost & Found — someone may have found something of yours!</p></div>`; openModal('feedback'); if(bookingId && !isOffline){ if(activeFeedbackListener) activeFeedbackListener(); activeFeedbackListener=onSnapshot(doc(db,'ride_requests',bookingId), snap=>{ if(!snap.exists) return; const d=snap.data(); const status=d.status||0; const shuttleId=d.shuttleIdFeedback||''; const acceptDot=document.getElementById('stage-accept-dot'); const acceptLabel=document.getElementById('stage-accept-label'); const acceptSub=document.getElementById('stage-accept-sub'); const assignDot=document.getElementById('stage-assign-dot'); const assignLabel=document.getElementById('stage-assign-label'); const assignSub=document.getElementById('stage-assign-sub'); if(status>=1){ acceptDot.innerHTML='✓'; acceptDot.className='stage-dot done'; acceptLabel.textContent='Request Accepted'; acceptSub.textContent='A shuttle has been assigned to pick you up'; } if(shuttleId){ assignDot.innerHTML='✓'; assignDot.className='stage-dot done'; assignLabel.textContent='Shuttle Assigned'; assignSub.textContent=`Shuttle ${shuttleId} is on its way!`; } }); } }
+async function submitOfflineRequest(pickup,dest) {
+  const pax = rideType==='Chartered' ? 1 : paxCount;
+  const pid  = userData.pickupId || generatePickupId(currentUser.uid);
+  const pc   = LOCATION_CODES[pickup]  || 0;
+  const dc   = LOCATION_CODES[dest]    || 0;
+  const rt   = rideType==='Chartered'  ? 1 : 0;
+
+  // Try to reach AP at 192.168.4.1 and send with user's own PID
+  const AP = 'http://192.168.4.1';
+  try {
+    const res = await fetch(AP+'/request', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pid, pc, dc, rt, pax }),
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!res.ok) throw new Error('AP HTTP '+res.status);
+    const json = await res.json();
+    console.log('[AP] queued:', json);
+  } catch(e) {
+    console.warn('[AP] not reachable or failed:', e.message);
+    // Continue anyway — save locally and show feedback
+  }
+
+  // Save to localStorage (device-only, no Firestore needed)
+  offlineStore.save({ pid, pickup, dest, rideType, pax, status:'pending', shuttleId:'', createdAt: Date.now() });
+
+  showFeedbackDialog(null, pickup, dest, rideType, pax, true, pid);
+}
+function showFeedbackDialog(bookingId, pickup, dest, rideType, pax, isOffline=false, pid='') {
+  const content = document.getElementById('feedback-content');
+  content.innerHTML = `
+    <div class="success-icon">${isOffline?'📡':'✅'}</div>
+    <div class="success-title">Request Sent!</div>
+    <div class="success-msg">${isOffline
+      ? 'Sent via campus WiFi. Waiting for driver response...'
+      : 'Waiting for a shuttle to accept your request...'}</div>
+    ${isOffline ? `<div style="background:#FFF3E0;border-radius:10px;padding:0.6rem 0.9rem;margin-bottom:0.75rem;font-size:0.8rem;color:#E65100;">
+      <strong>Your ID: ${pid}</strong> — Driver will call this ID when arriving
+    </div>` : ''}
+    <div class="stage-row"><div class="stage-dot done">✓</div><div>
+      <div class="stage-label">${isOffline?'AP Received':'Request Received'}</div>
+      <div class="stage-sub">${isOffline?'Sent to campus LoRa network':'Sent to shuttle network'}</div>
+    </div></div>
+    <div class="stage-row" id="stage-accept">
+      <div class="stage-dot ${isOffline?'active':''}" id="stage-accept-dot">${isOffline?'…':'○'}</div>
+      <div><div class="stage-label" id="stage-accept-label">${isOffline?'Gateway → Shuttle Unit':'Awaiting Acceptance'}</div>
+      <div class="stage-sub" id="stage-accept-sub">${isOffline?'Relaying to shuttle via LoRa...':'Waiting for a shuttle to accept...'}</div></div>
+    </div>
+    <div class="stage-row" id="stage-assign">
+      <div class="stage-dot" id="stage-assign-dot">○</div>
+      <div><div class="stage-label" id="stage-assign-label">Shuttle Assignment</div>
+      <div class="stage-sub" id="stage-assign-sub">A shuttle will be assigned when accepted</div></div>
+    </div>
+    <div style="background:#F0F4FF;border-radius:12px;padding:0.75rem;margin-top:0.75rem;font-size:0.8rem;color:var(--text-muted);">
+      💡 Stay on campus WiFi to receive live driver response. You can check My Requests anytime.
+    </div>`;
+  openModal('feedback');
+
+  if (isOffline && pid) {
+    // Poll AP /status?pid=XXX every 3 s
+    let apPollInterval = setInterval(async () => {
+      try {
+        const r = await fetch('http://192.168.4.1/status?pid='+pid, {signal:AbortSignal.timeout(4000)});
+        if (!r.ok) return;
+        const j = await r.json();
+        const status = j.status || 'pending';
+        const shuttle = j.shuttle || '';
+        const acceptDot   = document.getElementById('stage-accept-dot');
+        const acceptLabel = document.getElementById('stage-accept-label');
+        const acceptSub   = document.getElementById('stage-accept-sub');
+        const assignDot   = document.getElementById('stage-assign-dot');
+        const assignLabel = document.getElementById('stage-assign-label');
+        const assignSub   = document.getElementById('stage-assign-sub');
+        if (!acceptDot) { clearInterval(apPollInterval); return; }
+
+        if (status === 'accepted' || status === 'confirmed') {
+          acceptDot.innerHTML='✓'; acceptDot.className='stage-dot done';
+          acceptLabel.textContent='Driver Accepted';
+          acceptSub.textContent='Shuttle is heading to your pickup point';
+          if (shuttle) {
+            assignDot.innerHTML='✓'; assignDot.className='stage-dot done';
+            assignLabel.textContent='Shuttle Assigned';
+            assignSub.textContent='Shuttle '+shuttle+' is on its way!';
+          }
+          // Update localStorage with result
+          offlineStore.updateStatus(pid, status==='confirmed'?'confirmed':'accepted', shuttle);
+          refreshDashboardBanner();
+          clearInterval(apPollInterval);
+        } else if (status === 'rejected') {
+          acceptDot.innerHTML='✗'; acceptDot.className='stage-dot' ; acceptDot.style.background='#FFEBEE'; acceptDot.style.color='var(--danger)';
+          acceptLabel.textContent='No Shuttle Available';
+          acceptSub.textContent='No shuttle accepted. Please try again.';
+          offlineStore.updateStatus(pid, 'rejected', '');
+          refreshDashboardBanner();
+          clearInterval(apPollInterval);
+        }
+      } catch(e) { /* AP temporarily unreachable — keep polling */ }
+    }, 3000);
+    // Stop polling when modal closes
+    window._apPollInterval = apPollInterval;
+  }
+
+  if (bookingId && !isOffline) {
+    if (activeFeedbackListener) activeFeedbackListener();
+    activeFeedbackListener = onSnapshot(doc(db,'ride_requests',bookingId), snap => {
+      if (!snap.exists()) return;
+      const d = snap.data();
+      const status = d.status || 0;
+      const shuttleId = d.shuttleIdFeedback || '';
+      const acceptDot   = document.getElementById('stage-accept-dot');
+      const acceptLabel = document.getElementById('stage-accept-label');
+      const acceptSub   = document.getElementById('stage-accept-sub');
+      const assignDot   = document.getElementById('stage-assign-dot');
+      const assignLabel = document.getElementById('stage-assign-label');
+      const assignSub   = document.getElementById('stage-assign-sub');
+      if (status >= 1) {
+        acceptDot.innerHTML='✓'; acceptDot.className='stage-dot done';
+        acceptLabel.textContent='Request Accepted';
+        acceptSub.textContent='A shuttle has been assigned to pick you up';
+      }
+      if (shuttleId) {
+        assignDot.innerHTML='✓'; assignDot.className='stage-dot done';
+        assignLabel.textContent='Shuttle Assigned';
+        assignSub.textContent='Shuttle '+shuttleId+' is on its way!';
+      }
+    });
+  }
+}
 function showSuccessDialog(msg) { showToast(msg,'success'); }
 
 // MY REQUESTS
-async function loadMyRequests() { const el=document.getElementById('myrequests-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const q=query(collection(db,'ride_requests'),where('userId','==',currentUser.uid)); const snap=await getDocs(q); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0)); if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🚐</div><div class="empty-title">No requests yet</div><div class="empty-sub">Submit your first ride request</div></div>'; return; } el.innerHTML=docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.pickupLocation||''} → ${r.destination||''}</div><div class="list-item-sub">${r.rideType||''} · ${r.passengerCount||1} pax · ${formatTime(r.timestamp)}${r.shuttleIdFeedback?` · Shuttle: ${r.shuttleIdFeedback}`:''}</div></div>${statusBadge(r.status)}</div>${r.status===0?`<button class="btn btn-cancel" style="margin-top:0.6rem;padding:0.5rem;" onclick="cancelRequest('${r.id}')">Cancel Request</button>`:''}</div>`).join(''); } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; } }
+async function loadMyRequests() {
+  const el = document.getElementById('myrequests-content');
+  el.innerHTML = '<div class="empty-state"><div class="loading-spinner"></div></div>';
+  try {
+    // Load online from Firestore
+    const q = query(collection(db,'ride_requests'), where('userId','==',currentUser.uid));
+    const snap = await getDocs(q);
+    const online = snap.docs.map(d=>({id:d.id, _type:'online', ...d.data()}))
+      .sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
+
+    // Load offline from localStorage
+    const offlineRaw = offlineStore.getAll();
+    const offline = offlineRaw.map(r=>({
+      id: r.pid, _type:'offline',
+      pickupLocation: r.pickup, destination: r.dest,
+      rideType: r.rideType, passengerCount: r.pax,
+      status: r.status==='accepted'||r.status==='confirmed' ? 1 : r.status==='rejected' ? 5 : 0,
+      _offlineStatus: r.status,
+      shuttleIdFeedback: r.shuttleId,
+      timestamp: null, _createdAt: r.createdAt
+    })).sort((a,b)=>(b._createdAt||0)-(a._createdAt||0));
+
+    const all = [...offline, ...online];
+
+    if (all.length === 0) {
+      el.innerHTML='<div class="empty-state"><div class="empty-icon">🚐</div><div class="empty-title">No requests yet</div><div class="empty-sub">Submit your first ride request</div></div>';
+      return;
+    }
+
+    el.innerHTML = all.map(r => {
+      const isOffline = r._type === 'offline';
+      const statusLabel = isOffline
+        ? ({pending:'Pending (Offline)', accepted:'Accepted', confirmed:'Confirmed', rejected:'No Shuttle', cancelled:'Cancelled'}[r._offlineStatus] || 'Pending (Offline)')
+        : (r.statusName || ['Pending','Assigned','En Route','Arrived','Completed','Cancelled'][r.status] || 'Pending');
+      const badgeCls = isOffline
+        ? (r._offlineStatus==='accepted'||r._offlineStatus==='confirmed' ? 'badge-approved' : r._offlineStatus==='rejected'||r._offlineStatus==='cancelled' ? 'badge-cancelled' : 'badge-pending')
+        : ['badge-pending','badge-approved','badge-approved','badge-completed','badge-completed','badge-cancelled'][r.status] || 'badge-pending';
+      const time = isOffline
+        ? (r._createdAt ? new Date(r._createdAt).toLocaleString() : '')
+        : formatTime(r.timestamp);
+      const shuttle = r.shuttleIdFeedback || '';
+
+      return \`<div class="list-item">
+        \${isOffline ? '<span class="offline-tag">📡 OFFLINE</span>' : ''}
+        <div class="list-item-row">
+          <div>
+            <div class="list-item-title">\${r.pickupLocation||''} → \${r.destination||''}</div>
+            <div class="list-item-sub">\${r.rideType||''} · \${r.passengerCount||1} pax\${time?' · '+time:''}
+            \${shuttle?' · Shuttle: '+shuttle:''}</div>
+          </div>
+          <span class="status-badge \${badgeCls}">\${statusLabel}</span>
+        </div>
+        \${isOffline
+          ? (r._offlineStatus==='pending'||r._offlineStatus==='accepted'
+            ? \`<button class="btn btn-cancel" style="margin-top:0.6rem;padding:0.5rem;" onclick="cancelOfflineRequest('\${r.id}')">Cancel</button>\`
+            : r._offlineStatus==='cancelled'||r._offlineStatus==='rejected'
+            ? \`<button class="btn btn-secondary" style="margin-top:0.6rem;padding:0.5rem;font-size:0.75rem;" onclick="deleteOfflineRequest('\${r.id}')">Remove</button>\`
+            : '')
+          : (r.status===0 ? \`<button class="btn btn-cancel" style="margin-top:0.6rem;padding:0.5rem;" onclick="cancelRequest('\${r.id}')">Cancel Request</button>\` : '')
+        }
+      </div>\`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>';
+  }
+}
+window.cancelOfflineRequest = function(pid) { offlineStore.updateStatus(pid,'cancelled',''); loadMyRequests(); refreshDashboardBanner(); showToast('Offline request cancelled','success'); };
+window.deleteOfflineRequest = function(pid) { offlineStore.delete(pid); loadMyRequests(); showToast('Removed',''); };
 window.cancelRequest = async function(id) { const ok=await showConfirm({icon:'🚫',title:'Cancel Request',msg:'Are you sure?',okText:'Yes, Cancel',okClass:'btn-danger'}); if(!ok) return; showLoading('Cancelling...'); try { await updateDoc(doc(db,'ride_requests',id),{status:5}); showToast('Request cancelled','success'); loadMyRequests(); } catch(e){ showToast('Failed to cancel','error'); } finally { hideLoading(); } };
 
 // GAME HUB
@@ -503,6 +710,86 @@ function startAdListener() { if(_adUnsub) _adUnsub(); const q=query(collection(d
 function renderNextAd() { const container=document.getElementById('dash-ad-container'); if(!container || !_allAds.length) return; const ad=_allAds[_adIndex % _allAds.length]; const link=ad.linkUrl?.trim()||''; let media=''; if(ad.videoUrl?.trim()){ media=`<video class="ad-video" src="${ad.videoUrl}" autoplay muted loop playsinline style="width:100%;max-height:180px;object-fit:cover;border-radius:16px 16px 0 0;"></video>`; } else if(ad.imageUrl?.trim()){ const url=toDirectImgUrl(ad.imageUrl); media=`<img class="ad-img" src="${url}" style="width:100%;height:140px;object-fit:cover;border-radius:16px 16px 0 0;" onerror="this.parentElement.querySelector('.ad-placeholder-fb').style.display='flex';this.style.display='none'"/><div class="ad-placeholder-fb" style="display:none;height:100px;align-items:center;justify-content:center;background:#E3F2FD;border-radius:16px 16px 0 0;font-size:2rem;">📢</div>`; } else { media=`<div style="height:80px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1565C0,#0D47A1);border-radius:16px 16px 0 0;font-size:2rem;">📢</div>`; } container.innerHTML=`<div class="ad-card" onclick="tapAd('${ad.id}','${link.replace(/'/g,"\\'")}')"><span class="ad-label">AD</span>${media}<div class="ad-body" style="display:flex;align-items:flex-start;justify-content:space-between;"><div><div class="ad-title">${ad.title||''}</div>${ad.body?`<div class="ad-text">${ad.body}</div>`:''}${link?`<div style="font-size:0.75rem;color:var(--primary);margin-top:0.3rem;">↗ Tap to open</div>`:''}</div><button onclick="event.stopPropagation();dismissAd()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;">✕</button></div></div>`; try { updateDoc(doc(db,'ads',ad.id),{ impressions:(ad.impressions||0)+1, lastSeen:serverTimestamp() }); } catch(e){} }
 window.dismissAd = function() { _adDismissed=true; const c=document.getElementById('dash-ad-container'); if(c) c.innerHTML=''; setTimeout(()=>{ _adDismissed=false; _adIndex++; renderNextAd(); },30000); };
 window.tapAd = async function(id,link) { try { const d=await getDoc(doc(db,'ads',id)); if(d.exists()) await updateDoc(doc(db,'ads',id),{ taps:(d.data().taps||0)+1, lastTap:serverTimestamp() }); } catch(e){} if(link) window.open(link.startsWith('http')?link:'https://'+link,'_blank'); };
+
+// ── OFFLINE REQUEST STORE (localStorage) ─────────────────────────────────────
+// Equivalent of OfflineRequestStore.dart — stores offline requests on device.
+// No Firestore needed. Each record: { pid, pickup, dest, rideType, pax,
+//   status('pending'|'accepted'|'confirmed'|'rejected'|'cancelled'),
+//   shuttleId, createdAt (ms) }
+const OFFLINE_STORE_KEY = 'assa_offline_requests';
+const offlineStore = {
+  getAll() {
+    try { return JSON.parse(localStorage.getItem(OFFLINE_STORE_KEY) || '[]'); }
+    catch { return []; }
+  },
+  _save(arr) {
+    localStorage.setItem(OFFLINE_STORE_KEY, JSON.stringify(arr));
+  },
+  save(req) {
+    const arr = this.getAll().filter(r => r.pid !== req.pid);
+    arr.unshift(req);
+    this._save(arr);
+  },
+  updateStatus(pid, status, shuttleId) {
+    const arr = this.getAll().map(r => r.pid===pid ? {...r, status, shuttleId: shuttleId||r.shuttleId} : r);
+    this._save(arr);
+  },
+  cancel(pid) { this.updateStatus(pid,'cancelled',''); },
+  delete(pid) { this._save(this.getAll().filter(r => r.pid !== pid)); },
+  getPending() {
+    return this.getAll().filter(r => r.status==='pending'||r.status==='accepted'||r.status==='confirmed');
+  }
+};
+
+// Refresh dashboard active-booking banner from both Firestore and localStorage
+async function refreshDashboardBanner() {
+  const el = document.getElementById('dash-active-banner');
+  if (!el || !currentUser) return;
+
+  // Check offline store first
+  const offlinePending = offlineStore.getPending();
+  if (offlinePending.length > 0) {
+    const r = offlinePending[0];
+    const statusLabel = {pending:'Pending',accepted:'Accepted',confirmed:'Confirmed'}[r.status] || 'Pending';
+    el.innerHTML = \`<div class="active-booking-banner offline-ride" onclick="showScreen('myrequests')">
+      <span style="font-size:1.6rem;">📡</span>
+      <div class="active-booking-banner-text">
+        <div class="active-booking-banner-title">Offline Ride <span class="banner-status-pill">\${statusLabel}</span></div>
+        <div class="active-booking-banner-route">\${r.pickup} → \${r.dest}</div>
+        \${r.shuttleId ? '<div class="active-booking-banner-shuttle">Shuttle: '+r.shuttleId+'</div>' : ''}
+      </div>
+      <button class="banner-cancel-btn" onclick="event.stopPropagation();offlineStore.cancel('\${r.pid}');refreshDashboardBanner();showToast('Cancelled','')">Cancel</button>
+    </div>\`;
+    return;
+  }
+
+  // Check Firestore for online active booking
+  try {
+    const q = query(collection(db,'ride_requests'),
+      where('userId','==',currentUser.uid),
+      where('status','in',[0,1,2,3]));
+    const snap = await getDocs(q);
+    if (snap.empty) { el.innerHTML=''; return; }
+    const docs = snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
+    const r = docs[0];
+    const statusName = r.statusName || ['Pending','Assigned','En Route','Arrived'][r.status] || 'Pending';
+    const shuttle = r.shuttleIdFeedback||'';
+    el.innerHTML = \`<div class="active-booking-banner" onclick="showScreen('myrequests')">
+      <span style="font-size:1.6rem;">🚌</span>
+      <div class="active-booking-banner-text">
+        <div class="active-booking-banner-title">Ride Active <span class="banner-status-pill">\${statusName}</span></div>
+        <div class="active-booking-banner-route">\${r.pickupLocation||''} → \${r.destination||''}</div>
+        \${shuttle ? '<div class="active-booking-banner-shuttle">Shuttle: '+shuttle+'</div>' : ''}
+      </div>
+      <button class="banner-cancel-btn" onclick="event.stopPropagation();cancelRequest('\${r.id}')">Cancel</button>
+    </div>\`;
+  } catch { el.innerHTML=''; }
+}
+
+// Refresh banner each time dashboard is shown
+const _origShowScreen = window.showScreen;
+window.showScreen = function(id) { _origShowScreen(id); if(id==='dashboard') refreshDashboardBanner(); };
 
 // AUTH EVENTS
 document.getElementById('login-btn').addEventListener('click', async()=>{ const email=document.getElementById('login-email').value.trim(); const pass=document.getElementById('login-password').value; const err=document.getElementById('login-error'); err.classList.remove('show'); if(!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; } showLoading('Signing in...'); try { await signInWithEmailAndPassword(auth,email,pass); } catch(e){ err.textContent=e.code==='auth/invalid-credential'?'Invalid email or password.':e.message; err.classList.add('show'); } finally { hideLoading(); } });
