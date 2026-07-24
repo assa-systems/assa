@@ -251,6 +251,7 @@
         <div class="error-msg" id="login-error"></div>
         <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="login-email" type="email" placeholder="your@email.com"/></div>
         <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="login-password" type="password" placeholder="••••••••"/></div>
+        <div style="display:flex;justify-content:flex-end;margin:-0.4rem 0 1rem;"><a href="#" id="forgot-password-link" style="color:var(--primary);font-size:0.8rem;font-weight:600;text-decoration:none;">Forgot password?</a></div>
         <button class="btn btn-primary" id="login-btn">Sign In</button>
       </div>
       <div class="auth-switch">Don't have an account? <a href="#" id="go-register">Register</a></div>
@@ -353,7 +354,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut }
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, onSnapshot, serverTimestamp, getDocs, writeBatch, orderBy, limit }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -508,6 +509,7 @@ window.dismissAd = function() { _adDismissed=true; const c=document.getElementBy
 window.tapAd = async function(id,link) { try { const d=await getDoc(doc(db,'ads',id)); if(d.exists()) await updateDoc(doc(db,'ads',id),{ taps:(d.data().taps||0)+1, lastTap:serverTimestamp() }); } catch(e){} if(link) window.open(link.startsWith('http')?link:'https://'+link,'_blank'); };
 
 // AUTH EVENTS
+document.getElementById('forgot-password-link')?.addEventListener('click', async e=>{ e.preventDefault(); const emailInput=document.getElementById('login-email').value.trim(); const email=prompt('Enter your registered email address for password reset:', emailInput); if(!email) return; showLoading('Sending reset email...'); try { await sendPasswordResetEmail(auth, email); showToast('Password reset link sent to '+email, 'success'); } catch(err) { showToast(err.code==='auth/user-not-found'?'No account found with this email.':(err.message||'Failed to send reset link'), 'error'); } finally { hideLoading(); } });
 document.getElementById('login-btn').addEventListener('click', async()=>{ const email=document.getElementById('login-email').value.trim(); const pass=document.getElementById('login-password').value; const err=document.getElementById('login-error'); err.classList.remove('show'); if(!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; } showLoading('Signing in...'); try { await signInWithEmailAndPassword(auth,email,pass); } catch(e){ err.textContent=e.code==='auth/invalid-credential'?'Invalid email or password.':e.message; err.classList.add('show'); } finally { hideLoading(); } });
 document.getElementById('register-btn').addEventListener('click', async()=>{ const name=document.getElementById('reg-name').value.trim(); const email=document.getElementById('reg-email').value.trim(); const pass=document.getElementById('reg-password').value; const role=document.getElementById('reg-role').value; const err=document.getElementById('register-error'); err.classList.remove('show'); if(!name||!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; } if(pass.length<6){ err.textContent='Password must be at least 6 characters.'; err.classList.add('show'); return; } showLoading('Creating account...'); try { const cred=await createUserWithEmailAndPassword(auth,email,pass); const uid=cred.user.uid; const pickupId=generatePickupId(uid); await setDoc(doc(db,'users',uid),{ name, email, role, pickupId, platform:'pwa', createdAt:serverTimestamp() }); } catch(e){ err.textContent=e.code==='auth/email-already-in-use'?'Email already registered.':e.message; err.classList.add('show'); } finally { hideLoading(); } });
 document.getElementById('go-register').addEventListener('click',e=>{e.preventDefault();showScreen('register');});
