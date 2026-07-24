@@ -165,6 +165,7 @@ class _UploadSectionState extends State<_UploadSection> {
   final _storage   = StorageService();
 
   bool   _saving   = false;
+  bool   _urlValid = false;
 
   // Device image upload (gallery/camera) — replaces Google Drive link paste
   File? _pickedImage;
