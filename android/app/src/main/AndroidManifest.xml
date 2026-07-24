@@ -1,28 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ============================================================
-  FULL AndroidManifest.xml for ASSA Flutter App
-  Location in your project: android/app/src/main/AndroidManifest.xml
-  REPLACE your existing file with this one entirely.
-  Only change: replace "com.example.assa" with your actual app
-  package name if it differs.
+  COMPLETE AndroidManifest.xml for ASSA Flutter App
+  Location: android/app/src/main/AndroidManifest.xml
+  ============================================================
+  Features:
+  - Internet & Network permissions
+  - WiFi control for ESP32 AP communication
+  - Push notifications (FCM)
+  - Local notifications (flutter_local_notifications)
+  - Boot completed receiver for scheduled notifications
   ============================================================
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.assa">
 
     <!-- ── Permissions ─────────────────────────────────────────────── -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <!-- Required for push notifications on Android 13+ -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- Required for flutter_local_notifications scheduled/boot receivers -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <application
         android:label="ASSA"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:requestLegacyExternalStorage="true"
+        tools:ignore="GoogleAppIndexingWarning">
 
         <!-- ── Main Flutter activity ──────────────────────────────── -->
         <activity
@@ -47,7 +61,8 @@
             android:name="flutterEmbedding"
             android:value="2"/>
 
-        <!-- ── FCM: receive messages in background / killed state ─── -->
+        <!-- ── Firebase Cloud Messaging Service ────────────────────── -->
+        <!-- Receives push notifications when app is in background -->
         <service
             android:name="com.google.firebase.messaging.FirebaseMessagingService"
             android:exported="false">
@@ -56,10 +71,22 @@
             </intent-filter>
         </service>
 
-        <!-- ── flutter_local_notifications receivers ──────────────── -->
+        <!-- ── Firebase Instance ID Service (legacy, kept for compatibility) ── -->
+        <service
+            android:name="com.google.firebase.iid.FirebaseInstanceIdService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
+            </intent-filter>
+        </service>
+
+        <!-- ── Local Notifications (flutter_local_notifications) ────── -->
+        <!-- Scheduled notification receiver -->
         <receiver
             android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
+
+        <!-- Boot completed receiver - restores scheduled notifications after reboot -->
         <receiver
             android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
@@ -70,6 +97,28 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
             </intent-filter>
         </receiver>
+
+        <!-- ── WiFi IoT Plugin (wifi_iot) ────────────────────────────── -->
+        <!-- Allows the app to control WiFi for ESP32 AP communication -->
+        <service
+            android:name="com.baseflow.wifiiot.WiFiIotService"
+            android:exported="false"/>
+
+        <receiver
+            android:name="com.baseflow.wifiiot.WiFiIotBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.net.wifi.STATE_CHANGE"/>
+                <action android:name="android.net.wifi.WIFI_STATE_CHANGED"/>
+            </intent-filter>
+        </receiver>
+
+        <!-- ── Default Firebase Crashlytics (optional) ──────────────── -->
+        <!-- Uncomment if you use Firebase Crashlytics
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="true"/>
+        -->
 
     </application>
 

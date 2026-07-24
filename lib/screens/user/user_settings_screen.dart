@@ -5,6 +5,7 @@ import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
 import 'package:assa/widgets/common/common_widgets.dart';
 import 'package:assa/screens/user/report_screen.dart';
+import 'package:assa/screens/shared/settings_screen.dart';
 
 class UserSettingsScreen extends StatefulWidget {
   final Map<String, dynamic>? userData;
@@ -528,6 +529,18 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                 onTap: () => setState(() => _panel = 'password'),
               ),
               const Divider(color: AppColors.divider, height: 24),
+              _SettingTile(
+                icon: Icons.tune_rounded,
+                label: 'App Settings',
+                subtitle: 'Theme & about ASSA',
+                onTap: () {
+                  // Capture navigator before closing the bottom sheet
+                  final nav = Navigator.of(context);
+                  nav.pop();
+                  nav.push(MaterialPageRoute(
+                      builder: (_) => const SettingsScreen()));
+                },
+              ),
               _SettingTile(
                 icon: Icons.report_problem_outlined,
                 label: 'Report Shuttle',

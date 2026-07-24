@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
+import 'package:assa/services/storage_service.dart';
 import 'package:assa/widgets/common/common_widgets.dart';
 
 // Convert any Google Drive share link to a direct-loadable image URL
@@ -168,9 +171,14 @@ class _UploadSection extends StatefulWidget {
 class _UploadSectionState extends State<_UploadSection> {
   final _titleCtrl = TextEditingController();
   final _urlCtrl   = TextEditingController();
+  final _storage   = StorageService();
 
   bool   _saving   = false;
   bool   _urlValid = false;
+
+  // Device image upload (gallery/camera) — replaces Google Drive link paste
+  File? _pickedImage;
+  bool  _pickingImage = false;
 
   Color  get _color => widget.gridSize == 4 ? AppColors.primary : const Color(0xFF00897B);
   String get _label => '${widget.gridSize}×${widget.gridSize}';
@@ -190,11 +198,22 @@ class _UploadSectionState extends State<_UploadSection> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    setState(() => _pickingImage = true);
+    try {
+      final picked = await ImagePicker().pickImage(
+          source: ImageSource.gallery, imageQuality: 80, maxWidth: 1600);
+      if (picked != null && mounted) {
+        setState(() => _pickedImage = File(picked.path));
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _pickingImage = false);
+  }
+
   Future<void> _save() async {
-    final url   = _urlCtrl.text.trim();
     final title = _titleCtrl.text.trim();
-    if (url.isEmpty) {
-      Helpers.showErrorSnackBar(context, 'Please paste an image URL.');
+    if (_pickedImage == null) {
+      Helpers.showErrorSnackBar(context, 'Please choose a photo from your device.');
       return;
     }
     if (title.isEmpty) {
@@ -204,6 +223,24 @@ class _UploadSectionState extends State<_UploadSection> {
     setState(() => _saving = true);
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid ?? 'admin';
+
+      final newRef = FirebaseFirestore.instance.collection('puzzle_images').doc();
+
+      // Upload the device photo to Firebase Storage
+      final uploadResult = await _storage.uploadPuzzleImage(
+        imageFile: _pickedImage!,
+        storagePath: 'puzzle_images/${widget.gridSize}/${newRef.id}.jpg',
+      );
+      if (uploadResult['success'] != true) {
+        if (mounted) {
+          setState(() => _saving = false);
+          Helpers.showErrorSnackBar(context,
+              uploadResult['error'] ?? 'Failed to upload image.');
+        }
+        return;
+      }
+      final imageUrl = uploadResult['url'] as String;
+
       final existing = await FirebaseFirestore.instance
           .collection('puzzle_images')
           .where('gridSize', isEqualTo: widget.gridSize)
@@ -213,10 +250,9 @@ class _UploadSectionState extends State<_UploadSection> {
       for (final doc in existing.docs) {
         batch.update(doc.reference, {'isActive': false});
       }
-      final newRef = FirebaseFirestore.instance.collection('puzzle_images').doc();
       batch.set(newRef, {
         'imageId':    newRef.id,
-        'imageUrl':   _toDirectImageUrl(url),
+        'imageUrl':   imageUrl,
         'title':      title,
         'gridSize':   widget.gridSize,
         'gridLabel':  '${widget.gridSize}x${widget.gridSize}',
@@ -227,7 +263,7 @@ class _UploadSectionState extends State<_UploadSection> {
       });
       await batch.commit();
       if (mounted) {
-        setState(() { _saving = false; _urlValid = false; });
+        setState(() { _saving = false; _urlValid = false; _pickedImage = null; });
         _titleCtrl.clear();
         _urlCtrl.clear();
         Helpers.showSuccessSnackBar(context, '$_label puzzle image saved and activated!');
@@ -369,79 +405,50 @@ class _UploadSectionState extends State<_UploadSection> {
               },
             ),
 
-            // Set image via URL
-            const Text('Set Image via Link',
+            // Set image from device
+            const Text('Puzzle Photo',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary)),
             const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: _color.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _color.withOpacity(0.2)),
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Icon(Icons.tips_and_updates_rounded, color: _color, size: 14),
-                  const SizedBox(width: 6),
-                  const Text('How to get a free image link:',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary)),
-                ]),
-                const SizedBox(height: 6),
-                const Text(
-                  '1. Upload photo to Google Drive'
-                      '\n2. Right-click > "Get link" > Anyone with link'
-                      '\n3. Copy and paste the link below',
-                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.6),
-                ),
-              ]),
+            const Text(
+              'Choose a photo directly from your gallery or camera.',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.6),
             ),
             const SizedBox(height: 10),
-            TextField(
-              controller: _urlCtrl,
-              enabled: !_saving,
-              keyboardType: TextInputType.url,
-              decoration: InputDecoration(
-                hintText: 'https://drive.google.com/...',
-                labelText: 'Image URL',
-                prefixIcon: Icon(Icons.link_rounded, color: _color, size: 20),
-                suffixIcon: _urlValid
-                    ? const Icon(Icons.check_circle_rounded,
-                    color: AppColors.success, size: 20)
-                    : null,
-                filled: true,
-                fillColor: AppColors.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.inputBorder)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.inputBorder)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: _color, width: 1.5)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            GestureDetector(
+              onTap: (_saving || _pickingImage) ? null : _pickImage,
+              child: Container(
+                height: _pickedImage != null ? 150 : 56,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _color, width: 1.5),
+                ),
+                child: _pickingImage
+                    ? Center(child: CircularProgressIndicator(
+                    color: _color, strokeWidth: 2))
+                    : _pickedImage != null
+                    ? ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: Image.file(_pickedImage!,
+                        fit: BoxFit.cover, width: double.infinity))
+                    : Row(mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_photo_alternate_rounded,
+                          size: 20, color: _color),
+                      const SizedBox(width: 8),
+                      Text('Tap to choose photo from device',
+                          style: TextStyle(fontSize: 13,
+                              color: _color, fontWeight: FontWeight.w600)),
+                    ]),
               ),
             ),
-            if (_urlValid) ...[
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                  imageUrl: _toDirectImageUrl(_urlCtrl.text.trim()),
-                  height: 130, width: double.infinity, fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(height: 130,
-                      color: AppColors.surfaceVariant,
-                      child: const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2))),
-                  errorWidget: (_, __, ___) => Container(
-                    height: 50, color: AppColors.surfaceVariant,
-                    child: const Center(child: Text(
-                      'Could not preview — make sure link is set to public',
-                      style: TextStyle(fontSize: 11, color: AppColors.textHint),
-                      textAlign: TextAlign.center,
-                    )),
-                  ),
-                ),
+            if (_pickedImage != null) ...[
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: () => setState(() => _pickedImage = null),
+                child: const Text('Remove photo',
+                    style: TextStyle(fontSize: 11, color: AppColors.error)),
               ),
             ],
             const SizedBox(height: 12),

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -429,18 +430,21 @@ class _DriverDetailSheet extends StatelessWidget {
                         color: AppColors.surface),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),
-                      child: Image.network(
+                      child: driver.driverIdCardUrl.startsWith('data:image')
+                          ? Image.memory(
+                        base64Decode(driver.driverIdCardUrl.split(',').last),
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, e, s) => const Center(
+                            child: Icon(Icons.broken_image_rounded, color: AppColors.textHint, size: 40)),
+                      )
+                          : Image.network(
                         driver.driverIdCardUrl,
                         fit: BoxFit.cover,
                         loadingBuilder: (ctx, child, progress) => progress == null
                             ? child
                             : const Center(child: CircularProgressIndicator()),
                         errorBuilder: (ctx, e, s) => const Center(
-                            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                              Icon(Icons.broken_image_rounded, color: AppColors.textHint, size: 40),
-                              SizedBox(height: 8),
-                              Text('Failed to load image', style: TextStyle(color: AppColors.textHint)),
-                            ])),
+                            child: Icon(Icons.broken_image_rounded, color: AppColors.textHint, size: 40)),
                       ),
                     ),
                   ),
@@ -491,19 +495,21 @@ class _DriverDetailSheet extends StatelessWidget {
   }
 
   void _viewImage(BuildContext context, String url) {
+    final isBase64 = url.startsWith('data:image');
+    final imageWidget = isBase64
+        ? Image.memory(base64Decode(url.split(',').last), fit: BoxFit.contain)
+        : Image.network(url, fit: BoxFit.contain);
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => Scaffold(
         backgroundColor: Colors.black,
         appBar: AppBar(
           backgroundColor: Colors.black,
           iconTheme: const IconThemeData(color: Colors.white),
-          title: Text('${driver.name} — Shuttle ID',
+          title: Text('\${driver.name} — ID Card',
               style: const TextStyle(color: Colors.white, fontSize: 15)),
         ),
         body: Center(
-          child: InteractiveViewer(
-            child: Image.network(url, fit: BoxFit.contain),
-          ),
+          child: InteractiveViewer(child: imageWidget),
         ),
       ),
     ));

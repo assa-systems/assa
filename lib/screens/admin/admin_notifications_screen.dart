@@ -21,7 +21,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
     _stream = FirebaseFirestore.instance
         .collection('notifications')
         .where('userId', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots();
   }
@@ -55,6 +54,8 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
       ),
     );
     if (confirmed != true) return;
+    // TRUE DELETE — permanently removes every matching document (not a
+    // soft/is_active flag).
     final snap = await FirebaseFirestore.instance
         .collection('notifications').where('userId', isEqualTo: uid).get();
     final batch = FirebaseFirestore.instance.batch();
@@ -108,11 +109,20 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                     ]),
                   );
                 }
+                final sortedDocs = snapshot.data!.docs.toList()
+                  ..sort((a, b) {
+                    final aTs = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                    final bTs = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                    if (aTs == null && bTs == null) return 0;
+                    if (aTs == null) return 1;
+                    if (bTs == null) return -1;
+                    return bTs.compareTo(aTs);
+                  });
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: snapshot.data!.docs.length,
+                  itemCount: sortedDocs.length,
                   itemBuilder: (ctx, i) {
-                    final doc = snapshot.data!.docs[i];
+                    final doc = sortedDocs[i];
                     final data = doc.data() as Map<String, dynamic>;
                     return Dismissible(
                       key: Key(doc.id),
@@ -178,9 +188,29 @@ class _AdminNotifCard extends StatelessWidget {
   final VoidCallback onTap;
   const _AdminNotifCard({required this.data, required this.onTap});
 
+  static IconData _getIcon(String? type) {
+    switch (type) {
+      case 'lost_found': return Icons.volunteer_activism_rounded;
+      case 'driver_approved': return Icons.check_circle_rounded;
+      case 'driver_rejected': return Icons.cancel_rounded;
+      default: return Icons.chevron_right_rounded;
+    }
+  }
+
+  static Color _getColor(String? type) {
+    switch (type) {
+      case 'lost_found': return const Color(0xFF00897B);
+      case 'driver_approved': return AppColors.success;
+      case 'driver_rejected': return AppColors.error;
+      default: return AppColors.adminColor;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isRead = data['read'] ?? false;
+    final type = data['type'] as String?;
+    final color = _getColor(type);
     DateTime createdAt = DateTime.now();
     if (data['createdAt'] != null) {
       createdAt = (data['createdAt'] as Timestamp).toDate();
@@ -192,19 +222,18 @@ class _AdminNotifCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isRead ? AppColors.surface : AppColors.adminColor.withOpacity(0.05),
+          color: isRead ? AppColors.surface : color.withOpacity(0.05),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: isRead ? AppColors.cardBorder : AppColors.adminColor.withOpacity(0.3)),
+              color: isRead ? AppColors.cardBorder : color.withOpacity(0.3)),
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 4,
               offset: const Offset(0, 1))],
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(width: 42, height: 42,
               decoration: BoxDecoration(
-                  color: AppColors.adminColor.withOpacity(0.12), shape: BoxShape.circle),
-              child: const Icon(Icons.chevron_right_rounded,
-                  color: AppColors.adminColor, size: 20)),
+                  color: color.withOpacity(0.12), shape: BoxShape.circle),
+              child: Icon(_getIcon(type), color: color, size: 20)),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
@@ -214,8 +243,8 @@ class _AdminNotifCard extends StatelessWidget {
                       color: AppColors.textPrimary))),
               if (!isRead)
                 Container(width: 8, height: 8,
-                    decoration: const BoxDecoration(
-                        color: AppColors.adminColor, shape: BoxShape.circle)),
+                    decoration: BoxDecoration(
+                        color: color, shape: BoxShape.circle)),
             ]),
             const SizedBox(height: 4),
             Text(data['body'] ?? '',
@@ -226,11 +255,11 @@ class _AdminNotifCard extends StatelessWidget {
               Text(Helpers.formatDateTime(createdAt),
                   style: const TextStyle(fontSize: 10, color: AppColors.textHint)),
               const Spacer(),
-              const Text('Tap to read',
-                  style: TextStyle(fontSize: 10, color: AppColors.adminColor,
+              Text('Tap to read',
+                  style: TextStyle(fontSize: 10, color: color,
                       fontWeight: FontWeight.w500)),
-              const Icon(Icons.chevron_right_rounded,
-                  size: 14, color: AppColors.adminColor),
+              Icon(Icons.chevron_right_rounded,
+                  size: 14, color: color),
             ]),
           ])),
         ]),
@@ -250,6 +279,9 @@ class _AdminNotifDetailSheet extends StatelessWidget {
     if (data['createdAt'] != null) {
       createdAt = (data['createdAt'] as Timestamp).toDate();
     }
+    final type = data['type'] as String?;
+    final color = _AdminNotifCard._getColor(type);
+    final icon = _AdminNotifCard._getIcon(type);
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -264,9 +296,8 @@ class _AdminNotifDetailSheet extends StatelessWidget {
         const SizedBox(height: 20),
         Container(width: 64, height: 64,
             decoration: BoxDecoration(
-                color: AppColors.adminColor.withOpacity(0.12), shape: BoxShape.circle),
-            child: const Icon(Icons.notifications_rounded,
-                color: AppColors.adminColor, size: 32)),
+                color: color.withOpacity(0.12), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 32)),
         const SizedBox(height: 16),
         Text(data['title'] ?? '',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700,

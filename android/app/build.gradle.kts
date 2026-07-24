@@ -51,10 +51,9 @@ flutter {
 
 dependencies {
     // Core library desugaring (required by flutter_local_notifications)
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
-    // Firebase BOM keeps all Firebase versions compatible
-    implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
-    implementation("com.google.firebase:firebase-messaging-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Firebase — explicit versions (no BOM needed)
+    implementation("com.google.firebase:firebase-messaging-ktx:23.4.1")
+    implementation("com.google.firebase:firebase-analytics-ktx:21.5.1")
     implementation("androidx.multidex:multidex:2.0.1")
 }

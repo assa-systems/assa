@@ -1,6 +1,6 @@
-// ═══════════════════════════════════════════════════════════════════════════
-// offline_request_store.dart  —  ASSA Local Offline Request Persistence
-// Academic Project: AFIT Shuttle Service App (ASSA)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// offline_request_store.dart  â€”  ASSA Local Offline Request Persistence
+// Academic Project: AFIT AFIT KEKE Service App (ASSA)
 // Author: Abd21 | AFIT Kaduna | B.Eng Telecommunication Engineering
 //
 // PURPOSE:
@@ -12,23 +12,24 @@
 //     2. A local record is saved here immediately
 //     3. My Requests screen reads this store and displays the request
 //     4. The offline feedback dialog polls the AP and calls updateStatus()
-//        when the driver responds — updating the local record in place
+//        when the driver responds â€” updating the local record in place
 //     5. User can cancel (remove) the request at any time
 //
 //   Data is keyed by PID (e.g. "A01") and stored as JSON in SharedPreferences
 //   under the key "assa_offline_requests".
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ── Offline request status codes (mirrors AP firmware response strings) ──────
+// â”€â”€ Offline request status codes (mirrors AP firmware response strings) â”€â”€â”€â”€â”€â”€
 enum OfflineStatus {
-  pending,    // AP received, waiting for Gateway → SU → driver
-  accepted,   // Driver pressed ACCEPT on Shuttle Unit
+  pending,    // AP received, waiting for Gateway â†’ SU â†’ driver
+  accepted,   // Driver pressed ACCEPT on AFIT KEKE Unit
   confirmed,  // Gateway confirmed all passengers assigned
   rejected,   // Driver pressed REJECT or 30 s timeout
   cancelled,  // User cancelled locally
+  completed,  // User completed locally
 }
 
 extension OfflineStatusExt on OfflineStatus {
@@ -37,8 +38,9 @@ extension OfflineStatusExt on OfflineStatus {
       case OfflineStatus.pending:   return 'Pending (Offline)';
       case OfflineStatus.accepted:  return 'Accepted';
       case OfflineStatus.confirmed: return 'Confirmed';
-      case OfflineStatus.rejected:  return 'No Shuttle';
+      case OfflineStatus.rejected:  return 'No AFIT KEKE';
       case OfflineStatus.cancelled: return 'Cancelled';
+      case OfflineStatus.completed: return 'Completed';
     }
   }
 
@@ -48,12 +50,13 @@ extension OfflineStatusExt on OfflineStatus {
       case 'confirmed': return OfflineStatus.confirmed;
       case 'rejected':  return OfflineStatus.rejected;
       case 'cancelled': return OfflineStatus.cancelled;
+      case 'completed': return OfflineStatus.completed;
       default:          return OfflineStatus.pending;
     }
   }
 }
 
-// ── Local offline request model ───────────────────────────────────────────────
+// â”€â”€ Local offline request model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class OfflineRequest {
   final String pid;             // 3-char Pickup ID e.g. "A01"
   final String pickupLocation;  // e.g. "45x1 Hostel"
@@ -98,18 +101,18 @@ class OfflineRequest {
   );
 }
 
-// ── Store singleton ───────────────────────────────────────────────────────────
+// â”€â”€ Store singleton â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class OfflineRequestStore {
   OfflineRequestStore._();
   static final instance = OfflineRequestStore._();
 
   static const _key = 'assa_offline_requests';
 
-  // In-memory cache — loaded once, kept in sync
+  // In-memory cache â€” loaded once, kept in sync
   final List<OfflineRequest> _requests = [];
   bool _loaded = false;
 
-  // ── Load from SharedPreferences ────────────────────────────────────────────
+  // â”€â”€ Load from SharedPreferences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Future<void> _ensureLoaded() async {
     if (_loaded) return;
     final prefs = await SharedPreferences.getInstance();
@@ -122,7 +125,7 @@ class OfflineRequestStore {
           list.map((e) => OfflineRequest.fromJson(e as Map<String, dynamic>)),
         );
       } catch (_) {
-        // Corrupted data — start fresh
+        // Corrupted data â€” start fresh
         _requests.clear();
       }
     }
@@ -134,7 +137,7 @@ class OfflineRequestStore {
     await prefs.setString(_key, jsonEncode(_requests.map((r) => r.toJson()).toList()));
   }
 
-  // ── Public API ─────────────────────────────────────────────────────────────
+  // â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// All stored requests, newest first.
   Future<List<OfflineRequest>> getAll() async {

@@ -1,1 +1,36 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"afit-shuttle-system","appId":"1:419651451775:android:c1f0f7f294263a9015b84a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"afit-shuttle-system","configurations":{"android":"1:419651451775:android:c1f0f7f294263a9015b84a","ios":"1:419651451775:ios:166e02856ad950fd15b84a"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "afit-shuttle-system",
+          "appId": "1:419651451775:android:c1f0f7f294263a9015b84a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "afit-shuttle-system",
+          "configurations": {
+            "android": "1:419651451775:android:c1f0f7f294263a9015b84a",
+            "ios": "1:419651451775:ios:166e02856ad950fd15b84a"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "source": "functions"
+    }
+  ]
+}

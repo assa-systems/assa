@@ -1,128 +1,198 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
 import 'package:assa/widgets/common/common_widgets.dart';
 
 // ════════════════════════════════════════════════════════════════════
-// PAYOUT CLAIM SCREEN
-// Shown to winners after a cycle ends.
-// Winner chooses:
-//   • Bank Transfer — fills in bank name, account number, account name
-//   • Ride Credits  — shown on dashboard only (no bank details needed)
+// WINNER UPLOAD SCREEN
 //
-// On submit: updates payout_requests/{payoutId} with choice + details.
-// Admin then sees it in manage_payouts_screen.dart.
+// When a user wins "Face of the Week" (top scorer across all games),
+// they are asked to:
+//   • Upload a photo (camera or gallery)
+//   • Enter department / matric number
+//   • Share hobbies
+//   • Share "What do you do while waiting for the shuttle?"
+//
+// Data saved to winners/{weekKey} collection.
+// Displayed on Game Hub and User Dashboard as a hero banner.
 // ════════════════════════════════════════════════════════════════════
 
-class PayoutClaimScreen extends StatefulWidget {
-  final String payoutId;
-  const PayoutClaimScreen({super.key, required this.payoutId});
+class WinnerUploadScreen extends StatefulWidget {
+  final int totalScore;
+  final Map<String, int> gameScores; // {'puzzle': x, 'quiz': y, 'tap': z}
+  const WinnerUploadScreen({
+    super.key,
+    required this.totalScore,
+    required this.gameScores,
+  });
+
   @override
-  State<PayoutClaimScreen> createState() => _PayoutClaimScreenState();
+  State<WinnerUploadScreen> createState() => _WinnerUploadScreenState();
 }
 
-class _PayoutClaimScreenState extends State<PayoutClaimScreen> {
-  Map<String, dynamic>? _payout;
-  bool   _loading    = true;
-  bool   _submitting = false;
-  String _prizeType  = 'cash'; // 'cash' | 'credits'
+class _WinnerUploadScreenState extends State<WinnerUploadScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _deptCtrl = TextEditingController();
+  final _matricCtrl = TextEditingController();
+  final _hobbiesCtrl = TextEditingController();
+  final _waitingHabitCtrl = TextEditingController();
 
-  final _bankNameCtrl = TextEditingController();
-  final _accNumCtrl   = TextEditingController();
-  final _accNameCtrl  = TextEditingController();
+  File? _imageFile;
+  bool _isUploading = false;
+  bool _isLoading = true;
+  String? _userName;
+  String? _userEmail;
+
+  static String get _weekKey {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    final week = ((monday.difference(DateTime(monday.year, 1, 1)).inDays +
+        DateTime(monday.year, 1, 1).weekday - 1) ~/ 7) + 1;
+    return '${monday.year}-W$week';
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadPayout();
+    _loadUserData();
   }
 
   @override
   void dispose() {
-    _bankNameCtrl.dispose();
-    _accNumCtrl.dispose();
-    _accNameCtrl.dispose();
+    _deptCtrl.dispose();
+    _matricCtrl.dispose();
+    _hobbiesCtrl.dispose();
+    _waitingHabitCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadPayout() async {
+  Future<void> _loadUserData() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
     try {
       final doc = await FirebaseFirestore.instance
-          .collection('payout_requests')
-          .doc(widget.payoutId)
+          .collection('users')
+          .doc(uid)
           .get();
       if (mounted) {
         setState(() {
-          _payout  = doc.exists ? {'id': doc.id, ...doc.data()!} : null;
-          _loading = false;
+          _userName = doc.data()?['name'] ?? 'User';
+          _userEmail = doc.data()?['email'] ?? '';
+          _isLoading = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: source, maxWidth: 800);
+    if (picked != null) {
+      setState(() => _imageFile = File(picked.path));
+    }
+  }
+
+  Future<void> _showImagePicker() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Upload Photo',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _PickerOption(
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Camera',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(ImageSource.camera);
+                    },
+                  ),
+                  _PickerOption(
+                    icon: Icons.photo_library_rounded,
+                    label: 'Gallery',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(ImageSource.gallery);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
-    if (_prizeType == 'cash') {
-      if (_bankNameCtrl.text.trim().isEmpty) {
-        Helpers.showErrorSnackBar(context, 'Please enter your bank name.');
-        return;
-      }
-      if (_accNumCtrl.text.trim().length != 10) {
-        Helpers.showErrorSnackBar(context, 'Account number must be 10 digits.');
-        return;
-      }
-      if (_accNameCtrl.text.trim().isEmpty) {
-        Helpers.showErrorSnackBar(context, 'Please enter your account name.');
-        return;
-      }
+    if (!_formKey.currentState!.validate()) return;
+    if (_imageFile == null) {
+      Helpers.showErrorSnackBar(context, 'Please upload a photo');
+      return;
     }
 
-    setState(() => _submitting = true);
+    setState(() => _isUploading = true);
+
     try {
-      final update = <String, dynamic>{
-        'prizeType':   _prizeType,
-        'claimedAt':   FieldValue.serverTimestamp(),
-        'claimStatus': 'submitted',
-      };
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) throw Exception('Not logged in');
 
-      if (_prizeType == 'cash') {
-        update['bankName']      = _bankNameCtrl.text.trim();
-        update['accountNumber'] = _accNumCtrl.text.trim();
-        update['accountName']   = _accNameCtrl.text.trim();
-      } else {
-        // Mark ride credits on dashboard — write to a separate field
-        // that user_dashboard listens for
-        update['creditsAwarded'] = true;
-        final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-        if (uid.isNotEmpty) {
-          await FirebaseFirestore.instance
-              .collection('game_scores').doc(uid).set({
-            'hasUnclaimedPrize': false,
-            'lastPrizeType':     'credits',
-            'lastPrizeAmount':   _payout?['amount'] ?? 0,
-            'lastPrizeAt':       FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-        }
-      }
+      // Upload image to Firebase Storage
+      final weekKey = _weekKey;
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('winners')
+          .child('$weekKey')
+          .child('$uid.jpg');
+      await storageRef.putFile(_imageFile!);
+      final photoUrl = await storageRef.getDownloadURL();
 
+      // Save winner document
       await FirebaseFirestore.instance
-          .collection('payout_requests')
-          .doc(widget.payoutId)
-          .update(update);
+          .collection('winners')
+          .doc(weekKey)
+          .set({
+        'weekKey': weekKey,
+        'userId': uid,
+        'userName': _userName,
+        'userEmail': _userEmail,
+        'photoUrl': photoUrl,
+        'department': _deptCtrl.text.trim(),
+        'matricNumber': _matricCtrl.text.trim(),
+        'hobbies': _hobbiesCtrl.text.trim(),
+        'waitingHabit': _waitingHabitCtrl.text.trim(),
+        'totalScore': widget.totalScore,
+        'gameScores': widget.gameScores,
+        'declaredAt': FieldValue.serverTimestamp(),
+      });
 
       if (mounted) {
-        Helpers.showSuccessSnackBar(context,
-            _prizeType == 'cash'
-                ? 'Bank details submitted! Admin will process your payment.'
-                : 'Ride credits noted! You\'ll see it on your dashboard.');
-        Navigator.pop(context);
+        Helpers.showSuccessSnackBar(
+            context, '🎉 You are now the Face of the Week!');
+        Navigator.popUntil(context, (route) => route.isFirst);
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _submitting = false);
+        setState(() => _isUploading = false);
         Helpers.showErrorSnackBar(context, 'Failed to submit. Try again.');
       }
     }
@@ -130,262 +200,182 @@ class _PayoutClaimScreenState extends State<PayoutClaimScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(children: [
-          _buildHeader(),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : _payout == null
-                ? _buildNotFound()
-                : _buildForm(),
+      appBar: AppBar(
+        title: const Text('You Won! 🏆'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Congratulatory message
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFD700), Color(0xFFFFA000)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  children: [
+                    const Text('🏆', style: TextStyle(fontSize: 48)),
+                    const SizedBox(height: 8),
+                    Text('Congratulations $_userName!',
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF3E2000))),
+                    const SizedBox(height: 4),
+                    Text('You are the Face of the Week!',
+                        style: const TextStyle(
+                            fontSize: 14, color: Color(0xFF5D3200))),
+                    const SizedBox(height: 8),
+                    Text('Total Score: ${widget.totalScore} pts',
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF3E2000))),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Photo upload
+              const Text('Upload Your Photo',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: _showImagePicker,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(60),
+                    border: Border.all(
+                        color: AppColors.primary, width: 2),
+                  ),
+                  child: _imageFile != null
+                      ? ClipRRect(
+                    borderRadius: BorderRadius.circular(60),
+                    child: Image.file(_imageFile!, fit: BoxFit.cover),
+                  )
+                      : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.camera_alt_rounded,
+                          size: 32, color: AppColors.textSecondary),
+                      const SizedBox(height: 4),
+                      Text('Tap to add',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Form fields
+              CustomTextField(
+                label: 'Department / Faculty',
+                hint: 'e.g. Engineering, Computer Science...',
+                controller: _deptCtrl,
+                prefixIcon: Icons.business_rounded,
+                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                label: 'Matric Number',
+                hint: 'e.g. AFIT/2020/001',
+                controller: _matricCtrl,
+                prefixIcon: Icons.badge_rounded,
+                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                label: 'Hobbies',
+                hint: 'e.g. Reading, Football, Coding...',
+                controller: _hobbiesCtrl,
+                prefixIcon: Icons.favorite_rounded,
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                label: 'What do you do while waiting for the shuttle?',
+                hint: 'e.g. Study, Listen to music, Chat with friends...',
+                controller: _waitingHabitCtrl,
+                prefixIcon: Icons.timer_rounded,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 24),
+
+              // Submit button
+              CustomButton(
+                text: _isUploading ? 'Submitting...' : 'Claim Face of the Week',
+                onPressed: _isUploading ? null : _submit,
+                isLoading: _isUploading,
+                icon: Icons.emoji_events_rounded,
+                backgroundColor: const Color(0xFFFFD700),
+                textColor: const Color(0xFF3E2000),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Your photo and details will be displayed on the Game Hub and Dashboard for the entire week.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: AppColors.textHint),
+              ),
+            ],
           ),
-        ]),
+        ),
       ),
     );
   }
+}
 
-  Widget _buildHeader() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-            colors: [Color(0xFFFFD700), Color(0xFFFFA000)]),
-        borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(24),
-            bottomRight: Radius.circular(24)),
-      ),
-      padding: const EdgeInsets.fromLTRB(8, 12, 16, 24),
-      child: Row(children: [
-        IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: Color(0xFF3E2000)),
-        ),
-        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Claim Your Prize 🏆',
-              style: TextStyle(color: Color(0xFF3E2000), fontSize: 18,
-                  fontWeight: FontWeight.w800)),
-          Text('Choose how you want your winnings',
-              style: TextStyle(color: Color(0xFF5D3200), fontSize: 11)),
-        ])),
-        const Text('🎉', style: TextStyle(fontSize: 28)),
-      ]),
-    );
-  }
+class _PickerOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _PickerOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
-  Widget _buildNotFound() {
-    return const Center(child: Text('Payout not found.',
-        style: TextStyle(color: AppColors.textSecondary)));
-  }
-
-  Widget _buildForm() {
-    final p        = _payout!;
-    final gameType = p['gameType']  as String? ?? '';
-    final rank     = p['rank']      as int?    ?? 0;
-    final amount   = p['amount']    as num?    ?? 0;
-    final suffix   = rank == 1 ? 'st' : rank == 2 ? 'nd' : rank == 3 ? 'rd' : 'th';
-    final gameName = gameType == 'puzzle' ? 'Puzzle'
-        : gameType == 'quiz' ? 'Quiz' : 'Tap Challenge';
-
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        // Win summary card
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-                colors: [Color(0xFFFFF8E1), Color(0xFFFFF3CD)]),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.5)),
-          ),
-          child: Row(children: [
-            const Text('🏆', style: TextStyle(fontSize: 40)),
-            const SizedBox(width: 16),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('$rank$suffix Place — $gameName',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800,
-                      color: Color(0xFF3E2000))),
-              const SizedBox(height: 6),
-              Text('Prize Pool: ₦${amount.toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900,
-                      color: Color(0xFFFFA000))),
-              const SizedBox(height: 4),
-              const Text('Choose below how you want to receive this',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF5D3200))),
-            ])),
-          ]),
-        ),
-        const SizedBox(height: 24),
-
-        // Prize type selector
-        const Text('How would you like your prize?',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary)),
-        const SizedBox(height: 12),
-
-        // Cash option
-        GestureDetector(
-          onTap: () => setState(() => _prizeType = 'cash'),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(16),
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
-              color: _prizeType == 'cash'
-                  ? AppColors.primary.withOpacity(0.06)
-                  : AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: _prizeType == 'cash'
-                      ? AppColors.primary : AppColors.cardBorder,
-                  width: _prizeType == 'cash' ? 2 : 1),
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(30),
             ),
-            child: Row(children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle),
-                child: const Icon(Icons.account_balance_rounded,
-                    color: AppColors.primary, size: 20),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Bank Transfer', style: TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary)),
-                Text('Receive cash to your Nigerian bank account',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-              ])),
-              if (_prizeType == 'cash')
-                const Icon(Icons.check_circle_rounded, color: AppColors.primary),
-            ]),
-          ),
-        ),
-        const SizedBox(height: 10),
-
-        // Credits option
-        GestureDetector(
-          onTap: () => setState(() => _prizeType = 'credits'),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _prizeType == 'credits'
-                  ? const Color(0xFF00897B).withOpacity(0.06)
-                  : AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: _prizeType == 'credits'
-                      ? const Color(0xFF00897B) : AppColors.cardBorder,
-                  width: _prizeType == 'credits' ? 2 : 1),
-            ),
-            child: Row(children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                    color: const Color(0xFF00897B).withOpacity(0.1),
-                    shape: BoxShape.circle),
-                child: const Icon(Icons.stars_rounded,
-                    color: Color(0xFF00897B), size: 20),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Ride Credits', style: TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary)),
-                Text('Show as a winner badge on your dashboard',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-              ])),
-              if (_prizeType == 'credits')
-                const Icon(Icons.check_circle_rounded,
-                    color: Color(0xFF00897B)),
-            ]),
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // Bank details form (only for cash)
-        if (_prizeType == 'cash') ...[
-          const Text('Your Bank Details',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary)),
-          const SizedBox(height: 4),
-          const Text('Your details are only visible to the ASSA admin.',
-              style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-          const SizedBox(height: 14),
-          CustomTextField(
-            label:      'Bank Name',
-            hint:       'e.g. First Bank, GTBank, Opay...',
-            controller: _bankNameCtrl,
-            prefixIcon: Icons.account_balance_rounded,
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 12),
-          CustomTextField(
-            label:        'Account Number',
-            hint:         '10-digit NUBAN',
-            controller:   _accNumCtrl,
-            keyboardType: TextInputType.number,
-            prefixIcon:   Icons.pin_rounded,
-          ),
-          const SizedBox(height: 12),
-          CustomTextField(
-            label:      'Account Name',
-            hint:       'As it appears on your bank account',
-            controller: _accNameCtrl,
-            prefixIcon: Icons.person_outline_rounded,
-            textCapitalization: TextCapitalization.words,
+            child: Icon(icon, color: AppColors.primary, size: 28),
           ),
           const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.warning.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.warning.withOpacity(0.3)),
-            ),
-            child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Icon(Icons.info_outline_rounded, color: AppColors.warning, size: 14),
-              SizedBox(width: 6),
-              Expanded(child: Text(
-                'Admin processes payments manually. '
-                    'Allow 1–3 business days after submission.',
-                style: TextStyle(fontSize: 10, color: AppColors.textSecondary,
-                    height: 1.4),
-              )),
-            ]),
-          ),
-          const SizedBox(height: 24),
-        ] else ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF00897B).withOpacity(0.06),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: const Color(0xFF00897B).withOpacity(0.2)),
-            ),
-            child: const Text(
-              'Your prize will appear as a winner banner on your dashboard. '
-                  'No bank details needed for this option.',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary,
-                  height: 1.5),
-            ),
-          ),
-          const SizedBox(height: 24),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 12, color: AppColors.textSecondary)),
         ],
-
-        CustomButton(
-          text:      'Submit Claim',
-          onPressed: _submitting ? null : _submit,
-          isLoading: _submitting,
-          icon: Icons.send_rounded,
-        ),
-      ],
+      ),
     );
   }
 }

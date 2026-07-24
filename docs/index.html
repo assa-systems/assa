@@ -1,1065 +1,847 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ASSA — AFIT Shuttle Service App</title>
-  <meta name="description" content="ASSA is the official AFIT campus shuttle management app. Request rides, track drivers, and stay connected — built for the AFIT community." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --navy: #0D1B4B;
-      --navy-deep: #080F2D;
-      --blue: #1A237E;
-      --blue-mid: #1565C0;
-      --blue-bright: #1976D2;
-      --accent: #42A5F5;
-      --accent-light: #90CAF9;
-      --gold: #FFB300;
-      --white: #F8FAFF;
-      --white-dim: rgba(248,250,255,0.7);
-      --white-faint: rgba(248,250,255,0.12);
-      --card-bg: rgba(255,255,255,0.04);
-      --card-border: rgba(66,165,245,0.18);
-    }
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>ASSA — AFIT Shuttle Service</title>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <meta name="apple-mobile-web-app-title" content="ASSA"/>
+    <link rel="manifest" href="manifest.json"/>
+    <link rel="apple-touch-icon" href="icon-192.png"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <style>
+        :root {
+          --primary: #1565C0; --primary-dark: #0D47A1; --primary-deeper: #0A2E6E;
+          --accent: #42A5F5; --success: #2E7D32; --success-light: #E8F5E9;
+          --warning: #F57F17; --warning-light: #FFF8E1;
+          --danger: #C62828; --danger-light: #FFEBEE;
+          --text-primary: #1A237E; --text-secondary: #546E7A; --text-muted: #90A4AE;
+          --bg: #F0F4FF; --card: #FFFFFF; --border: #E3E8F0;
+          --safe-top: env(safe-area-inset-top,0px); --safe-bottom: env(safe-area-inset-bottom,0px);
+          --purple: #6A1B9A; --teal: #00897B;
+        }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:var(--bg);color:#1a1a2e;-webkit-tap-highlight-color:transparent}
+        #app{height:100%;display:flex;flex-direction:column;overflow:hidden}
+        .screen{display:none;flex-direction:column;height:100%;overflow:hidden}
+        .screen.active{display:flex}
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        /* SPLASH */
+        #screen-splash{background:linear-gradient(160deg,var(--primary-deeper) 0%,var(--primary) 60%,#1976D2 100%);align-items:center;justify-content:center;gap:1rem}
+        .splash-logo{font-size:3.5rem;font-weight:800;color:white;letter-spacing:-0.02em}
+        .splash-logo span{color:#90CAF9}
+        .splash-sub{color:rgba(255,255,255,0.65);font-size:0.85rem}
+        .splash-spinner{width:32px;height:32px;border:3px solid rgba(255,255,255,0.25);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;margin-top:2rem}
+        @keyframes spin{to{transform:rotate(360deg)}}
 
-    html { scroll-behavior: smooth; }
+        /* AUTH */
+        #screen-login,#screen-register{background:linear-gradient(160deg,var(--primary-deeper) 0%,var(--primary) 50%,#1565C0 100%);overflow-y:auto}
+        .auth-container{min-height:100%;display:flex;flex-direction:column;padding:calc(var(--safe-top) + 3rem) 1.5rem calc(var(--safe-bottom) + 2rem)}
+        .auth-logo{font-size:2.5rem;font-weight:800;color:white;text-align:center;margin-bottom:0.3rem}
+        .auth-logo span{color:#90CAF9}
+        .auth-tagline{color:rgba(255,255,255,0.6);text-align:center;font-size:0.8rem;margin-bottom:2.5rem}
+        .auth-card{background:white;border-radius:24px;padding:1.8rem;box-shadow:0 20px 60px rgba(0,0,0,0.25)}
+        .auth-title{font-size:1.3rem;font-weight:700;color:var(--primary-dark);margin-bottom:1.5rem}
+        .form-group{margin-bottom:1rem}
+        .form-label{display:block;font-size:0.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.04em}
+        .form-input{width:100%;padding:0.85rem 1rem;border:1.5px solid var(--border);border-radius:12px;font-size:0.95rem;font-family:inherit;color:#1a1a2e;background:#FAFCFF;transition:border-color 0.2s;outline:none}
+        .form-input:focus{border-color:var(--accent);background:white}
+        .form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23546E7A'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 1rem center;padding-right:2.5rem}
+        .btn{display:flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.9rem;border:none;border-radius:14px;font-size:0.95rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all 0.15s}
+        .btn:active{transform:scale(0.97)}
+        .btn-primary{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:white}
+        .btn-secondary{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary)}
+        .btn-danger{background:var(--danger-light);color:var(--danger)}
+        .btn-success{background:var(--success);color:white}
+        .btn-cancel{background:#FFF8E1;color:var(--warning);border:1px solid #FFE082}
+        .auth-switch{text-align:center;margin-top:1.2rem;color:rgba(255,255,255,0.7);font-size:0.85rem}
+        .auth-switch a{color:#90CAF9;font-weight:600;text-decoration:none}
+        .error-msg{background:var(--danger-light);color:var(--danger);padding:0.75rem 1rem;border-radius:10px;font-size:0.82rem;margin-bottom:1rem;font-weight:500;display:none}
+        .error-msg.show{display:block}
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--navy-deep);
-      color: var(--white);
-      overflow-x: hidden;
-    }
+        /* LAYOUT */
+        #screen-dashboard,#screen-request,#screen-myrequests,#screen-notifications,
+        #screen-lostfound,#screen-report,#screen-admin,#screen-driver,
+        #screen-gamehub,#screen-puzzle,#screen-quiz,#screen-tap,
+        #screen-leaderboard{overflow-y:auto}
 
-    /* ── NOISE TEXTURE OVERLAY ── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-    }
+        /* TOPBAR */
+        .topbar{background:linear-gradient(135deg,#1565C0 0%,#0D47A1 100%);padding:calc(var(--safe-top) + 1rem) 1.2rem 1.2rem;flex-shrink:0;border-radius:0 0 24px 24px}
+        .topbar-row{display:flex;align-items:center;gap:0.75rem}
+        .topbar-avatar{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:white;flex-shrink:0;border:2px solid rgba(255,255,255,0.3)}
+        .topbar-name{color:white;font-weight:700;font-size:1rem;flex:1}
+        .topbar-greeting{color:rgba(255,255,255,0.7);font-size:0.73rem;font-weight:400}
+        .topbar-icon{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;color:white;position:relative;flex-shrink:0}
+        .notif-badge{position:absolute;top:4px;right:4px;width:16px;height:16px;background:#FF5252;border-radius:50%;font-size:9px;font-weight:700;color:white;display:flex;align-items:center;justify-content:center;border:1.5px solid white}
+        .notif-badge.hidden{display:none}
+        .status-pill{display:inline-flex;align-items:center;gap:0.4rem;background:rgba(255,255,255,0.15);border-radius:50px;padding:0.3rem 0.8rem;margin-top:0.75rem}
+        .status-dot{width:7px;height:7px;border-radius:50%}
+        .status-dot.online{background:#69F0AE}
+        .status-dot.offline{background:#FFD740}
+        .status-text{color:white;font-size:0.75rem;font-weight:600}
+        .offline-banner{background:var(--warning);padding:0.6rem 1rem;display:flex;align-items:center;gap:0.5rem;flex-shrink:0}
+        .offline-banner.hidden{display:none}
+        .content{flex:1;overflow-y:auto;padding:1rem 1rem calc(var(--safe-bottom) + 5rem);-webkit-overflow-scrolling:touch}
+        .card{background:var(--card);border-radius:18px;padding:1.2rem;box-shadow:0 2px 12px rgba(0,0,0,0.06);margin-bottom:1rem;border:1px solid var(--border)}
+        .card-title{font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem}
 
-    /* ── NAV ── */
-    nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.1rem 5%;
-      background: rgba(8,15,45,0.75);
-      backdrop-filter: blur(18px);
-      border-bottom: 1px solid var(--card-border);
-    }
+        /* PICKUP ID CARD */
+        .pickup-card{background:linear-gradient(135deg,#0D47A1 0%,#1565C0 100%);border-radius:18px;padding:1.2rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;box-shadow:0 6px 20px rgba(13,71,161,0.35)}
+        .pickup-icon{width:52px;height:52px;background:rgba(255,255,255,0.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0}
+        .pickup-label{color:rgba(255,255,255,0.7);font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em}
+        .pickup-id{color:white;font-size:2.2rem;font-weight:800;letter-spacing:0.1em;line-height:1}
+        .pickup-hint{color:rgba(255,255,255,0.5);font-size:0.68rem;margin-top:0.25rem}
+        .pickup-copy{margin-left:auto;background:rgba(255,255,255,0.2);border:none;border-radius:10px;padding:0.5rem 0.9rem;color:white;font-size:0.75rem;font-weight:700;cursor:pointer}
 
-    .nav-logo {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: 1.4rem;
-      letter-spacing: 0.04em;
-      color: var(--white);
-    }
-    .nav-logo span { color: var(--accent); }
+        /* QUICK ACTIONS */
+        .section-title{font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:0.8rem}
+        .quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;margin-bottom:1rem}
+        .quick-btn{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.1rem 0.8rem;display:flex;flex-direction:column;align-items:center;gap:0.6rem;cursor:pointer;transition:all 0.15s;text-align:center}
+        .quick-btn:active{transform:scale(0.96);background:#F0F4FF}
+        .quick-btn .icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem}
+        .quick-btn .label{font-size:0.8rem;font-weight:700;color:var(--text-primary)}
+        .quick-btn .sub{font-size:0.68rem;color:var(--text-muted)}
+        .icon-blue{background:#E3F2FD} .icon-green{background:#E8F5E9}
+        .icon-orange{background:#FFF3E0} .icon-red{background:#FFEBEE}
+        .icon-teal{background:#E0F7FA} .icon-purple{background:#F3E5F5}
 
-    .nav-links {
-      display: flex;
-      gap: 2rem;
-      list-style: none;
-    }
-    .nav-links a {
-      color: var(--white-dim);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-    .nav-links a:hover { color: var(--accent); }
+        /* BOTTOM NAV */
+        .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);display:flex;padding:0.5rem 0 calc(var(--safe-bottom) + 0.3rem);z-index:50;box-shadow:0 -4px 20px rgba(0,0,0,0.08)}
+        .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:0.2rem;padding:0.3rem;cursor:pointer;border:none;background:none;font-family:inherit}
+        .nav-item .nav-icon{font-size:1.3rem;transition:transform 0.15s}
+        .nav-item .nav-label{font-size:0.62rem;font-weight:500;color:var(--text-muted);transition:color 0.15s}
+        .nav-item.active .nav-label{color:var(--primary);font-weight:700}
+        .nav-item.active .nav-icon{transform:scale(1.1)}
 
-    .nav-cta {
-      background: var(--accent);
-      color: var(--navy-deep) !important;
-      padding: 0.5rem 1.2rem;
-      border-radius: 50px;
-      font-weight: 700 !important;
-      font-size: 0.85rem !important;
-      transition: background 0.2s, transform 0.15s !important;
-    }
-    .nav-cta:hover { background: var(--accent-light) !important; transform: translateY(-1px); color: var(--navy-deep) !important; }
+        /* SUB HEADER */
+        .sub-header{background:linear-gradient(135deg,#1565C0,#0D47A1);padding:calc(var(--safe-top) + 1rem) 1.2rem 1.2rem;display:flex;align-items:center;gap:0.75rem;flex-shrink:0;border-radius:0 0 24px 24px}
+        .back-btn{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+        .sub-title{color:white;font-size:1.05rem;font-weight:700}
 
-    /* ── HERO ── */
-    .hero {
-      position: relative;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 8rem 5% 6rem;
-      overflow: hidden;
-    }
+        /* LOCATION CHIPS */
+        .mode-badge{display:inline-flex;align-items:center;gap:0.4rem;border-radius:50px;padding:0.35rem 0.9rem;font-size:0.75rem;font-weight:600;margin-bottom:1rem}
+        .mode-badge.online{background:var(--success-light);color:var(--success)}
+        .mode-badge.offline{background:var(--warning-light);color:var(--warning)}
+        .location-chips{display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem}
+        .loc-chip{padding:0.5rem 1rem;border-radius:50px;border:1.5px solid var(--border);background:white;font-size:0.82rem;font-weight:500;cursor:pointer;transition:all 0.15s;color:var(--text-primary)}
+        .loc-chip.selected{background:var(--primary);border-color:var(--primary);color:white;font-weight:700}
+        .loc-chip.disabled{opacity:0.4;cursor:not-allowed;background:#f5f5f5}
+        .ride-type-row{display:flex;gap:0.75rem;margin-bottom:1rem}
+        .ride-type-btn{flex:1;padding:0.9rem 0.5rem;border:2px solid var(--border);border-radius:14px;background:white;font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;color:var(--text-secondary);transition:all 0.15s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:0.3rem}
+        .ride-type-btn.active{border-color:var(--primary);background:#E3F2FD;color:var(--primary)}
+        .pax-row{display:flex;align-items:center;gap:0;margin-top:0.5rem}
+        .pax-circle{width:54px;height:54px;border-radius:50%;border:2px solid var(--border);background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;font-weight:800;color:var(--text-primary);transition:all 0.15s;margin:0 0.4rem}
+        .pax-circle.active{background:var(--primary);border-color:var(--primary);color:white;box-shadow:0 4px 12px rgba(21,101,192,0.35)}
+        .pax-label{font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.25rem}
+        .info-tip{background:#E3F2FD;border-left:3px solid var(--primary);border-radius:0 10px 10px 0;padding:0.7rem 0.9rem;margin-bottom:1rem;font-size:0.8rem;color:var(--text-secondary);line-height:1.5}
+        .summary-card{background:#F8FAFF;border:1px solid #C5CAE9;border-radius:14px;padding:1rem;margin-bottom:1rem}
+        .summary-row{display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0;border-bottom:1px solid var(--border);font-size:0.85rem}
+        .summary-row:last-child{border-bottom:none}
+        .summary-key{color:var(--text-muted);min-width:80px;font-size:0.8rem}
+        .summary-val{font-weight:600;color:var(--text-primary)}
 
-    /* Radial glow blobs */
-    .hero::after {
-      content: '';
-      position: absolute;
-      width: 700px; height: 700px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(21,101,192,0.35) 0%, transparent 70%);
-      top: -150px; left: 50%;
-      transform: translateX(-50%);
-      pointer-events: none;
-      animation: pulse-glow 6s ease-in-out infinite;
-    }
+        /* FEEDBACK DIALOG STAGES */
+        .stage-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:8px;border-radius:12px;background:#F8FAFF}
+        .stage-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#E3F2FD;color:var(--primary);flex-shrink:0}
+        .stage-dot.done{background:var(--success);color:white}
+        .stage-dot.active{background:var(--primary);color:white;animation:pulse 1s infinite}
+        @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+        .stage-label{font-size:13px;font-weight:700;color:var(--text-primary)}
+        .stage-sub{font-size:11px;color:var(--text-muted)}
+        .stage-check{width:18px;height:18px;border-radius:50%;background:var(--success);color:white;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
 
-    @keyframes pulse-glow {
-      0%, 100% { opacity: 0.7; transform: translateX(-50%) scale(1); }
-      50% { opacity: 1; transform: translateX(-50%) scale(1.08); }
-    }
+        /* GAME HUB */
+        .game-card{background:linear-gradient(135deg,var(--purple),#4A148C);border-radius:20px;padding:18px;margin-bottom:14px;cursor:pointer;transition:transform 0.15s}
+        .game-card:active{transform:scale(0.98)}
+        .game-card.quiz{background:linear-gradient(135deg,#1565C0,#0D47A1)}
+        .game-card.tap{background:linear-gradient(135deg,var(--teal),#00695C)}
+        .score-summary{background:#1A1F2E;border-radius:18px;padding:18px;margin-bottom:16px;border:1px solid #2A3040}
+        .score-number{font-size:32px;font-weight:900;color:white}
+        .budget-bar{height:6px;background:#2A3040;border-radius:3px;overflow:hidden;margin-top:8px}
+        .budget-fill{height:100%;background:var(--teal);border-radius:3px;width:0%}
+        .face-banner{background:linear-gradient(135deg,#FFD700,#FFA000);border-radius:16px;padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+        .face-avatar{width:56px;height:56px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:28px}
+        .face-name{font-size:16px;font-weight:800;color:#5D4037}
+        .face-score{font-size:12px;color:#8D6E63}
 
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(66,165,245,0.12);
-      border: 1px solid rgba(66,165,245,0.3);
-      border-radius: 50px;
-      padding: 0.35rem 1rem;
-      font-size: 0.78rem;
-      font-weight: 500;
-      color: var(--accent);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 1.8rem;
-      animation: fade-up 0.7s ease both;
-    }
-    .hero-badge::before {
-      content: '';
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-      animation: blink 1.4s ease-in-out infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        /* PUZZLE */
+        .puzzle-grid{display:grid;gap:2px;background:#1A237E;border-radius:12px;padding:2px}
+        .puzzle-tile{background:linear-gradient(135deg,var(--primary),var(--primary-dark));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;color:white;cursor:pointer;transition:all 0.1s}
+        .puzzle-tile:active{transform:scale(0.96)}
+        .puzzle-tile.empty{background:#0D1B6E;cursor:default}
 
-    h1 {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: clamp(2.8rem, 7vw, 5.5rem);
-      line-height: 1.05;
-      letter-spacing: -0.02em;
-      max-width: 820px;
-      animation: fade-up 0.8s 0.1s ease both;
-    }
+        /* QUIZ */
+        .quiz-option{padding:16px;border:2px solid var(--border);border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all 0.15s}
+        .quiz-option.correct{background:#E8F5E9;border-color:var(--success);color:var(--success)}
+        .quiz-option.wrong{background:#FFEBEE;border-color:var(--danger);color:var(--danger)}
+        .quiz-timer{height:6px;background:#E0E0E0;border-radius:3px;overflow:hidden;margin-bottom:16px}
+        .quiz-timer-fill{height:100%;background:var(--primary);border-radius:3px;width:100%}
 
-    h1 .line-accent {
-      background: linear-gradient(90deg, var(--accent) 0%, #64B5F6 60%, var(--accent-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+        /* TAP CHALLENGE */
+        .tap-target{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.05s linear;box-shadow:0 0 20px rgba(0,137,123,0.6)}
+        .tap-target:active{transform:scale(0.95)}
 
-    .hero-sub {
-      margin-top: 1.4rem;
-      font-size: clamp(1rem, 2.2vw, 1.2rem);
-      color: var(--white-dim);
-      max-width: 540px;
-      line-height: 1.65;
-      font-weight: 300;
-      animation: fade-up 0.8s 0.2s ease both;
-    }
+        /* LEADERBOARD */
+        .leaderboard-podium{display:flex;align-items:flex-end;justify-content:center;gap:16px;margin-bottom:24px}
+        .podium-item{text-align:center;flex:1}
+        .podium-avatar{width:64px;height:64px;border-radius:50%;background:gold;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px}
+        .podium-rank{font-size:12px;color:var(--text-muted)}
+        .podium-name{font-size:13px;font-weight:700}
+        .podium-score{font-size:11px;color:var(--success)}
 
-    .hero-actions {
-      display: flex;
-      gap: 1rem;
-      margin-top: 2.8rem;
-      flex-wrap: wrap;
-      justify-content: center;
-      animation: fade-up 0.8s 0.3s ease both;
-    }
+        /* LOST & FOUND IMAGE */
+        .lf-image{width:100%;height:160px;object-fit:cover;display:block}
+        .lf-placeholder{height:100px;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-size:2rem}
 
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-      background: var(--accent);
-      color: var(--navy-deep);
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 1rem;
-      padding: 0.85rem 2rem;
-      border-radius: 50px;
-      text-decoration: none;
-      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
-      box-shadow: 0 0 30px rgba(66,165,245,0.35);
-    }
-    .btn-primary:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 0 50px rgba(66,165,245,0.55);
-      background: #64B5F6;
-    }
-
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-      background: transparent;
-      color: var(--white);
-      font-family: 'Syne', sans-serif;
-      font-weight: 600;
-      font-size: 1rem;
-      padding: 0.85rem 2rem;
-      border-radius: 50px;
-      border: 1px solid var(--card-border);
-      text-decoration: none;
-      transition: background 0.2s, border-color 0.2s, transform 0.2s;
-    }
-    .btn-secondary:hover {
-      background: var(--white-faint);
-      border-color: var(--accent);
-      transform: translateY(-3px);
-    }
-
-    /* Scroll indicator */
-    .scroll-hint {
-      position: absolute;
-      bottom: 2.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.4rem;
-      color: var(--white-dim);
-      font-size: 0.72rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      animation: fade-up 1s 0.6s ease both;
-    }
-    .scroll-arrow {
-      width: 22px; height: 22px;
-      border-right: 2px solid var(--accent);
-      border-bottom: 2px solid var(--accent);
-      transform: rotate(45deg);
-      animation: bounce-arrow 1.5s ease-in-out infinite;
-    }
-    @keyframes bounce-arrow {
-      0%,100%{transform:rotate(45deg) translateY(0)} 50%{transform:rotate(45deg) translateY(5px)}
-    }
-
-    /* ── STATS STRIP ── */
-    .stats-strip {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      justify-content: center;
-      gap: 0;
-      padding: 0 5%;
-      margin-top: -1rem;
-      flex-wrap: wrap;
-    }
-
-    .stat-item {
-      flex: 1;
-      min-width: 140px;
-      max-width: 220px;
-      text-align: center;
-      padding: 2rem 1rem;
-      border-right: 1px solid var(--card-border);
-      animation: fade-up 0.8s ease both;
-    }
-    .stat-item:last-child { border-right: none; }
-
-    .stat-number {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: 2.4rem;
-      color: var(--accent);
-      line-height: 1;
-    }
-    .stat-label {
-      font-size: 0.82rem;
-      color: var(--white-dim);
-      margin-top: 0.4rem;
-      font-weight: 300;
-    }
-
-    /* ── SECTIONS ── */
-    section {
-      position: relative;
-      z-index: 1;
-      padding: 6rem 5%;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .section-label {
-      display: inline-block;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 1rem;
-    }
-
-    h2 {
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: clamp(1.8rem, 4vw, 2.8rem);
-      line-height: 1.15;
-      letter-spacing: -0.01em;
-      max-width: 560px;
-    }
-
-    .section-intro {
-      color: var(--white-dim);
-      font-size: 1rem;
-      line-height: 1.7;
-      max-width: 500px;
-      margin-top: 0.8rem;
-      font-weight: 300;
-    }
-
-    /* ── FEATURES GRID ── */
-    .features-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 2rem;
-      flex-wrap: wrap;
-      margin-bottom: 3rem;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1.2rem;
-    }
-
-    .feature-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 2rem;
-      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
-      position: relative;
-      overflow: hidden;
-    }
-    .feature-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .feature-card:hover {
-      transform: translateY(-6px);
-      border-color: rgba(66,165,245,0.4);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.4);
-    }
-    .feature-card:hover::before { opacity: 1; }
-
-    .feature-icon {
-      font-size: 2rem;
-      margin-bottom: 1.1rem;
-      display: block;
-    }
-
-    .feature-title {
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 1.05rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .feature-desc {
-      color: var(--white-dim);
-      font-size: 0.88rem;
-      line-height: 1.65;
-      font-weight: 300;
-    }
-
-    /* ── PHONE MOCKUP SECTION ── */
-    .showcase {
-      display: flex;
-      align-items: center;
-      gap: 5rem;
-      flex-wrap: wrap;
-    }
-
-    .showcase-text { flex: 1; min-width: 260px; }
-    .showcase-visual { flex: 1; min-width: 260px; display: flex; justify-content: center; }
-
-    .phone-mockup {
-      width: 240px;
-      height: 490px;
-      border-radius: 36px;
-      border: 2px solid rgba(66,165,245,0.25);
-      background: linear-gradient(160deg, #0D47A1 0%, #0D1B4B 60%, #080F2D 100%);
-      position: relative;
-      box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
-      overflow: hidden;
-      animation: float 4s ease-in-out infinite;
-    }
-    @keyframes float {
-      0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)}
-    }
-
-    .phone-notch {
-      width: 90px; height: 22px;
-      background: #080F2D;
-      border-radius: 0 0 14px 14px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 2;
-    }
-    .phone-screen {
-      padding: 1.2rem 1rem;
-      height: calc(100% - 22px);
-    }
-    .phone-row {
-      background: rgba(255,255,255,0.06);
-      border-radius: 10px;
-      padding: 0.7rem 0.8rem;
-      margin-bottom: 0.6rem;
-      font-size: 0.68rem;
-      color: rgba(255,255,255,0.75);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .phone-row .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--accent); flex-shrink: 0;
-    }
-    .phone-row.active {
-      background: rgba(66,165,245,0.15);
-      border: 1px solid rgba(66,165,245,0.3);
-    }
-    .phone-header {
-      font-family: 'Syne', sans-serif;
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--white);
-      margin-bottom: 1rem;
-    }
-    .phone-badge {
-      display: inline-block;
-      background: rgba(66,165,245,0.2);
-      border-radius: 50px;
-      padding: 0.18rem 0.6rem;
-      font-size: 0.6rem;
-      color: var(--accent);
-      font-weight: 600;
-      margin-left: auto;
-    }
-
-    /* SECOND MOCKUP (offset) */
-    .phone-mockup-2 {
-      width: 200px;
-      height: 410px;
-      border-radius: 30px;
-      border: 2px solid rgba(66,165,245,0.15);
-      background: linear-gradient(160deg, #1A237E 0%, #0D1B4B 100%);
-      position: absolute;
-      right: -60px;
-      top: 60px;
-      box-shadow: 0 30px 60px rgba(0,0,0,0.4);
-      animation: float 4s 1.5s ease-in-out infinite;
-      overflow: hidden;
-    }
-
-    .phones-container {
-      position: relative;
-      width: 240px;
-      height: 520px;
-    }
-
-    /* ── HOW IT WORKS ── */
-    .steps {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-      position: relative;
-    }
-    .steps::before {
-      content: '';
-      position: absolute;
-      left: 24px;
-      top: 40px;
-      bottom: 40px;
-      width: 1px;
-      background: linear-gradient(to bottom, var(--accent), transparent);
-    }
-
-    .step {
-      display: flex;
-      gap: 2rem;
-      align-items: flex-start;
-      padding: 1.5rem 0;
-    }
-    .step-num {
-      width: 48px; height: 48px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      background: var(--blue);
-      border: 2px solid var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: 1rem;
-      color: var(--accent);
-      position: relative;
-      z-index: 1;
-    }
-    .step-content h3 {
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 1.05rem;
-      margin-bottom: 0.3rem;
-    }
-    .step-content p {
-      color: var(--white-dim);
-      font-size: 0.88rem;
-      line-height: 1.6;
-      font-weight: 300;
-    }
-
-    /* ── SCREENSHOTS ── */
-    .screenshots-row {
-      display: flex;
-      gap: 1.5rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .screenshot-card {
-      width: 170px;
-      height: 320px;
-      border-radius: 22px;
-      border: 1px solid var(--card-border);
-      background: var(--card-bg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.6rem;
-      color: var(--white-dim);
-      font-size: 0.75rem;
-      transition: transform 0.3s, border-color 0.3s;
-      position: relative;
-      overflow: hidden;
-    }
-    .screenshot-card:nth-child(even) { transform: translateY(20px); }
-    .screenshot-card:hover { transform: translateY(-8px) !important; border-color: var(--accent); }
-
-    .screenshot-label {
-      position: absolute;
-      bottom: 1rem;
-      font-size: 0.7rem;
-      font-weight: 500;
-      color: var(--accent);
-      background: rgba(66,165,245,0.1);
-      padding: 0.2rem 0.6rem;
-      border-radius: 50px;
-    }
-    .screenshot-icon { font-size: 2.5rem; opacity: 0.4; }
-
-    /* ── DOWNLOAD CTA ── */
-    .download-section {
-      text-align: center;
-      padding: 6rem 5%;
-      position: relative;
-      z-index: 1;
-    }
-
-    .download-box {
-      max-width: 700px;
-      margin: 0 auto;
-      background: linear-gradient(135deg, rgba(21,101,192,0.25) 0%, rgba(13,27,75,0.8) 100%);
-      border: 1px solid rgba(66,165,245,0.25);
-      border-radius: 28px;
-      padding: 4rem 3rem;
-      position: relative;
-      overflow: hidden;
-    }
-    .download-box::before {
-      content: '';
-      position: absolute;
-      top: -60px; right: -60px;
-      width: 240px; height: 240px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(66,165,245,0.15), transparent 70%);
-      pointer-events: none;
-    }
-
-    .download-box h2 { max-width: 100%; margin-bottom: 1rem; font-size: clamp(1.6rem, 3.5vw, 2.4rem); }
-    .download-box p { color: var(--white-dim); font-size: 1rem; line-height: 1.65; font-weight: 300; margin-bottom: 2rem; }
-
-    .version-tag {
-      display: inline-block;
-      font-size: 0.75rem;
-      font-weight: 500;
-      color: var(--accent-light);
-      background: rgba(66,165,245,0.1);
-      border-radius: 50px;
-      padding: 0.25rem 0.8rem;
-      margin-top: 1.2rem;
-    }
-
-    /* ── FOOTER ── */
-    footer {
-      position: relative;
-      z-index: 1;
-      border-top: 1px solid var(--card-border);
-      padding: 2.5rem 5%;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-
-    .footer-logo {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: 1.1rem;
-      color: var(--white);
-    }
-    .footer-logo span { color: var(--accent); }
-
-    footer p {
-      color: var(--white-dim);
-      font-size: 0.82rem;
-      font-weight: 300;
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 1.5rem;
-      list-style: none;
-    }
-    .footer-links a {
-      color: var(--white-dim);
-      text-decoration: none;
-      font-size: 0.82rem;
-      transition: color 0.2s;
-    }
-    .footer-links a:hover { color: var(--accent); }
-
-    /* ── ANIMATIONS ── */
-    @keyframes fade-up {
-      from { opacity: 0; transform: translateY(24px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .reveal {
-      opacity: 0;
-      transform: translateY(30px);
-      transition: opacity 0.7s ease, transform 0.7s ease;
-    }
-    .reveal.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .stats-strip { gap: 0; }
-      .stat-item { border-right: none; border-bottom: 1px solid var(--card-border); }
-      .stat-item:last-child { border-bottom: none; }
-      .showcase { gap: 3rem; }
-      .phones-container { margin: 0 auto; }
-      .phone-mockup-2 { display: none; }
-    }
-  </style>
+        /* TOAST & MODAL */
+        .toast{position:fixed;bottom:calc(var(--safe-bottom) + 5rem);left:1rem;right:1rem;background:#1a1a2e;color:white;padding:0.9rem 1.2rem;border-radius:14px;font-size:0.85rem;font-weight:500;z-index:400;transform:translateY(20px);opacity:0;transition:all 0.25s;pointer-events:none}
+        .toast.show{transform:translateY(0);opacity:1}
+        .toast.success{background:var(--success)}
+        .toast.error{background:var(--danger)}
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s}
+        .modal-overlay.show{opacity:1;pointer-events:all}
+        .modal{background:white;border-radius:28px 28px 0 0;padding:1.5rem 1.5rem calc(var(--safe-bottom) + 1.5rem);width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1)}
+        .modal-overlay.show .modal{transform:translateY(0)}
+        .modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 1.2rem}
+        .modal-title{font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:1rem}
+        .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.95);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
+        .loading-overlay.hidden{display:none}
+        .loading-spinner{width:40px;height:40px;border:4px solid #E3F2FD;border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite}
+        .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:1.5rem;opacity:0;pointer-events:none;transition:opacity 0.2s}
+        .confirm-overlay.show{opacity:1;pointer-events:all}
+        .confirm-box{background:white;border-radius:20px;padding:1.5rem;width:100%;max-width:340px;transform:scale(0.92);transition:transform 0.2s}
+        .confirm-overlay.show .confirm-box{transform:scale(1)}
+        .confirm-icon{font-size:2.5rem;text-align:center;margin-bottom:0.75rem}
+        .confirm-title{font-size:1rem;font-weight:800;color:var(--text-primary);text-align:center;margin-bottom:0.4rem}
+        .confirm-msg{font-size:0.83rem;color:var(--text-muted);text-align:center;margin-bottom:1.2rem;line-height:1.5}
+        .confirm-btns{display:flex;gap:0.6rem}
+        .status-badge{display:inline-block;padding:0.25rem 0.7rem;border-radius:50px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
+        .badge-pending{background:#FFF8E1;color:#F57F17}
+        .badge-approved{background:#E8F5E9;color:#2E7D32}
+        .badge-rejected,.badge-cancelled{background:#FFEBEE;color:#C62828}
+        .badge-completed{background:#E3F2FD;color:#1565C0}
+        .empty-state{text-align:center;padding:3rem 1rem}
+        .empty-icon{font-size:3rem;margin-bottom:1rem}
+        .empty-title{font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.4rem}
+        .empty-sub{font-size:0.82rem;color:var(--text-muted)}
+        .list-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem;margin-bottom:0.75rem}
+        .list-item-row{display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem}
+        .list-item-title{font-size:0.9rem;font-weight:600;color:var(--text-primary)}
+        .list-item-sub{font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem}
+    </style>
 </head>
 <body>
+<div id="app">
 
-  <!-- NAV -->
-  <nav>
-    <div class="nav-logo">ASSA<span>.</span></div>
-    <ul class="nav-links">
-      <li><a href="#features">Features</a></li>
-      <li><a href="#how-it-works">How It Works</a></li>
-      <li><a href="#screenshots">Screenshots</a></li>
-      <li><a href="#download" class="nav-cta">Download</a></li>
-    </ul>
-  </nav>
+    <!-- SPLASH -->
+    <div id="screen-splash" class="screen active">
+        <div class="splash-logo">ASSA<span>.</span></div>
+        <div class="splash-sub">AFIT Shuttle Service App</div>
+        <div class="splash-spinner"></div>
+    </div>
 
-  <!-- HERO -->
-  <section class="hero" style="max-width:100%; padding-top:9rem;">
-    <div class="hero-badge">AFIT Campus · Android &amp; iOS</div>
-    <h1>
-      Campus Rides,<br/>
-      <span class="line-accent">Reimagined for AFIT</span>
-    </h1>
-    <p class="hero-sub">
-      ASSA connects AFIT students with campus shuttle drivers in real time — request a ride, track your driver, and get to class on time.
-    </p>
-    <div class="hero-actions">
-      <a href="#download" class="btn-primary">
-        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 15V3m0 12l-4-4m4 4l4-4M3 21h18"/>
-        </svg>
-        Download for Android
-      </a>
-      <a href="#download" class="btn-secondary">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-        </svg>
-        Try on iOS
-      </a>
-    </div>
-    <div class="scroll-hint">
-      <span>Scroll</span>
-      <div class="scroll-arrow"></div>
-    </div>
-  </section>
-
-  <!-- STATS -->
-  <div class="stats-strip">
-    <div class="stat-item reveal">
-      <div class="stat-number">34</div>
-      <div class="stat-label">App Screens</div>
-    </div>
-    <div class="stat-item reveal">
-      <div class="stat-number">3</div>
-      <div class="stat-label">User Roles</div>
-    </div>
-    <div class="stat-item reveal">
-      <div class="stat-number">ESP32</div>
-      <div class="stat-label">IoT Integration</div>
-    </div>
-    <div class="stat-item reveal">
-      <div class="stat-number">100%</div>
-      <div class="stat-label">Offline Ready</div>
-    </div>
-  </div>
-
-  <!-- FEATURES -->
-  <section id="features">
-    <div class="features-header reveal">
-      <div>
-        <span class="section-label">What ASSA Does</span>
-        <h2>Everything your campus shuttle needs</h2>
-        <p class="section-intro">Purpose-built for the AFIT community with real-time tracking, offline support, and smart ride management.</p>
-      </div>
-    </div>
-    <div class="features-grid">
-      <div class="feature-card reveal">
-        <span class="feature-icon">🛺</span>
-        <div class="feature-title">Instant Ride Requests</div>
-        <p class="feature-desc">Request a campus shuttle from any pickup point — AFIT Gate, BK Gate, Old Girls Hostel, Boys Hostel — with one tap.</p>
-      </div>
-      <div class="feature-card reveal">
-        <span class="feature-icon">📶</span>
-        <div class="feature-title">Works Offline</div>
-        <p class="feature-desc">Firestore offline caching keeps the app functional even when your connection drops. Syncs automatically when you're back online.</p>
-      </div>
-      <div class="feature-card reveal">
-        <span class="feature-icon">🔔</span>
-        <div class="feature-title">Push Notifications</div>
-        <p class="feature-desc">Get notified when your driver accepts or arrives via Firebase Cloud Messaging push notifications.</p>
-      </div>
-      <div class="feature-card reveal">
-        <span class="feature-icon">🛰️</span>
-        <div class="feature-title">ESP32 / LoRa IoT</div>
-        <p class="feature-desc">Integrates with on-campus ESP32 hardware via 6-byte binary LoRa packets for real-time shuttle tracking at the hardware level.</p>
-      </div>
-      <div class="feature-card reveal">
-        <span class="feature-icon">🧩</span>
-        <div class="feature-title">Campus Puzzle & Lost & Found</div>
-        <p class="feature-desc">Built-in community features — a daily puzzle game and a lost-and-found board to keep the AFIT community connected.</p>
-      </div>
-
-      <div class="feature-card reveal">
-        <span class="feature-icon">🔐</span>
-        <div class="feature-title">Secure Auth</div>
-        <p class="feature-desc">Email/password and Google Sign-In with verified accounts. Phone OTP authentication is built and ready for when billing is enabled.</p>
-      </div>
-      <div class="feature-card reveal">
-        <span class="feature-icon">💬</span>
-        <div class="feature-title">Support Chat</div>
-        <p class="feature-desc">Submit complaints with live status tracking — Open, In Progress, Resolved. Get updates directly in the app.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- HOW IT WORKS -->
-  <section id="how-it-works" style="padding-top:2rem;">
-    <div class="showcase">
-      <div class="showcase-text reveal">
-        <span class="section-label">How It Works</span>
-        <h2>From gate to destination in three steps</h2>
-        <p class="section-intro" style="margin-bottom:2.5rem;">Designed for simplicity. Whether you're a student or driver, ASSA fits your workflow.</p>
-
-        <div class="steps">
-          <div class="step">
-            <div class="step-num">1</div>
-            <div class="step-content">
-              <h3>Sign Up or Sign In</h3>
-              <p>Create an account with your email or Google account. Choose your role — Rider or Driver — and you're in.</p>
+    <!-- LOGIN -->
+    <div id="screen-login" class="screen">
+        <div class="auth-container">
+            <div class="auth-logo">ASSA<span>.</span></div>
+            <div class="auth-tagline">AFIT Shuttle Service App</div>
+            <div class="auth-card">
+                <div class="auth-title">Welcome back</div>
+                <div class="error-msg" id="login-error"></div>
+                <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="login-email" type="email" placeholder="your@email.com"/></div>
+                <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="login-password" type="password" placeholder="••••••••"/></div>
+                <button class="btn btn-primary" id="login-btn">Sign In</button>
             </div>
-          </div>
-          <div class="step">
-            <div class="step-num">2</div>
-            <div class="step-content">
-              <h3>Request Your Ride</h3>
-              <p>Select your pickup location and drop-off. The nearest available driver gets notified instantly.</p>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num">3</div>
-            <div class="step-content">
-              <h3>Track & Ride</h3>
-              <p>Follow your driver's status in real time. Get push notifications at every step of the journey.</p>
-            </div>
-          </div>
+            <div class="auth-switch">Don't have an account? <a href="#" id="go-register">Register</a></div>
         </div>
-      </div>
-
-      <div class="showcase-visual reveal">
-        <div class="phones-container">
-          <div class="phone-mockup">
-            <div class="phone-notch"></div>
-            <div class="phone-screen">
-              <div class="phone-header">Good morning 👋</div>
-              <div class="phone-row active">
-                <div class="dot"></div>
-                Request a Shuttle
-                <div class="phone-badge">New</div>
-              </div>
-              <div class="phone-row">
-                <div class="dot" style="background:#4CAF50"></div>
-                My Bookings
-              </div>
-              <div class="phone-row">
-                <div class="dot" style="background:#FFA726"></div>
-                Lost &amp; Found
-              </div>
-              <div class="phone-row">
-                <div class="dot" style="background:#AB47BC"></div>
-                Campus Puzzle
-              </div>
-              <div class="phone-row">
-                <div class="dot" style="background:#26C6DA"></div>
-                Notifications
-              </div>
-            </div>
-          </div>
-          <div class="phone-mockup-2">
-            <div class="phone-notch" style="width:70px;height:18px;border-radius:0 0 10px 10px;background:#080F2D;margin:0 auto;"></div>
-            <div class="phone-screen" style="padding:0.8rem;">
-              <div style="font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;color:#fff;margin-bottom:0.8rem;">Driver View</div>
-              <div class="phone-row" style="font-size:0.6rem;">
-                <div class="dot" style="background:#4CAF50"></div>
-                Pending Requests (3)
-              </div>
-              <div class="phone-row" style="font-size:0.6rem;">
-                <div class="dot"></div>
-                AFIT Gate → Hostel
-              </div>
-              <div class="phone-row" style="font-size:0.6rem;background:rgba(66,165,245,0.12);border:1px solid rgba(66,165,245,0.2);">
-                <div class="dot"></div>
-                Accept Ride ✓
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SCREENSHOTS -->
-  <section id="screenshots" style="text-align:center; padding-top:2rem;">
-    <span class="section-label reveal">App Preview</span>
-    <h2 style="max-width:100%; margin:0 auto 1rem; reveal">Screens built for clarity</h2>
-    <p class="section-intro reveal" style="margin:0 auto 3rem;">Clean, intuitive design across all screens — for students and drivers.</p>
-    <div class="screenshots-row">
-      <div class="screenshot-card reveal">
-        <div class="screenshot-icon">🔐</div>
-        <div class="screenshot-label">Login</div>
-      </div>
-      <div class="screenshot-card reveal">
-        <div class="screenshot-icon">🏠</div>
-        <div class="screenshot-label">Dashboard</div>
-      </div>
-      <div class="screenshot-card reveal">
-        <div class="screenshot-icon">🛺</div>
-        <div class="screenshot-label">Request Ride</div>
-      </div>
-      <div class="screenshot-card reveal">
-        <div class="screenshot-icon">📋</div>
-        <div class="screenshot-label">My Bookings</div>
-      </div>
-
-    </div>
-    <p style="color:var(--white-dim); font-size:0.8rem; margin-top:2rem; font-style:italic; font-weight:300;">Screenshots coming soon — app is in active development</p>
-  </section>
-
-  <!-- DOWNLOAD -->
-  <div class="download-section" id="download">
-    <span class="section-label reveal" style="display:block; text-align:center; margin-bottom:0.8rem;">Get ASSA</span>
-    <h2 style="text-align:center; max-width:100%; margin:0 auto 0.6rem; font-family:'Syne',sans-serif; font-weight:700; font-size:clamp(1.8rem,4vw,2.8rem);">Available on Android &amp; iOS</h2>
-    <p style="text-align:center; color:var(--white-dim); font-size:1rem; font-weight:300; max-width:480px; margin:0 auto 2.5rem;">
-      Download the APK directly for Android, or try the live iOS preview in your browser — no iPhone needed.
-    </p>
-
-    <div style="display:flex; gap:1.5rem; justify-content:center; flex-wrap:wrap; max-width:900px; margin:0 auto;">
-
-      <!-- Android Card -->
-      <div class="download-box reveal" style="flex:1; min-width:280px; max-width:400px;">
-        <div style="display:flex; align-items:center; gap:0.8rem; margin-bottom:1.2rem; justify-content:center;">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="#42A5F5">
-            <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zm-2.5-1C2.67 17 2 17.67 2 18.5v3c0 .83.67 1.5 1.5 1.5S5 22.33 5 21.5v-3C5 17.67 4.33 17 3.5 17zm17 0c-.83 0-1.5.67-1.5 1.5v3c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-3c0-.83-.67-1.5-1.5-1.5zm-4.97-15.51l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48A5.84 5.84 0 0012 1c-.96 0-1.86.23-2.66.64L7.85.16c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.31 1.31A5.98 5.98 0 006 7h12a5.98 5.98 0 00-2.47-5.51zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/>
-          </svg>
-          <span style="font-family:'Syne',sans-serif; font-weight:700; font-size:1.3rem; color:var(--white);">Android</span>
-        </div>
-        <span class="section-label" style="display:block; text-align:center; margin-bottom:0.8rem;">Direct APK Download</span>
-        <p style="color:var(--white-dim); font-size:0.9rem; font-weight:300; text-align:center; margin-bottom:1.5rem;">
-          Download and install directly on any Android phone running Android 5.0 or above.
-        </p>
-        <a href="https://github.com/aminuabdulrahman321-dot/assa/releases/latest/download/app-release.apk"
-           class="btn-primary" style="display:inline-flex; margin:0 auto;">
-          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path d="M12 15V3m0 12l-4-4m4 4l4-4M3 21h18"/>
-          </svg>
-          Download APK
-        </a>
-        <div class="version-tag" style="display:block; margin:1rem auto 0;">Android · APK · v1.0 Prototype</div>
-        <p style="font-size:0.75rem; margin-top:1rem; color:rgba(248,250,255,0.35); text-align:center;">
-          Enable "Install from unknown sources" in Android settings before installing.
-        </p>
-      </div>
-
-      <!-- iOS Card -->
-      <div class="download-box reveal" style="flex:1; min-width:280px; max-width:400px; border-color:rgba(66,165,245,0.15);">
-        <div style="display:flex; align-items:center; gap:0.8rem; margin-bottom:1.2rem; justify-content:center;">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="#90CAF9">
-            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-          </svg>
-          <span style="font-family:'Syne',sans-serif; font-weight:700; font-size:1.3rem; color:var(--white);">iOS</span>
-        </div>
-        <span class="section-label" style="display:block; text-align:center; margin-bottom:0.8rem;">Browser Preview</span>
-        <p style="color:var(--white-dim); font-size:0.9rem; font-weight:300; text-align:center; margin-bottom:1.5rem;">
-          Try ASSA on an iPhone simulator directly in your browser — no iPhone or Mac required.
-        </p>
-        <a href="https://assa-systems.github.io/assa/app/"
-           class="btn-secondary" style="display:inline-flex; margin:0 auto; border-color:rgba(144,202,249,0.4); color:var(--accent-light);">
-          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-          </svg>
-          Use Web App
-        </a>
-        <div class="version-tag" style="display:block; margin:1rem auto 0; background:rgba(144,202,249,0.1); color:var(--accent-light);">iOS App Store · Coming Soon</div>
-        <p style="font-size:0.75rem; margin-top:1rem; color:rgba(248,250,255,0.35); text-align:center;">
-          Native iOS app is in development. Use the web app via Safari — tap Share → Add to Home Screen for the full experience.
-        </p>
-      </div>
-
     </div>
 
-    <!-- QR hint -->
-    <p style="text-align:center; color:rgba(248,250,255,0.3); font-size:0.8rem; margin-top:2rem; font-weight:300;">
-      AFIT students · Scan the QR code at the shuttle stand to download instantly
-    </p>
-
-    <!-- iOS Guide -->
-    <div style="max-width:600px; margin:3rem auto 0; background:rgba(255,255,255,0.05); border:1px solid rgba(144,202,249,0.2); border-radius:20px; padding:2rem;">
-      <p style="text-align:center; font-family:'Syne',sans-serif; font-weight:700; font-size:1.1rem; color:var(--accent-light); margin-bottom:0.5rem;">
-        📱 iPhone Users — How to Install ASSA
-      </p>
-      <p style="text-align:center; color:var(--white-dim); font-size:0.85rem; margin-bottom:1.5rem; font-weight:300;">
-        No App Store needed. Works like a native app on your iPhone.
-      </p>
-      <div style="display:flex; flex-direction:column; gap:0.8rem;">
-        <div style="display:flex; align-items:flex-start; gap:1rem;">
-          <div style="background:var(--accent); color:#0D1B4B; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; flex-shrink:0;">1</div>
-          <div>
-            <p style="color:white; font-weight:600; font-size:0.9rem;">Open Safari on your iPhone</p>
-            <p style="color:var(--white-dim); font-size:0.8rem; font-weight:300;">Must be Safari — Chrome and Firefox do not support installation</p>
-          </div>
+    <!-- REGISTER -->
+    <div id="screen-register" class="screen">
+        <div class="auth-container">
+            <div class="auth-logo">ASSA<span>.</span></div>
+            <div class="auth-tagline">Create your account</div>
+            <div class="auth-card">
+                <div class="auth-title">Get started</div>
+                <div class="error-msg" id="register-error"></div>
+                <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="reg-name" type="text" placeholder="Your full name"/></div>
+                <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="reg-email" type="email" placeholder="your@email.com"/></div>
+                <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="reg-password" type="password" placeholder="Min. 6 characters"/></div>
+                <div class="form-group"><label class="form-label">Role</label><select class="form-input form-select" id="reg-role"><option value="user">User</option><option value="driver">Driver</option></select></div>
+                <button class="btn btn-primary" id="register-btn">Create Account</button>
+            </div>
+            <div class="auth-switch">Already have an account? <a href="#" id="go-login">Sign In</a></div>
         </div>
-        <div style="display:flex; align-items:flex-start; gap:1rem;">
-          <div style="background:var(--accent); color:#0D1B4B; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; flex-shrink:0;">2</div>
-          <div>
-            <p style="color:white; font-weight:600; font-size:0.9rem;">Go to this link in Safari</p>
-            <p style="color:var(--accent); font-size:0.82rem; font-weight:600; word-break:break-all;">assa-systems.github.io/assa/app/</p>
-          </div>
-        </div>
-        <div style="display:flex; align-items:flex-start; gap:1rem;">
-          <div style="background:var(--accent); color:#0D1B4B; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; flex-shrink:0;">3</div>
-          <div>
-            <p style="color:white; font-weight:600; font-size:0.9rem;">Tap the Share button</p>
-            <p style="color:var(--white-dim); font-size:0.8rem; font-weight:300;">The box with an arrow pointing up at the bottom of Safari</p>
-          </div>
-        </div>
-        <div style="display:flex; align-items:flex-start; gap:1rem;">
-          <div style="background:var(--accent); color:#0D1B4B; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; flex-shrink:0;">4</div>
-          <div>
-            <p style="color:white; font-weight:600; font-size:0.9rem;">Tap "Add to Home Screen"</p>
-            <p style="color:var(--white-dim); font-size:0.8rem; font-weight:300;">Scroll down in the Share menu to find this option</p>
-          </div>
-        </div>
-        <div style="display:flex; align-items:flex-start; gap:1rem;">
-          <div style="background:var(--accent); color:#0D1B4B; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; flex-shrink:0;">5</div>
-          <div>
-            <p style="color:white; font-weight:600; font-size:0.9rem;">Tap "Add" — done!</p>
-            <p style="color:var(--white-dim); font-size:0.8rem; font-weight:300;">ASSA icon appears on your home screen. Open it like any app.</p>
-          </div>
-        </div>
-      </div>
-      <div style="margin-top:1.5rem; padding:1rem; background:rgba(144,202,249,0.08); border-radius:12px; border:1px solid rgba(144,202,249,0.15);">
-        <p style="color:var(--accent-light); font-size:0.8rem; text-align:center; font-weight:300;">
-          ✅ Works offline · Same account as Android · No App Store · Free
-        </p>
-      </div>
     </div>
-  </div>
 
-  <!-- FOOTER -->
-  <footer>
-    <div class="footer-logo">ASSA<span>.</span></div>
-    <p>© 2026 AFIT Shuttle Service App · Built at Air Force Institute of Technology, Kaduna</p>
-    <ul class="footer-links">
-      <li><a href="https://github.com/aminuabdulrahman321-dot/assa" target="_blank">GitHub</a></li>
-      <li><a href="#features">Features</a></li>
-      <li><a href="#download">Download</a></li>
-    </ul>
-  </footer>
+    <!-- DASHBOARD -->
+    <div id="screen-dashboard" class="screen">
+        <div class="topbar"><div class="topbar-row"><div class="topbar-avatar" id="dash-avatar">?</div><div style="flex:1"><div class="topbar-greeting" id="dash-greeting">Good morning</div><div class="topbar-name" id="dash-name">Loading...</div></div><button class="topbar-icon" onclick="showScreen('notifications')" style="position:relative;">🔔<span class="notif-badge hidden" id="dash-notif-badge">0</span></button><button class="topbar-icon" onclick="showSettings()">⚙️</button></div><div class="status-pill"><div class="status-dot online" id="dash-status-dot"></div><span class="status-text" id="dash-status-text">Checking...</span></div></div>
+        <div class="offline-banner hidden" id="dash-offline-banner"><span>📵</span><span>Offline Mode — Campus WiFi only</span></div>
+        <div class="content">
+            <div class="pickup-card"><div class="pickup-icon">🪪</div><div><div class="pickup-label">Your Pickup ID</div><div class="pickup-id" id="dash-pickup-id">---</div><div class="pickup-hint">Show this to your driver</div></div><button class="pickup-copy" onclick="copyPickupId()">Copy</button></div>
+            <div class="section-title">Quick Actions</div>
+            <div class="quick-grid">
+                <div class="quick-btn" onclick="showScreen('request')"><div class="icon icon-blue">🚐</div><div class="label">Request Ride</div><div class="sub">Book a shuttle</div></div>
+                <div class="quick-btn" onclick="showScreen('myrequests')"><div class="icon icon-green">📋</div><div class="label">My Requests</div><div class="sub">View history</div></div>
+                <div class="quick-btn" onclick="showScreen('gamehub')"><div class="icon icon-purple">🎮</div><div class="label">Game Hub</div><div class="sub">Play & win</div></div>
+                <div class="quick-btn" onclick="showScreen('lostfound')"><div class="icon icon-orange">🔍</div><div class="label">Lost & Found</div><div class="sub">Report items</div></div>
+                <div class="quick-btn" onclick="showScreen('report')"><div class="icon icon-red">⚠️</div><div class="label">Report Issue</div><div class="sub">Contact admin</div></div>
+            </div>
+            <div id="admin-quick-wrap"></div>
+            <div id="dash-ad-container"></div>
+        </div>
+        <div class="bottom-nav"><button class="nav-item active" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button><button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button><button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button><button class="nav-item" data-nav="gamehub" onclick="showScreen('gamehub')"><span class="nav-icon">🎮</span><span class="nav-label">Game</span></button><button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button></div>
+    </div>
 
-  <script>
-    // Scroll reveal
-    const reveals = document.querySelectorAll('.reveal');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((e, i) => {
-        if (e.isIntersecting) {
-          setTimeout(() => e.target.classList.add('visible'), i * 80);
-        }
+    <!-- REQUEST RIDE -->
+    <div id="screen-request" class="screen">
+        <div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title">Book a Ride</div><div id="req-mode-chip" style="margin-left:auto;background:rgba(255,255,255,0.15);border-radius:50px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:600;color:white;">Checking...</div></div>
+        <div class="offline-banner hidden" id="req-offline-banner"><span>📵</span><span>Campus WiFi Mode — Hostel pickups only</span></div>
+        <div class="content"><div id="req-checking" style="text-align:center;padding:3rem 1rem;"><div class="loading-spinner" style="margin:0 auto 1rem;"></div>Checking connection...</div><div id="req-form" style="display:none;"><div class="card"><div class="card-title">Pickup Location</div><div class="location-chips" id="req-pickup-chips"></div><div id="req-offline-note" style="display:none;font-size:0.75rem;color:var(--warning);margin-top:0.3rem;">⚠ Campus WiFi: hostel pickups only</div></div><div class="card"><div class="card-title">Destination</div><div class="info-tip">💡 Select the zone closest to your destination. You can negotiate your exact drop-off point with the driver on arrival.</div><div class="location-chips" id="req-dest-chips"></div></div><div class="card"><div class="card-title">Ride Type</div><div class="ride-type-row"><button class="ride-type-btn active" id="rt-shared" onclick="setRideType('Shared')"><span style="font-size:1.3rem;">👥</span>Shared Ride<span style="font-size:0.72rem;opacity:0.7;">1–4 passengers</span></button><button class="ride-type-btn" id="rt-chartered" onclick="setRideType('Chartered')"><span style="font-size:1.3rem;">🚌</span>Chartered<span style="font-size:0.72rem;opacity:0.7;">Private shuttle</span></button></div></div><div class="card" id="pax-card"><div class="card-title">Number of Passengers</div><div class="info-tip" style="margin-bottom:0.75rem;">👥 Others at your stop? Select your total group size — one shuttle picks you all up together.</div><div class="pax-row" id="pax-row"><div onclick="setPax(1)" class="pax-circle active" data-pax="1" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">1<span class="pax-label">Just me</span></div><div onclick="setPax(2)" class="pax-circle" data-pax="2" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">2<span class="pax-label"></span></div><div onclick="setPax(3)" class="pax-circle" data-pax="3" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">3<span class="pax-label"></span></div><div onclick="setPax(4)" class="pax-circle" data-pax="4" style="display:flex;flex-direction:column;gap:2px;width:64px;height:64px;">4<span class="pax-label"></span></div></div></div><div class="summary-card hidden" id="req-summary"><div style="font-size:0.85rem;font-weight:700;margin-bottom:0.75rem;">Request Summary</div><div class="summary-row"><span class="summary-key">📍 From</span><span class="summary-val" id="sum-from">-</span></div><div class="summary-row"><span class="summary-key">🏁 To</span><span class="summary-val" id="sum-to">-</span></div><div class="summary-row"><span class="summary-key">🚐 Type</span><span class="summary-val" id="sum-type">-</span></div></div><button class="btn btn-primary" id="req-submit-btn" onclick="submitRequest()" style="margin-bottom:0.75rem;">➤ Send Request</button><button class="btn btn-cancel" onclick="showScreen('dashboard')">Cancel</button></div></div>
+        <div class="bottom-nav"><button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button><button class="nav-item active" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button><button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button><button class="nav-item" data-nav="gamehub" onclick="showScreen('gamehub')"><span class="nav-icon">🎮</span><span class="nav-label">Game</span></button><button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button></div>
+    </div>
+
+    <!-- FEEDBACK DIALOG MODAL -->
+    <div class="modal-overlay" id="modal-feedback" onclick="closeModal('feedback')"><div class="modal" onclick="event.stopPropagation()"><div class="modal-handle"></div><div id="feedback-content"></div><button class="btn btn-primary" onclick="closeModal('feedback');showScreen('dashboard')" style="margin-top:16px;">Done</button></div></div>
+
+    <!-- MY REQUESTS -->
+    <div id="screen-myrequests" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title">My Requests</div></div><div class="content" id="myrequests-content"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div><div class="bottom-nav"><button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button><button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button><button class="nav-item active" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button><button class="nav-item" data-nav="gamehub" onclick="showScreen('gamehub')"><span class="nav-icon">🎮</span><span class="nav-label">Game</span></button><button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button></div></div>
+
+    <!-- GAME HUB -->
+    <div id="screen-gamehub" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title">Game Hub</div><div style="font-size:24px;">🎮</div></div><div class="content" id="gamehub-content"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div><div class="bottom-nav"><button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button><button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button><button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button><button class="nav-item active" data-nav="gamehub" onclick="showScreen('gamehub')"><span class="nav-icon">🎮</span><span class="nav-label">Game</span></button><button class="nav-item" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button></div></div>
+
+    <!-- PUZZLE SCREEN -->
+    <div id="screen-puzzle" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('gamehub')">←</button><div class="sub-title">Puzzle Game</div><button class="topbar-icon" onclick="showLeaderboard('puzzle')" style="margin-left:auto;">🏆</button></div><div class="content" id="puzzle-content"></div></div>
+
+    <!-- QUIZ SCREEN -->
+    <div id="screen-quiz" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('gamehub')">←</button><div class="sub-title">Quiz Game</div><button class="topbar-icon" onclick="showLeaderboard('quiz')" style="margin-left:auto;">🏆</button></div><div class="content" id="quiz-content"></div></div>
+
+    <!-- TAP CHALLENGE -->
+    <div id="screen-tap" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('gamehub')">←</button><div class="sub-title">Tap Challenge</div><button class="topbar-icon" onclick="showLeaderboard('tap')" style="margin-left:auto;">🏆</button></div><div class="content" id="tap-content" style="position:relative;min-height:500px;"></div></div>
+
+    <!-- LEADERBOARD -->
+    <div id="screen-leaderboard" class="screen"><div class="sub-header"><button class="back-btn" onclick="goBackFromLeaderboard()">←</button><div class="sub-title" id="leaderboard-title">Leaderboard</div></div><div class="content" id="leaderboard-content"></div></div>
+
+    <!-- LOST & FOUND -->
+    <div id="screen-lostfound" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title">Lost & Found</div></div><div class="content"><div style="display:flex;gap:0.75rem;margin-bottom:1rem;"><button class="btn btn-primary" style="flex:1;" onclick="showLostFoundForm('lost')">📦 Report Lost</button><button class="btn" style="flex:1;background:#E8F5E9;color:var(--success);border:1px solid #A5D6A7;" onclick="showLostFoundForm('found')">✅ Report Found</button></div><div class="section-title">Recent Reports</div><div id="lostfound-list"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div></div></div>
+
+    <!-- REPORT ISSUE -->
+    <div id="screen-report" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title">Report an Issue</div></div><div class="content"><div class="card"><div class="card-title">Subject</div><input class="form-input" id="report-subject" type="text" placeholder="Brief description of issue"/></div><div class="card"><div class="card-title">Message</div><textarea class="form-input" id="report-message" placeholder="Describe the issue in detail..."></textarea></div><button class="btn btn-primary" onclick="submitReport()" style="margin-bottom:1rem;">Send Report</button><div class="section-title" style="margin-top:0.5rem;">My Previous Reports</div><div id="reports-list"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div></div></div>
+
+    <!-- NOTIFICATIONS + CHAT -->
+    <div id="screen-notifications" class="screen"><div class="sub-header"><button class="back-btn" onclick="showScreen('dashboard')">←</button><div class="sub-title" id="notif-screen-title">Notifications</div><button onclick="markAllRead()" id="mark-read-btn" style="margin-left:auto;background:rgba(255,255,255,0.15);border:none;color:white;font-size:0.75rem;font-weight:600;cursor:pointer;border-radius:50px;padding:0.3rem 0.75rem;">Mark all read</button></div><div style="display:flex;background:white;border-bottom:1px solid var(--border);flex-shrink:0;"><button id="tab-notifs" onclick="switchNotifTab('notifs')" style="flex:1;padding:0.75rem;border:none;background:none;font-family:inherit;font-size:0.85rem;font-weight:700;color:var(--primary);border-bottom:2.5px solid var(--primary);cursor:pointer;">🔔 Alerts</button><button id="tab-chat" onclick="switchNotifTab('chat')" style="flex:1;padding:0.75rem;border:none;background:none;font-family:inherit;font-size:0.85rem;font-weight:600;color:var(--text-muted);border-bottom:2.5px solid transparent;cursor:pointer;">💬 Chat</button></div><div class="content" id="notif-content"></div><div id="chat-panel" style="display:none;flex:1;flex-direction:column;overflow:hidden;"><div id="chat-messages" style="flex:1;overflow-y:auto;padding:1rem;"></div><div style="padding:0.75rem 1rem;background:white;border-top:1px solid var(--border);display:flex;gap:0.5rem;"><input id="chat-input" class="form-input" type="text" placeholder="Type a message..." style="flex:1;"/><button onclick="sendChatMessage()" style="background:var(--primary);border:none;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;">➤</button></div></div><div class="bottom-nav"><button class="nav-item" data-nav="dashboard" onclick="showScreen('dashboard')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button><button class="nav-item" data-nav="request" onclick="showScreen('request')"><span class="nav-icon">🚐</span><span class="nav-label">Ride</span></button><button class="nav-item" data-nav="myrequests" onclick="showScreen('myrequests')"><span class="nav-icon">📋</span><span class="nav-label">Requests</span></button><button class="nav-item" data-nav="gamehub" onclick="showScreen('gamehub')"><span class="nav-icon">🎮</span><span class="nav-label">Game</span></button><button class="nav-item active" data-nav="notifications" onclick="showScreen('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Alerts</span></button></div></div>
+
+    <!-- ADMIN PANEL -->
+    <div id="screen-admin" class="screen"><div class="topbar"><div class="topbar-row"><div class="topbar-avatar" id="admin-avatar">A</div><div style="flex:1"><div class="topbar-greeting">Admin Panel</div><div class="topbar-name" id="admin-name">Admin</div></div><button class="topbar-icon" onclick="logout()">🚪</button></div></div><div class="content"><div class="admin-section-title">Manage</div><div class="admin-row" onclick="adminShowBookings()"><div class="admin-row-icon icon-blue">📋</div><span class="admin-row-label">All Ride Requests</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminShowUsers()"><div class="admin-row-icon icon-green">👥</div><span class="admin-row-label">Users</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminShowDrivers()"><div class="admin-row-icon icon-orange">🚐</div><span class="admin-row-label">Drivers</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminShowLostFound()"><div class="admin-row-icon icon-purple">🔍</div><span class="admin-row-label">Lost & Found</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminShowComplaints()"><div class="admin-row-icon icon-red">⚠️</div><span class="admin-row-label">Complaints</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminShowChats()"><div class="admin-row-icon icon-blue">💬</div><span class="admin-row-label">User Chats</span><span class="admin-row-arrow">›</span></div><div class="admin-row" onclick="adminSendNotification()"><div class="admin-row-icon icon-teal">📢</div><span class="admin-row-label">Send Notification</span><span class="admin-row-arrow">›</span></div><div id="admin-content"></div></div></div>
+
+    <!-- DRIVER PANEL -->
+    <div id="screen-driver" class="screen"><div class="topbar"><div class="topbar-row"><div class="topbar-avatar" id="driver-avatar">D</div><div style="flex:1"><div class="topbar-greeting">Driver Dashboard</div><div class="topbar-name" id="driver-name">Driver</div></div><button class="topbar-icon" onclick="loadDriverRequests()">🔄</button><button class="topbar-icon" onclick="logout()">🚪</button></div></div><div class="content"><div id="driver-intents-container"></div><div class="section-title">Assigned Requests</div><div id="driver-requests"><div class="empty-state"><div class="loading-spinner" style="margin:0 auto;"></div></div></div></div></div>
+
+    <!-- MODALS -->
+    <div class="modal-overlay" id="modal-settings" onclick="closeModal('settings')"><div class="modal" onclick="event.stopPropagation()"><div class="modal-handle"></div><div class="modal-title">Settings</div><div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#F0F4FF;border-radius:14px;margin-bottom:1rem;"><div style="width:54px;height:54px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.3rem;color:white;" id="settings-avatar">?</div><div><div style="font-weight:700;color:var(--text-primary);" id="settings-name">-</div><div style="font-size:0.78rem;color:var(--text-muted);" id="settings-email">-</div><div style="font-size:0.72rem;color:var(--primary);font-weight:700;margin-top:0.2rem;" id="settings-role">USER</div></div></div><div style="background:#F0F4FF;border-radius:14px;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Pickup ID</div><div style="font-size:1.8rem;font-weight:800;color:var(--primary);" id="settings-pickup-id">---</div></div><button onclick="copyPickupId()" style="background:var(--primary);color:white;border:none;border-radius:10px;padding:0.5rem 1rem;font-size:0.8rem;font-weight:700;cursor:pointer;">Copy</button></div><button class="btn btn-danger" onclick="logout()">🚪 Sign Out</button></div></div>
+
+    <div class="modal-overlay" id="modal-lostfound" onclick="closeModal('lostfound')"><div class="modal" onclick="event.stopPropagation()"><div class="modal-handle"></div><div class="modal-title" id="lf-modal-title">Report Lost Item</div><div class="form-group"><label class="form-label">Item Name</label><input class="form-input" id="lf-item" type="text" placeholder="e.g. Black backpack"/></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="lf-desc" placeholder="Describe the item..."></textarea></div><div class="form-group"><label class="form-label">Location</label><input class="form-input" id="lf-location" type="text" placeholder="Where was it lost/found?"/></div><div class="form-group"><label class="form-label">Photo URL</label><input class="form-input" id="lf-image" type="url" placeholder="Google Drive image link"/><div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">Google Drive → Share → Anyone with link → Copy link → Paste here</div></div><button class="btn btn-primary" onclick="submitLostFound()">Submit Report</button></div></div>
+
+    <div class="modal-overlay" id="modal-send-notif" onclick="closeModal('send-notif')"><div class="modal" onclick="event.stopPropagation()"><div class="modal-handle"></div><div class="modal-title">Send Notification</div><div class="form-group"><label class="form-label">Title</label><input class="form-input" id="sn-title" type="text" placeholder="Notification title"/></div><div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="sn-body" placeholder="Message body..."></textarea></div><div class="form-group"><label class="form-label">Send To</label><select class="form-input form-select" id="sn-target"><option value="all">All Users</option><option value="driver">Drivers Only</option></select></div><button class="btn btn-primary" onclick="sendAdminNotification()">Send</button></div></div>
+
+    <div class="loading-overlay hidden" id="loading-overlay"><div class="loading-spinner"></div><div class="loading-text" id="loading-text">Please wait...</div></div>
+    <div class="toast" id="toast"></div>
+    <div class="confirm-overlay" id="confirm-overlay"><div class="confirm-box"><div class="confirm-icon" id="confirm-icon">❓</div><div class="confirm-title" id="confirm-title">Are you sure?</div><div class="confirm-msg" id="confirm-msg"></div><div class="confirm-btns"><button class="btn btn-secondary" style="flex:1;" id="confirm-cancel-btn">Cancel</button><button class="btn btn-primary" style="flex:1;" id="confirm-ok-btn">Confirm</button></div></div></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut }
+      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, onSnapshot, serverTimestamp, getDocs, writeBatch, orderBy, limit }
+      from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCBN5iCfV2o8to9A5H2nUb-bXRDYhD4PJc",
+      authDomain: "afit-shuttle-system.firebaseapp.com",
+      projectId: "afit-shuttle-system",
+      storageBucket: "afit-shuttle-system.appspot.com",
+      messagingSenderId: "419651451775",
+      appId: "1:419651451775:ios:166e02856ad950fd15b84a"
+    };
+    const fbApp = initializeApp(firebaseConfig);
+    const auth = getAuth(fbApp);
+    const db = getFirestore(fbApp);
+
+    // CONSTANTS
+    const ALL_LOCATIONS = ['AFIT Gates','45x1 Hostel','Old Girls Hostel','TETFUND Hostel','BK','Boys Hostel','Alfa Hall','EED','AFIT Mosque','New Mechanical','Centre of Entrepreneurship','Hall A'];
+    const OFFLINE_PICKUPS = ['45x1 Hostel','Old Girls Hostel','Boys Hostel'];
+    const LOCATION_CODES = {'AFIT Gates':1,'45x1 Hostel':2,'Old Girls Hostel':3,'TETFUND Hostel':4,'BK':5,'Boys Hostel':6,'Alfa Hall':7,'EED':8,'AFIT Mosque':9,'New Mechanical':10,'Centre of Entrepreneurship':11,'Hall A':12};
+
+    let currentUser = null, userData = null;
+    let isOnline = true, rideType = 'Shared', paxCount = 1, lfType = 'lost';
+    let selectedPickup = null, selectedDest = null;
+    let notifUnsub = null, activeFeedbackListener = null;
+    let puzzleGame = null, quizQuestions = [], tapInterval = null;
+
+    // HELPERS
+    function getInitials(n) { return n ? n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?'; }
+    function getGreeting() { const h=new Date().getHours(); return h<12?'Good morning':h<17?'Good afternoon':'Good evening'; }
+    function generatePickupId(uid) { const letters='ABCDEFGHJKLMNPQRSTUVWXYZ'; let hash=0; for(let i=0;i<uid.length;i++) hash=(hash*31+uid.charCodeAt(i))|0; return letters[Math.abs(hash)%letters.length] + String(Math.abs(hash)%100).padStart(2,'0'); }
+    function formatTime(ts) { if(!ts) return ''; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+    function statusBadge(s) {
+      // Status codes matching firmware assa_common.h + Firestore convention:
+      //   0 = Pending (waiting for Gateway/driver)
+      //   1 = Assigned (shuttle accepted, en route)
+      //   4 = No shuttle available (Gateway timeout after retries)
+      const m={
+        0:  ['Pending',          'badge-pending'],
+        1:  ['Assigned',         'badge-approved'],
+        2:  ['En Route',         'badge-approved'],
+        3:  ['Arrived',          'badge-completed'],
+        4:  ['No Shuttle',       'badge-rejected'],   // firmware v12 Gateway timeout
+        5:  ['Cancelled',        'badge-cancelled'],
+        'open':     ['Open',     'badge-pending'],
+        'resolved': ['Resolved', 'badge-approved'],
+        'lost':     ['Lost',     'badge-pending'],
+        'found':    ['Found',    'badge-approved']
+      };
+      const [l,c]=m[s]??[String(s),'badge-pending'];
+      return `<span class="status-badge ${c}">${l}</span>`;
+    }
+    function toDirectImgUrl(url) { if(!url) return ''; const m=url.match(/\/d\/([a-zA-Z0-9_-]+)/); return m?`https://lh3.googleusercontent.com/d/${m[1]}`:url; }
+
+    window.showScreen = function(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); const el=document.getElementById('screen-'+id); if(el) el.classList.add('active'); document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===id)); if(id==='myrequests') loadMyRequests(); if(id==='notifications') loadNotifications(); if(id==='lostfound') loadLostFound(); if(id==='report') loadReports(); if(id==='request') initRequestScreen(); if(id==='driver') loadDriverRequests(); if(id==='gamehub') loadGameHub(); };
+    window.closeModal = id => { const m=document.getElementById('modal-'+id); if(m) m.classList.remove('show'); if(activeFeedbackListener) { activeFeedbackListener(); activeFeedbackListener=null; } };
+    function openModal(id) { document.getElementById('modal-'+id).classList.add('show'); }
+    function showLoading(msg) { document.getElementById('loading-text').textContent=msg||'Please wait...'; document.getElementById('loading-overlay').classList.remove('hidden'); }
+    function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
+    let _tt; function showToast(msg,type='') { const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+type; clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('show'),3000); }
+    window.showSettings = function() { if(!userData) return; document.getElementById('settings-avatar').textContent=getInitials(userData.name); document.getElementById('settings-name').textContent=userData.name||'-'; document.getElementById('settings-email').textContent=currentUser.email||'-'; document.getElementById('settings-role').textContent=(userData.role||'user').toUpperCase(); document.getElementById('settings-pickup-id').textContent=userData.pickupId||'---'; openModal('settings'); };
+    window.copyPickupId = function() { const id=userData?.pickupId||'---'; navigator.clipboard?.writeText(id).then(()=>showToast('Pickup ID copied!','success')).catch(()=>showToast(id)); };
+    function checkConnectivity() { return navigator.onLine; }
+    function updateOnlineStatus() { isOnline = navigator.onLine; const dot=document.getElementById('dash-status-dot'); const txt=document.getElementById('dash-status-text'); const ban=document.getElementById('dash-offline-banner'); const reqChip=document.getElementById('req-mode-chip'); const reqBan=document.getElementById('req-offline-banner'); const offNote=document.getElementById('req-offline-note'); if(dot){ dot.className='status-dot '+(isOnline?'online':'offline'); txt.textContent=isOnline?'Online':'Campus WiFi Mode'; ban?.classList.toggle('hidden',isOnline); } if(reqChip){ reqChip.textContent=isOnline?'🟢 Online':'🟡 Campus WiFi'; reqChip.style.background=isOnline?'rgba(46,125,50,0.3)':'rgba(245,127,23,0.3)'; reqBan?.classList.toggle('hidden',isOnline); if(offNote) offNote.style.display=isOnline?'none':'block'; buildLocationChips(); } return isOnline; }
+    window.addEventListener('online', ()=>{ isOnline=true; updateOnlineStatus(); showToast('Back online ✓','success'); });
+    window.addEventListener('offline', ()=>{ isOnline=false; updateOnlineStatus(); showToast('Offline — Campus WiFi Mode',''); });
+
+    // AUTH
+    onAuthStateChanged(auth, async user => { if(user){ currentUser=user; await loadUserData(user.uid); } else { currentUser=null; userData=null; showScreen('login'); } });
+    async function loadUserData(uid) { try { showScreen('splash'); const ref=doc(db,'users',uid); let snap; try { snap=await Promise.race([getDoc(ref),new Promise((_,rej)=>setTimeout(()=>rej('timeout'),5000))]); } catch { snap=await new Promise(res=>{ const u=onSnapshot(ref,{source:'cache'},s=>{u();res(s)},()=>res(null)); }); } let data=snap?.data?.()??snap?.data??null; if(data&&(!data.pickupId||data.pickupId==='')){ data.pickupId=generatePickupId(uid); try{ await updateDoc(ref,{pickupId:data.pickupId}); }catch{} } if(!data){ data={name:currentUser.email?.split('@')[0]||'User',email:currentUser.email,role:'user',pickupId:generatePickupId(uid),platform:'pwa',createdAt:new Date().toISOString()}; try{ await setDoc(ref,{...data,createdAt:serverTimestamp(),platform:'pwa'}); }catch{} } userData=data; updateOnlineStatus(); routeByRole(data.role); startNotifListener(uid); } catch(e){ showScreen('login'); } }
+    function routeByRole(role) { if(role==='admin'){ document.getElementById('admin-avatar').textContent=getInitials(userData.name); document.getElementById('admin-name').textContent=userData.name||'Admin'; showScreen('admin'); } else if(role==='driver'){ document.getElementById('driver-name').textContent=userData.name||'Driver'; document.getElementById('driver-avatar').textContent=getInitials(userData.name); showScreen('driver'); loadDriverRequests(); startIntentListener(currentUser.uid); } else { showScreen('dashboard'); loadDashboard(); } }
+    function loadDashboard() { if(!userData) return; document.getElementById('dash-avatar').textContent=getInitials(userData.name); document.getElementById('dash-name').textContent=userData.name||'User'; document.getElementById('dash-greeting').textContent=getGreeting(); document.getElementById('dash-pickup-id').textContent=userData.pickupId||'---'; updateOnlineStatus(); if(userData.role==='admin'&&!document.getElementById('admin-quick-btn')){ document.getElementById('admin-quick-wrap').innerHTML='<div class="quick-btn" id="admin-quick-btn" onclick="showScreen(\'admin\')"><div class="icon icon-teal">🛡️</div><div class="label">Admin Panel</div><div class="sub">Manage system</div></div>'; } startAdListener(); }
+    function startNotifListener(uid) { if(notifUnsub) notifUnsub(); const q=query(collection(db,'notifications'),where('userId','==',uid),where('read','==',false)); notifUnsub=onSnapshot(q, snap=>{ const count=snap.size; const badge=document.getElementById('dash-notif-badge'); if(badge){ badge.textContent=count; badge.classList.toggle('hidden',count===0); } }); }
+
+    // REQUEST SCREEN
+    function initRequestScreen() { selectedPickup=null; selectedDest=null; document.getElementById('req-summary').classList.add('hidden'); isOnline=checkConnectivity(); updateOnlineStatus(); buildLocationChips(); document.getElementById('req-checking').style.display='none'; document.getElementById('req-form').style.display='block'; }
+    function buildLocationChips() { const pickups=isOnline?ALL_LOCATIONS:OFFLINE_PICKUPS; const pc=document.getElementById('req-pickup-chips'); const dc=document.getElementById('req-dest-chips'); pc.innerHTML=pickups.map(l=>`<div class="loc-chip" data-loc="${l}" onclick="selectPickup('${l}')">${l}</div>`).join(''); dc.innerHTML=ALL_LOCATIONS.map(l=>`<div class="loc-chip" data-loc="${l}" onclick="selectDest('${l}')">${l}</div>`).join(''); }
+    window.selectPickup = function(loc) { selectedPickup=loc; document.querySelectorAll('#req-pickup-chips .loc-chip').forEach(c=>{ c.classList.toggle('selected',c.dataset.loc===loc); c.classList.toggle('disabled',c.dataset.loc===selectedDest); }); document.querySelectorAll('#req-dest-chips .loc-chip').forEach(c=>c.classList.toggle('disabled',c.dataset.loc===loc)); updateSummary(); };
+    window.selectDest = function(loc) { selectedDest=loc; document.querySelectorAll('#req-dest-chips .loc-chip').forEach(c=>{ c.classList.toggle('selected',c.dataset.loc===loc); c.classList.toggle('disabled',c.dataset.loc===selectedPickup); }); document.querySelectorAll('#req-pickup-chips .loc-chip').forEach(c=>c.classList.toggle('disabled',c.dataset.loc===loc)); updateSummary(); };
+    function updateSummary() { if(!selectedPickup||!selectedDest) return; document.getElementById('sum-from').textContent=selectedPickup; document.getElementById('sum-to').textContent=selectedDest; document.getElementById('sum-type').textContent=rideType+(rideType==='Shared'?' · '+paxCount+' passenger'+(paxCount>1?'s':''):''); document.getElementById('req-summary').classList.remove('hidden'); }
+    window.setRideType = function(type) { rideType=type; document.getElementById('rt-shared').classList.toggle('active',type==='Shared'); document.getElementById('rt-chartered').classList.toggle('active',type==='Chartered'); document.getElementById('pax-card').style.display=type==='Shared'?'block':'none'; updateSummary(); };
+    window.setPax = function(n) { paxCount=n; document.querySelectorAll('.pax-circle').forEach(c=>c.classList.toggle('active',parseInt(c.dataset.pax)===n)); updateSummary(); };
+    window.submitRequest = async function() { if(!selectedPickup||!selectedDest){ showToast('Please select pickup and destination','error'); return; } if(selectedPickup===selectedDest){ showToast('Pickup and destination cannot be the same','error'); return; } showLoading('Submitting request...'); isOnline=checkConnectivity(); try { if(isOnline) await submitOnlineRequest(selectedPickup,selectedDest); else await submitOfflineRequest(selectedPickup,selectedDest); } catch(e){ showToast('Failed to submit. Try again.','error'); } finally { hideLoading(); } };
+    // submitOnlineRequest: writes to Firestore with gatewayForwarded=false
+    // so the Gateway firmware will pick it up on next poll
+    async function submitOnlineRequest(pickup,dest) {
+      const pax=rideType==='Chartered'?1:paxCount;
+      const docRef=await addDoc(collection(db,'ride_requests'),{
+        userId:           currentUser.uid,
+        userName:         userData.name,
+        pickupId:         userData.pickupId,
+        pickupLocation:   pickup,
+        destination:      dest,
+        pickup_code:      locCodePwa(pickup),   // numeric code for firmware
+        destination_code: locCodePwa(dest),     // numeric code for firmware
+        rideType,
+        passengerCount:   pax,
+        status:           0,
+        requestType:      'online',
+        platform:         'pwa',
+        gatewayForwarded: false,   // Gateway firmware polls for this field
+        timestamp:        serverTimestamp()
       });
-    }, { threshold: 0.1 });
-    reveals.forEach(el => observer.observe(el));
+      showFeedbackDialog(docRef.id, pickup, dest, rideType, pax, false);
+    }
 
-    // Nav shadow on scroll
-    const nav = document.querySelector('nav');
-    window.addEventListener('scroll', () => {
-      nav.style.boxShadow = window.scrollY > 30
-        ? '0 4px 30px rgba(0,0,0,0.35)'
-        : 'none';
-    });
-  </script>
+    // Location name → numeric code map (matches assa_common.h LOCATIONS table)
+    // Used when writing ride requests from PWA so Gateway can decode them
+    function locCodePwa(name) {
+      const map={
+        'AFIT Gates':1,'45x1 Hostel':2,'Old Girls Hostel':3,'TETFUND Hostel':4,
+        'BK':5,'Boys Hostel':6,'Alfa Hall':7,'EED':8,
+        'AFIT Mosque':9,'New Mechanical':10,'Centre of Entrepreneurship':11,'Hall A':12
+      };
+      return map[name]||1;
+    }
+
+    // submitOfflineRequest: POSTs to the ESP32 Access Point at 192.168.4.1
+    // Uses firmware v12 field names: pc, dc, rt, pax
+    // Parses the enriched response: { pid, from, to, remainingBudget }
+    async function submitOfflineRequest(pickup,dest) {
+      const pax = rideType==='Chartered' ? 1 : paxCount;
+      const pc  = locCodePwa(pickup);
+      const dc  = locCodePwa(dest);
+      const rt  = rideType==='Chartered' ? 1 : 0;
+
+      let pid = userData.pickupId || 'unknown';
+      let confirmedFrom = pickup;
+      let confirmedTo   = dest;
+      let remainingBudget = 0;
+
+      try {
+        // POST to Access Point — firmware v12 expects { pc, dc, rt, pax }
+        const res = await fetch('http://192.168.4.1/request', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ pc, dc, rt, pax }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Firmware v12 enriched response includes "from" and "to" location strings
+          pid             = data.pid              || pid;
+          confirmedFrom   = data.from             || pickup;
+          confirmedTo     = data.to               || dest;
+          remainingBudget = data.remainingBudget  || 0;
+        } else {
+          const errData = await res.json().catch(()=>({}));
+          showToast(errData.msg || `AP error (${res.status})`, 'error');
+          return;
+        }
+      } catch(e) {
+        // Network error — not connected to ASSA-Campus WiFi
+        showToast('Could not reach campus WiFi. Connect to "ASSA-Campus" and try again.', 'error');
+        return;
+      }
+
+      // Write to Firestore in background with PID from AP response
+      addDoc(collection(db,'ride_requests'),{
+        userId:           currentUser.uid,
+        userName:         userData.name,
+        pickupId:         userData.pickupId,
+        offlineUUID:      pid,           // the PID the Gateway uses to match this doc
+        pickupLocation:   confirmedFrom,
+        destination:      confirmedTo,
+        pickup_code:      pc,
+        destination_code: dc,
+        rideType,
+        passengerCount:   pax,
+        status:           0,
+        requestType:      'offline',
+        platform:         'pwa',
+        gatewayForwarded: false,
+        timestamp:        serverTimestamp()
+      }).catch(e => console.warn('[Offline] Firestore write failed:', e));
+
+      showFeedbackDialog(null, confirmedFrom, confirmedTo, rideType, pax, true, pid, remainingBudget);
+    }
+    // showFeedbackDialog — unified feedback modal for online and offline requests
+    // Handles: status=0 (pending), status=1 (assigned), status=4 (no shuttle)
+    // offlinePid and remainingBudget are from the enriched AP v12 response
+    function showFeedbackDialog(bookingId, pickup, dest, rideType, pax, isOffline=false, offlinePid='', remainingBudget=0) {
+      const content=document.getElementById('feedback-content');
+      const pidDisplay = offlinePid ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">PID: <strong>${offlinePid}</strong></div>` : '';
+      const budgetHint = remainingBudget > 0 ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">LoRa budget remaining: ${remainingBudget}</div>` : '';
+
+      content.innerHTML=`
+        <div class="success-icon">${isOffline ? '📡' : '✅'}</div>
+        <div class="success-title">Request Sent!</div>
+        <div style="font-size:13px;color:var(--text-muted);text-align:center;margin-bottom:4px;">
+          ${pickup} → ${dest}
+        </div>
+        ${pidDisplay}${budgetHint}
+        <div style="height:1px;background:var(--border);margin:12px 0;"></div>
+
+        <!-- Stage 1: always done -->
+        <div class="stage-row">
+          <div class="stage-dot done">✓</div>
+          <div>
+            <div class="stage-label">${isOffline ? 'Access Point Received' : 'Request Received'}</div>
+            <div class="stage-sub">${isOffline ? 'Sent to campus shuttle network via WiFi' : 'Your request has been sent to the shuttle network'}</div>
+          </div>
+        </div>
+
+        <!-- Stage 2: gateway / accepted -->
+        <div class="stage-row" id="stage-accept">
+          <div class="stage-dot active" id="stage-accept-dot">○</div>
+          <div>
+            <div class="stage-label" id="stage-accept-label">${isOffline ? 'Gateway Forwarding' : 'Awaiting Acceptance'}</div>
+            <div class="stage-sub" id="stage-accept-sub">${isOffline ? 'Waiting for gateway to relay via LoRa…' : 'Waiting for a shuttle to accept…'}</div>
+          </div>
+          <div id="stage-accept-check" style="display:none;"></div>
+        </div>
+
+        <!-- Stage 3: shuttle assigned -->
+        <div class="stage-row" id="stage-assign">
+          <div class="stage-dot" id="stage-assign-dot">○</div>
+          <div>
+            <div class="stage-label" id="stage-assign-label">Shuttle Assigned</div>
+            <div class="stage-sub" id="stage-assign-sub">A shuttle will be assigned when accepted</div>
+          </div>
+        </div>
+
+        <div class="wait-tip" style="margin-top:16px;">
+          <div class="wait-tip-title">💡 While you wait...</div>
+          <p>🎮 Try our puzzle game and climb the leaderboard!</p>
+          <p>🔍 Check Lost & Found — someone may have found something of yours!</p>
+        </div>`;
+
+      openModal('feedback');
+
+      // Online: listen to Firestore doc for real-time status updates
+      if(bookingId && !isOffline){
+        if(activeFeedbackListener) activeFeedbackListener();
+        activeFeedbackListener=onSnapshot(doc(db,'ride_requests',bookingId), snap=>{
+          if(!snap.exists) return;
+          const d=snap.data();
+          const status=d.status||0;
+          const shuttleId=d.shuttleIdFeedback||'';
+
+          const acceptDot   =document.getElementById('stage-accept-dot');
+          const acceptLabel =document.getElementById('stage-accept-label');
+          const acceptSub   =document.getElementById('stage-accept-sub');
+          const assignDot   =document.getElementById('stage-assign-dot');
+          const assignLabel =document.getElementById('stage-assign-label');
+          const assignSub   =document.getElementById('stage-assign-sub');
+
+          if(status===4){
+            // Gateway timeout — no shuttle responded after all retries (firmware v12)
+            if(acceptDot)  { acceptDot.innerHTML='✗'; acceptDot.className='stage-dot'; acceptDot.style.background='var(--danger)'; }
+            if(acceptLabel) acceptLabel.textContent='No Shuttle Available';
+            if(acceptSub)   acceptSub.textContent='No shuttle accepted within the timeout window. Please try again.';
+            if(assignDot)  { assignDot.style.display='none'; }
+            return;
+          }
+          if(status>=1){
+            if(acceptDot)  { acceptDot.innerHTML='✓'; acceptDot.className='stage-dot done'; }
+            if(acceptLabel) acceptLabel.textContent='Request Accepted';
+            if(acceptSub)   acceptSub.textContent='A shuttle has been assigned to pick you up';
+          }
+          if(shuttleId){
+            if(assignDot)  { assignDot.innerHTML='✓'; assignDot.className='stage-dot done'; }
+            if(assignLabel) assignLabel.textContent='Shuttle Assigned';
+            if(assignSub)   assignSub.textContent=`Shuttle ${shuttleId} is on its way!`;
+          }
+        });
+      }
+
+      // Offline: listen by offlineUUID (the PID from AP response)
+      if(isOffline && offlinePid){
+        if(activeFeedbackListener) activeFeedbackListener();
+        const q=query(
+          collection(db,'ride_requests'),
+          where('offlineUUID','==',offlinePid),
+          where('requestType','==','offline'),
+          limit(1)
+        );
+        activeFeedbackListener=onSnapshot(q, snap=>{
+          if(snap.empty) return;
+          const d=snap.docs[0].data();
+          const status=d.status||0;
+          const fwd=d.gatewayForwarded||false;
+          const shuttleId=d.shuttleIdFeedback||'';
+
+          const acceptDot   =document.getElementById('stage-accept-dot');
+          const acceptLabel =document.getElementById('stage-accept-label');
+          const acceptSub   =document.getElementById('stage-accept-sub');
+          const assignDot   =document.getElementById('stage-assign-dot');
+          const assignLabel =document.getElementById('stage-assign-label');
+          const assignSub   =document.getElementById('stage-assign-sub');
+
+          if(status===4){
+            // Gateway timeout (firmware v12 patchNoShuttleAvailable)
+            if(acceptDot)  { acceptDot.innerHTML='✗'; acceptDot.className='stage-dot'; acceptDot.style.background='var(--danger)'; }
+            if(acceptLabel) acceptLabel.textContent='No Shuttle Available';
+            if(acceptSub)   acceptSub.textContent='No shuttle accepted. Please try again.';
+            return;
+          }
+          if(fwd || status>=1){
+            if(acceptDot)  { acceptDot.innerHTML='✓'; acceptDot.className='stage-dot done'; }
+            if(acceptLabel) acceptLabel.textContent='Gateway Forwarded';
+            if(acceptSub)   acceptSub.textContent='Request relayed to shuttle via LoRa radio';
+          }
+          if(shuttleId){
+            if(assignDot)  { assignDot.innerHTML='✓'; assignDot.className='stage-dot done'; }
+            if(assignLabel) assignLabel.textContent='Shuttle Assigned';
+            if(assignSub)   assignSub.textContent=`Shuttle ${shuttleId} is on its way!`;
+          }
+        });
+      }
+    }
+    function showSuccessDialog(msg) { showToast(msg,'success'); }
+
+    // MY REQUESTS
+    async function loadMyRequests() { const el=document.getElementById('myrequests-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const q=query(collection(db,'ride_requests'),where('userId','==',currentUser.uid)); const snap=await getDocs(q); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0)); if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🚐</div><div class="empty-title">No requests yet</div><div class="empty-sub">Submit your first ride request</div></div>'; return; } el.innerHTML=docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.pickupLocation||''} → ${r.destination||''}</div><div class="list-item-sub">${r.rideType||''} · ${r.passengerCount||1} pax · ${formatTime(r.timestamp)}${r.shuttleIdFeedback?` · Shuttle: ${r.shuttleIdFeedback}`:''}</div></div>${statusBadge(r.status)}</div>${r.status===0?`<button class="btn btn-cancel" style="margin-top:0.6rem;padding:0.5rem;" onclick="cancelRequest('${r.id}')">Cancel Request</button>`:''}</div>`).join(''); } catch { el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; } }
+    window.cancelRequest = async function(id) { const ok=await showConfirm({icon:'🚫',title:'Cancel Request',msg:'Are you sure?',okText:'Yes, Cancel',okClass:'btn-danger'}); if(!ok) return; showLoading('Cancelling...'); try { await updateDoc(doc(db,'ride_requests',id),{status:5}); showToast('Request cancelled','success'); loadMyRequests(); } catch(e){ showToast('Failed to cancel','error'); } finally { hideLoading(); } };
+
+    // GAME HUB
+    async function loadGameHub() { const el=document.getElementById('gamehub-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const weekKey=getWeekKey(); const scoresSnap=await getDoc(doc(db,'game_scores',currentUser.uid)); const scores=scoresSnap.data()||{}; const totalPts=(scores.puzzle_weeklyPoints||0)+(scores.quiz_weeklyPoints||0)+(scores.tap_weeklyPoints||0); const remainingBudget=720-(scores.dailyTxCount||0); const budgetPercent=(remainingBudget/720)*100; el.innerHTML=`<div class="face-banner"><div class="face-avatar">🏆</div><div><div class="face-name">Face of the Week</div><div class="face-score">Compete to be featured!</div></div></div><div class="score-summary"><div style="display:flex;justify-content:space-between;"><span style="color:white70;">This Week's Points</span><span style="color:white38;">${weekKey}</span></div><div class="score-number">${totalPts} pts</div><div style="display:flex;justify-content:space-between;margin-top:12px;"><div><div style="color:#6A1B9A;font-size:10px;">PUZZLE</div><div style="color:white;font-size:16px;font-weight:800;">${scores.puzzle_weeklyPoints||0}</div></div><div><div style="color:#1565C0;font-size:10px;">QUIZ</div><div style="color:white;font-size:16px;font-weight:800;">${scores.quiz_weeklyPoints||0}</div></div><div><div style="color:#00897B;font-size:10px;">TAP</div><div style="color:white;font-size:16px;font-weight:800;">${scores.tap_weeklyPoints||0}</div></div></div><div class="budget-bar"><div class="budget-fill" style="width:${budgetPercent}%;"></div></div><div style="font-size:10px;color:white38;margin-top:6px;">Daily TX budget: ${remainingBudget}/${720} remaining</div></div><div class="game-card" onclick="startPuzzle()"><div style="display:flex;align-items:center;gap:16px;"><div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;">🧩</div><div><div style="font-size:17px;font-weight:800;color:white;">Puzzle Game</div><div style="font-size:12px;color:rgba(255,255,255,0.75);">${scores.puzzle_weeklyPoints||0} pts this week</div></div></div></div><div class="game-card quiz" onclick="startQuiz()"><div style="display:flex;align-items:center;gap:16px;"><div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;">❓</div><div><div style="font-size:17px;font-weight:800;color:white;">Quiz Game</div><div style="font-size:12px;color:rgba(255,255,255,0.75);">${scores.quiz_weeklyPoints||0} pts this week</div></div></div></div><div class="game-card tap" onclick="startTapChallenge()"><div style="display:flex;align-items:center;gap:16px;"><div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;">👆</div><div><div style="font-size:17px;font-weight:800;color:white;">Tap Challenge</div><div style="font-size:12px;color:rgba(255,255,255,0.75);">${scores.tap_weeklyPoints||0} pts this week</div></div></div></div>`; } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Game Hub</div><div class="empty-sub">Play games and earn points</div></div>'; } }
+    function getWeekKey() { const now=new Date(); const monday=new Date(now); monday.setDate(now.getDate()-now.getDay()+1); const week=Math.ceil((monday-new Date(monday.getFullYear(),0,1))/86400000/7); return `${monday.getFullYear()}-W${week}`; }
+    window.startPuzzle = function() { showScreen('puzzle'); loadPuzzle(); };
+    window.startQuiz = function() { showScreen('quiz'); loadQuiz(); };
+    window.startTapChallenge = function() { showScreen('tap'); startTapGame(); };
+    window.showLeaderboard = function(gameType) { window.currentLeaderboardGame=gameType; document.getElementById('leaderboard-title').textContent=gameType==='puzzle'?'Puzzle Leaderboard':gameType==='quiz'?'Quiz Leaderboard':'Tap Leaderboard'; showScreen('leaderboard'); loadLeaderboard(gameType); };
+    window.goBackFromLeaderboard = function() { showScreen('gamehub'); };
+
+    // PUZZLE
+    async function loadPuzzle() { const el=document.getElementById('puzzle-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const imgSnap=await getDocs(query(collection(db,'puzzle_images'),where('isActive','==',true),limit(1))); const imgUrl=imgSnap.docs[0]?.data()?.imageUrl||''; el.innerHTML=`<div class="card"><div class="card-title">3x3 Puzzle</div><div id="puzzle-stats" style="display:flex;justify-content:space-between;margin-bottom:16px;"><span>Moves: <span id="puzzle-moves">0</span></span><span>Time: <span id="puzzle-time">00:00</span></span></div><div id="puzzle-grid" class="puzzle-grid" style="grid-template-columns:repeat(3,1fr);aspect-ratio:1/1;"></div><button class="btn btn-primary" style="margin-top:16px;" onclick="shufflePuzzle()">Shuffle</button><button class="btn btn-secondary" style="margin-top:8px;" onclick="showScreen('gamehub')">Back to Game Hub</button></div>`; initPuzzle(imgUrl); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🧩</div><div class="empty-title">Puzzle Game</div><div class="empty-sub">Arrange the tiles to solve the puzzle</div><button class="btn btn-primary" style="margin-top:16px;" onclick="showScreen(\'gamehub\')">Back to Game Hub</button></div>'; } }
+    let puzzleTiles=[], puzzleMoves=0, puzzleSeconds=0, puzzleTimer=null, puzzleImageUrl='';
+    function initPuzzle(imgUrl) { puzzleImageUrl=imgUrl; puzzleTiles=[1,2,3,4,5,6,7,8,0]; shufflePuzzle(); }
+    function shufflePuzzle() { for(let i=puzzleTiles.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [puzzleTiles[i],puzzleTiles[j]]=[puzzleTiles[j],puzzleTiles[i]]; } puzzleMoves=0; puzzleSeconds=0; document.getElementById('puzzle-moves').textContent='0'; if(puzzleTimer) clearInterval(puzzleTimer); puzzleTimer=setInterval(()=>{ puzzleSeconds++; const m=Math.floor(puzzleSeconds/60); const s=puzzleSeconds%60; document.getElementById('puzzle-time').textContent=`${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; },1000); renderPuzzleGrid(); }
+    function renderPuzzleGrid() { const grid=document.getElementById('puzzle-grid'); if(!grid) return; grid.innerHTML=''; const size=3; for(let i=0;i<puzzleTiles.length;i++){ const tile=puzzleTiles[i]; const isEmpty=tile===0; const tileDiv=document.createElement('div'); tileDiv.className='puzzle-tile'+(isEmpty?' empty':''); tileDiv.style.aspectRatio='1/1'; tileDiv.style.display='flex'; tileDiv.style.alignItems='center'; tileDiv.style.justifyContent='center'; tileDiv.style.fontSize='24px'; tileDiv.style.fontWeight='800'; if(!isEmpty){ tileDiv.textContent=tile.toString(); if(puzzleImageUrl){ tileDiv.style.backgroundImage=`url(${toDirectImgUrl(puzzleImageUrl)})`; tileDiv.style.backgroundSize='300% 300%'; const row=Math.floor((tile-1)/size); const col=(tile-1)%size; tileDiv.style.backgroundPosition=`${col*50}% ${row*50}%`; tileDiv.style.backgroundRepeat='no-repeat'; tileDiv.textContent=''; } } tileDiv.onclick=()=>moveTile(i); grid.appendChild(tileDiv); } }
+    function moveTile(idx) { const emptyIdx=puzzleTiles.indexOf(0); const row=Math.floor(idx/3), col=idx%3; const emptyRow=Math.floor(emptyIdx/3), emptyCol=emptyIdx%3; if((Math.abs(row-emptyRow)+Math.abs(col-emptyCol))===1){ [puzzleTiles[idx],puzzleTiles[emptyIdx]]=[puzzleTiles[emptyIdx],puzzleTiles[idx]]; puzzleMoves++; document.getElementById('puzzle-moves').textContent=puzzleMoves; renderPuzzleGrid(); if(isPuzzleSolved()){ clearInterval(puzzleTimer); const score=Math.max(1,Math.floor(1000*(60/puzzleSeconds))); saveGameScore('puzzle',score); showToast(`Puzzle solved! Score: ${score} pts`,'success'); } } }
+    function isPuzzleSolved(){ for(let i=0;i<puzzleTiles.length-1;i++) if(puzzleTiles[i]!==i+1) return false; return true; }
+
+    // QUIZ
+    async function loadQuiz() { const el=document.getElementById('quiz-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const qSnap=await getDocs(query(collection(db,'game_questions'),where('isActive','==',true))); quizQuestions=qSnap.docs.map(d=>({id:d.id,...d.data()})).sort(()=>0.5-Math.random()).slice(0,10); if(quizQuestions.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">❓</div><div class="empty-title">No questions yet</div><div class="empty-sub">Admin will add questions soon</div><button class="btn btn-primary" style="margin-top:16px;" onclick="showScreen(\'gamehub\')">Back to Game Hub</button></div>'; return; } window.quizIndex=0; window.quizScore=0; renderQuizQuestion(); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">❓</div><div class="empty-title">Quiz Game</div><div class="empty-sub">Test your knowledge</div><button class="btn btn-primary" style="margin-top:16px;" onclick="showScreen(\'gamehub\')">Back to Game Hub</button></div>'; } }
+    function renderQuizQuestion() { const el=document.getElementById('quiz-content'); if(window.quizIndex>=quizQuestions.length){ const totalScore=window.quizScore; saveGameScore('quiz',totalScore); el.innerHTML=`<div class="card"><div class="success-icon">🎉</div><div class="success-title">Quiz Complete!</div><div class="success-msg">You scored ${totalScore} points</div><button class="btn btn-primary" onclick="loadQuiz()">Play Again</button><button class="btn btn-secondary" style="margin-top:8px;" onclick="showScreen(\'gamehub\')">Back to Game Hub</button></div>`; return; } const q=quizQuestions[window.quizIndex]; const isMcq=q.type!=='tf'; const options=isMcq?q.options:['True','False']; const timeLeft=20; el.innerHTML=`<div class="card"><div class="quiz-timer"><div class="quiz-timer-fill" id="quiz-timer-fill" style="width:100%;"></div></div><div style="font-size:18px;font-weight:700;margin-bottom:16px;">${q.question}</div><div id="quiz-options">${options.map(opt=>`<div class="quiz-option" onclick="selectQuizAnswer('${opt.replace(/'/g,"\\'")}')">${opt}</div>`).join('')}</div><div style="margin-top:16px;">Question ${window.quizIndex+1}/${quizQuestions.length}</div></div>`; let timer=timeLeft; const timerFill=document.getElementById('quiz-timer-fill'); const interval=setInterval(()=>{ timer--; if(timerFill) timerFill.style.width=`${(timer/timeLeft)*100}%`; if(timer<=0){ clearInterval(interval); selectQuizAnswer(null); } },1000); window.quizTimerInterval=interval; }
+    window.selectQuizAnswer = function(answer) { if(window.quizTimerInterval) clearInterval(window.quizTimerInterval); if(answer!==null){ const q=quizQuestions[window.quizIndex]; const isCorrect=answer===q.answer; if(isCorrect) window.quizScore+=10; } window.quizIndex++; renderQuizQuestion(); };
+
+    // TAP CHALLENGE
+    let tapScore=0, tapTimeLeft=30, tapTargetX=100, tapTargetY=200, tapTargetSize=72, tapGameActive=false, tapMoveInterval=null, tapTimerInterval=null;
+    function startTapGame() { tapScore=0; tapTimeLeft=30; tapGameActive=true; const container=document.getElementById('tap-content'); container.innerHTML=`<div style="position:relative;width:100%;height:500px;background:#0A1A14;border-radius:20px;overflow:hidden;"><div style="position:absolute;top:10px;left:16px;right:16px;display:flex;justify-content:space-between;"><div style="background:rgba(0,200,83,0.2);padding:8px 14px;border-radius:10px;"><span style="color:#00C853;font-weight:800;">Taps: <span id="tap-count">0</span></span></div><div style="background:rgba(255,215,0,0.2);padding:8px 14px;border-radius:10px;"><span style="color:#FFD700;font-weight:800;">Score: <span id="tap-score">0</span></span></div><div style="background:rgba(255,255,255,0.1);padding:8px 14px;border-radius:10px;"><span style="color:white;font-weight:800;"><span id="tap-time">30</span>s</span></div></div><div id="tap-target" style="position:absolute;left:${tapTargetX}px;top:${tapTargetY}px;width:${tapTargetSize}px;height:${tapTargetSize}px;background:radial-gradient(circle,#69F0AE,#00897B);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 20px rgba(0,137,123,0.6);transition:all 0.05s linear;"><span style="font-size:28px;">👆</span></div></div>`; const target=document.getElementById('tap-target'); target.onclick=()=>{ if(!tapGameActive) return; tapScore+=tapTimeLeft<10?8:tapTimeLeft<20?5:3; document.getElementById('tap-count').textContent=parseInt(document.getElementById('tap-count').textContent)+1; document.getElementById('tap-score').textContent=tapScore; const maxX=container.clientWidth-tapTargetSize; const maxY=500-tapTargetSize; tapTargetX=Math.random()*maxX; tapTargetY=Math.random()*maxY; target.style.left=`${tapTargetX}px`; target.style.top=`${tapTargetY}px`; }; tapTimerInterval=setInterval(()=>{ if(!tapGameActive) return; tapTimeLeft--; document.getElementById('tap-time').textContent=tapTimeLeft; if(tapTimeLeft<=0){ endTapGame(); } },1000); tapMoveInterval=setInterval(()=>{ if(!tapGameActive) return; const maxX=container.clientWidth-tapTargetSize; const maxY=500-tapTargetSize; tapTargetX=Math.random()*maxX; tapTargetY=Math.random()*maxY; if(target) target.style.cssText+=`left:${tapTargetX}px;top:${tapTargetY}px;`; },800); }
+    function endTapGame() { tapGameActive=false; if(tapTimerInterval) clearInterval(tapTimerInterval); if(tapMoveInterval) clearInterval(tapMoveInterval); saveGameScore('tap',tapScore); showToast(`Tap Challenge complete! Score: ${tapScore} pts`,'success'); showScreen('gamehub'); }
+
+    // LEADERBOARD
+    async function loadLeaderboard(gameType) { const el=document.getElementById('leaderboard-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const weekKey=getWeekKey(); const q=query(collection(db,'game_leaderboard'),where('gameType','==',gameType),where('weekKey','==',weekKey)); const snap=await getDocs(q); const entries=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.points||0)-(a.points||0)); if(entries.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-title">No scores yet</div><div class="empty-sub">Be the first to play!</div></div>'; return; } const top3=entries.slice(0,3); const rest=entries.slice(3); let podiumHtml='<div class="leaderboard-podium">'; for(let i=0;i<top3.length;i++){ const medals=['🥇','🥈','🥉']; podiumHtml+=`<div class="podium-item"><div class="podium-avatar">${medals[i]}</div><div class="podium-rank">#${i+1}</div><div class="podium-name">${top3[i].userName||'User'}</div><div class="podium-score">${top3[i].points} pts</div></div>`; } podiumHtml+='</div>'; let restHtml='<div class="section-title">Other Players</div>'; rest.forEach((e,idx)=>{ restHtml+=`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${e.userName||'User'}</div><div class="list-item-sub">#${idx+4} · ${e.points} pts</div></div></div></div>`; }); el.innerHTML=podiumHtml+restHtml; } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-title">Leaderboard</div><div class="empty-sub">Could not load rankings</div></div>'; } }
+    async function saveGameScore(gameType,score) { if(!currentUser) return; try { await setDoc(doc(db,'game_scores',currentUser.uid),{ [`${gameType}_weeklyPoints`]:FieldValue.increment(score), lastUpdated:serverTimestamp() },{merge:true}); const weekKey=getWeekKey(); await setDoc(doc(db,'game_leaderboard',`${gameType}_${weekKey}_${currentUser.uid}`),{ userId:currentUser.uid, userName:userData.name, gameType, points:FieldValue.increment(score), weekKey, updatedAt:serverTimestamp() },{merge:true}); } catch(e){} }
+
+    // LOST & FOUND
+    async function loadLostFound() { const el=document.getElementById('lostfound-list'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'lost_found')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No reports yet</div></div>'; return; } el.innerHTML=docs.map(r=>{ let imgHtml=''; if(r.imageUrl){ const url=toDirectImgUrl(r.imageUrl); imgHtml=`<img src="${url}" class="lf-image" onerror="this.style.display=\'none\'"><div class="lf-placeholder" style="display:none;">📷</div>`; } return `<div class="list-item" style="padding:0;overflow:hidden;">${imgHtml?`<div style="position:relative;">${imgHtml}<div style="position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(transparent,rgba(0,0,0,0.5));"></div></div>`:''}<div style="padding:0.9rem 1rem;"><div class="list-item-row"><div><div class="list-item-title">${r.itemName||''}</div><div class="list-item-sub">${r.description||''}</div><div class="list-item-sub">📍 ${r.location||''} · ${formatTime(r.createdAt)}</div><div class="list-item-sub">👤 ${r.contactName||userData?.name||''}</div></div>${statusBadge(r.type)}</div></div></div>`; }).join(''); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; } }
+    window.showLostFoundForm = function(type) { lfType=type; document.getElementById('lf-modal-title').textContent=type==='lost'?'Report Lost Item':'Report Found Item'; ['lf-item','lf-desc','lf-location','lf-image'].forEach(id=>{ const inp=document.getElementById(id); if(inp) inp.value=''; }); openModal('lostfound'); };
+    window.submitLostFound = async function() { const item=document.getElementById('lf-item').value.trim(); if(!item){ showToast('Please enter item name','error'); return; } showLoading('Submitting...'); try { await addDoc(collection(db,'lost_found'),{ type:lfType, itemName:item, description:document.getElementById('lf-desc').value.trim(), location:document.getElementById('lf-location').value.trim(), imageUrl:document.getElementById('lf-image').value.trim(), contactName:userData.name, userId:currentUser.uid, createdAt:serverTimestamp() }); closeModal('lostfound'); showToast('Report submitted!','success'); loadLostFound(); } catch(e){ showToast('Failed. Try again.','error'); } finally { hideLoading(); } };
+
+    // REPORT
+    async function loadReports() { const el=document.getElementById('reports-list'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const q=query(collection(db,'complaints'),where('userId','==',currentUser.uid)); const snap=await getDocs(q); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">No reports yet</div></div>'; return; } el.innerHTML=docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.subject||''}</div><div class="list-item-sub">${(r.message||'').slice(0,60)}</div>${r.adminReply?`<div class="list-item-sub" style="color:var(--primary);">Admin: ${r.adminReply}</div>`:''}</div>${statusBadge(r.status)}</div></div>`).join(''); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; } }
+    window.submitReport = async function() { const subject=document.getElementById('report-subject').value.trim(); const message=document.getElementById('report-message').value.trim(); if(!subject||!message){ showToast('Please fill in all fields','error'); return; } showLoading('Submitting...'); try { await addDoc(collection(db,'complaints'),{ userId:currentUser.uid, userName:userData.name, subject, message, status:'open', adminReply:'', platform:'pwa', createdAt:serverTimestamp() }); document.getElementById('report-subject').value=''; document.getElementById('report-message').value=''; showToast('Report submitted!','success'); loadReports(); } catch(e){ showToast('Failed. Try again.','error'); } finally { hideLoading(); } };
+
+    // NOTIFICATIONS + CHAT
+    async function loadNotifications() { const el=document.getElementById('notif-content'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; try { const q=query(collection(db,'notifications'),where('userId','==',currentUser.uid)); const snap=await getDocs(q); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); if(docs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">🔔</div><div class="empty-title">No notifications</div><div class="empty-sub">You\'re all caught up</div></div>'; return; } el.innerHTML=docs.map(n=>`<div class="notif-item ${n.read?'':'notif-unread'}" onclick="markRead('${n.id}')"><div class="notif-dot ${n.read?'read':''}"></div><div><div class="notif-title">${n.title||'Notification'}</div><div class="notif-body">${n.body||''}</div><div class="notif-time">${formatTime(n.createdAt)}</div></div></div>`).join(''); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>'; } }
+    window.markRead = async function(id) { try { await updateDoc(doc(db,'notifications',id),{read:true}); loadNotifications(); } catch(e){} };
+    window.markAllRead = async function() { showLoading('Marking all as read...'); try { const q=query(collection(db,'notifications'),where('userId','==',currentUser.uid),where('read','==',false)); const snap=await getDocs(q); const batch=writeBatch(db); snap.docs.forEach(d=>batch.update(d.ref,{read:true})); await batch.commit(); loadNotifications(); showToast('All marked as read','success'); } catch(e){ showToast('Failed','error'); } finally { hideLoading(); } };
+    let chatUnsub=null; window.switchNotifTab = function(tab) { const notifContent=document.getElementById('notif-content'); const chatPanel=document.getElementById('chat-panel'); const tabNotifs=document.getElementById('tab-notifs'); const tabChat=document.getElementById('tab-chat'); const markBtn=document.getElementById('mark-read-btn'); const title=document.getElementById('notif-screen-title'); if(tab==='notifs'){ notifContent.style.display='block'; chatPanel.style.display='none'; tabNotifs.style.color=tabNotifs.style.borderBottomColor='var(--primary)'; tabNotifs.style.fontWeight='700'; tabChat.style.color='var(--text-muted)'; tabChat.style.borderBottomColor='transparent'; tabChat.style.fontWeight='600'; markBtn.style.display='block'; title.textContent='Notifications'; loadNotifications(); } else { notifContent.style.display='none'; chatPanel.style.display='flex'; tabChat.style.color=tabChat.style.borderBottomColor='var(--primary)'; tabChat.style.fontWeight='700'; tabNotifs.style.color='var(--text-muted)'; tabNotifs.style.borderBottomColor='transparent'; tabNotifs.style.fontWeight='600'; markBtn.style.display='none'; title.textContent='Chat'; loadChat(); } };
+    function loadChat() { const el=document.getElementById('chat-messages'); el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>'; if(chatUnsub) chatUnsub(); const q=query(collection(db,'chats',currentUser.uid,'messages')); chatUnsub=onSnapshot(q, snap=>{ const msgs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0)); if(msgs.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-title">No messages yet</div><div class="empty-sub">Start a conversation with admin</div></div>'; return; } let lastDate=''; el.innerHTML=msgs.map(m=>{ const mine=m.senderId===currentUser.uid; const d=m.createdAt?.toDate?m.createdAt.toDate():new Date(); const dateStr=d.toLocaleDateString(); const timeStr=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); let divider=dateStr!==lastDate?`<div class="chat-day-divider">${dateStr}</div>`:''; if(dateStr!==lastDate) lastDate=dateStr; return `${divider}<div class="chat-wrap ${mine?'mine':'theirs'}">${!mine?`<div class="chat-sender">${m.senderName||'Admin'}</div>`:''}<div class="chat-bubble ${mine?'mine':'theirs'}">${m.text||''}<div class="chat-meta">${timeStr}</div></div></div>`; }).join(''); el.scrollTop=el.scrollHeight; }); }
+    window.sendChatMessage = async function() { const input=document.getElementById('chat-input'); const text=input.value.trim(); if(!text) return; input.value=''; try { await addDoc(collection(db,'chats',currentUser.uid,'messages'),{ senderId:currentUser.uid, senderName:userData.name, senderRole:userData.role||'user', text, createdAt:serverTimestamp() }); } catch(e){ showToast('Failed to send','error'); input.value=text; } }
+
+    // DRIVER
+    async function loadDriverRequests() {
+      const el=document.getElementById('driver-requests');
+      el.innerHTML='<div class="empty-state"><div class="loading-spinner"></div></div>';
+      try {
+        // Fetch pending (status=0) requests — Gateway-forwarded ones handled by hardware
+        const q=query(collection(db,'ride_requests'),where('status','==',0));
+        const snap=await getDocs(q);
+        const docs=snap.docs.map(d=>({id:d.id,...d.data()}))
+          .sort((a,b)=>(a.timestamp?.seconds||0)-(b.timestamp?.seconds||0));
+        if(docs.length===0){
+          el.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No pending requests</div><div class="empty-sub">Hardware gateway is handling active requests</div></div>';
+          return;
+        }
+        el.innerHTML=docs.map(r=>`
+          <div class="driver-request-card">
+            <div class="driver-route">${r.pickupLocation||''} → ${r.destination||''}</div>
+            <div class="driver-meta">
+              <span class="driver-chip">ID: ${r.pickupId||'-'}</span>
+              <span class="driver-chip">${r.rideType||''}</span>
+              <span class="driver-chip">${r.passengerCount||1} pax</span>
+              <span class="driver-chip">${r.userName||'-'}</span>
+              <span class="driver-chip" style="background:#E3F2FD;color:#1565C0;">${r.platform==='pwa'?'PWA':'App'}</span>
+            </div>
+            <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+              <button class="btn btn-success" style="flex:1;padding:0.6rem;"
+                onclick="updateRequestStatus('${r.id}',1)">✓ Accept</button>
+              <button class="btn btn-danger" style="flex:1;padding:0.6rem;"
+                onclick="updateRequestStatus('${r.id}',4)">✗ No Shuttle</button>
+            </div>
+          </div>`).join('');
+      } catch(e){
+        el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load</div></div>';
+      }
+    }
+    window.updateRequestStatus = async function(id,status) {
+      // status: 1=Assigned, 4=Rejected/NoShuttle
+      // IMPORTANT: gatewayForwarded must be set true here for any web-accepted
+      // request so the Gateway firmware does not pick it up again on next poll.
+      // This prevents double-dispatch of the same Firestore document.
+      showLoading('Updating...');
+      try {
+        await updateDoc(doc(db,'ride_requests',id),{
+          status,
+          statusName:         status===1 ? 'Assigned' : 'No shuttle available',
+          shuttleIdFeedback:  status===1 ? (userData.shuttleId||'AFIT-001') : '',
+          gatewayForwarded:   true,   // prevents Gateway firmware re-processing
+          updatedAt:          serverTimestamp()
+        });
+        showToast(status===1 ? 'Request accepted!' : 'Request rejected', status===1 ? 'success' : 'error');
+        loadDriverRequests();
+      } catch(e){ showToast('Failed','error'); }
+      finally { hideLoading(); }
+    };
+    let intentUnsub=null; function startIntentListener(driverId) { if(intentUnsub) intentUnsub(); const q=query(collection(db,'driver_intents'),where('driverId','==',driverId),where('status','==','pending_intent')); intentUnsub=onSnapshot(q, snap=>{ const intents=snap.docs.map(d=>({id:d.id,...d.data()})); const container=document.getElementById('driver-intents-container'); if(!container) return; if(intents.length===0){ container.innerHTML=''; return; } container.innerHTML=intents.map(i=>`<div class="intent-banner"><div class="intent-badge"><span class="intent-dot"></span>NEW REQUEST</div><div class="driver-route">${i.pickupLocation||''} → ${i.destination||''}</div><div class="driver-meta"><span class="driver-chip">${i.rideType||''}</span><span class="driver-chip">${i.passengerCount||1} pax</span><span class="driver-chip">${i.userName||''}</span></div><div style="display:flex;gap:0.5rem;margin-top:0.75rem;"><button class="btn btn-danger" style="flex:1;padding:0.6rem;" onclick="rejectIntent('${i.id}')">Reject</button><button class="btn btn-success" style="flex:1;padding:0.6rem;" onclick="acceptIntent('${i.id}')">Accept</button></div></div>`).join(''); }); }
+    window.acceptIntent = async function(intentId) { showLoading('Accepting...'); try { const intentSnap=await getDoc(doc(db,'driver_intents',intentId)); const intent=intentSnap.data(); if(!intent) return; const batch=writeBatch(db); batch.update(doc(db,'driver_intents',intentId),{status:'accepted',acceptedAt:serverTimestamp()}); if(intent.requestId){ batch.update(doc(db,'ride_requests',intent.requestId),{ status:1, statusName:'Assigned', driverId:currentUser.uid, driverName:userData.name, shuttleIdFeedback:userData.shuttleId||'AFIT-001', assignedAt:serverTimestamp() }); } await batch.commit(); showToast('Request accepted! Passenger notified.','success'); loadDriverRequests(); } catch(e){ showToast('Failed to accept','error'); } finally { hideLoading(); } };
+    window.rejectIntent = async function(intentId) { showLoading('Rejecting...'); try { await updateDoc(doc(db,'driver_intents',intentId),{status:'rejected',rejectedAt:serverTimestamp()}); showToast('Request rejected',''); loadDriverRequests(); } catch(e){ showToast('Failed','error'); } finally { hideLoading(); } };
+
+    // ADMIN
+    window.adminShowUsers = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">All Users</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'users')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='user'); el.innerHTML=`<div class="admin-section-title">Users (${docs.length})</div>`+(docs.length===0?'<div class="empty-state"><div class="empty-title">No users</div></div>':docs.map(u=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${u.name||u.email||'-'}</div><div class="list-item-sub">${u.email||''} · ID: ${u.pickupId||'-'}</div></div><span class="status-badge badge-approved">${u.platform==='pwa'?'PWA':'Android'}</span></div></div>`).join('')); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
+    window.adminShowDrivers = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">Drivers</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'users')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='driver'); el.innerHTML=`<div class="admin-section-title">Drivers (${docs.length})</div>`+(docs.length===0?'<div class="empty-state"><div class="empty-title">No drivers</div></div>':docs.map(u=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${u.name||u.email||'-'}</div><div class="list-item-sub">${u.email||''}</div></div><span class="status-badge badge-pending">DRIVER</span></div></div>`).join('')); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
+    window.adminShowBookings = async function() {
+      const el=document.getElementById('admin-content');
+      el.innerHTML='<div class="admin-section-title">All Ride Requests</div><div class="empty-state"><div class="loading-spinner"></div></div>';
+      try {
+        const snap=await getDocs(collection(db,'ride_requests'));
+        const docs=snap.docs.map(d=>({id:d.id,...d.data()}))
+          .sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
+        // Status label map — matches firmware assa_common.h status codes
+        const statusLabel = s => ({0:'Pending',1:'Assigned',4:'No Shuttle'}[s]??'Unknown');
+        el.innerHTML=`<div class="admin-section-title">Requests (${docs.length})</div>`
+          +(docs.length===0
+            ?'<div class="empty-state"><div class="empty-title">No requests</div></div>'
+            :docs.map(r=>`
+              <div class="list-item">
+                <div class="list-item-row">
+                  <div>
+                    <div class="list-item-title">${r.pickupLocation||''} → ${r.destination||''}</div>
+                    <div class="list-item-sub">${r.userName||'-'} · ${r.rideType||''} · ${r.platform==='pwa'?'PWA':'App'}${r.shuttleIdFeedback?` · Shuttle: ${r.shuttleIdFeedback}`:''}</div>
+                    <div class="list-item-sub">${formatTime(r.timestamp)}</div>
+                    <div class="list-item-sub" style="color:${r.gatewayForwarded?'var(--success)':'var(--warning)'};">
+                      Gateway: ${r.gatewayForwarded?'Forwarded':'Not forwarded'}
+                    </div>
+                  </div>
+                  ${statusBadge(r.status)}
+                </div>
+                <div style="display:flex;gap:0.4rem;margin-top:0.5rem;">
+                  <button class="btn btn-success" style="flex:1;padding:0.45rem;font-size:0.78rem;"
+                    onclick="updateRequestStatus('${r.id}',1)">Accept</button>
+                  <button class="btn btn-danger" style="flex:1;padding:0.45rem;font-size:0.78rem;"
+                    onclick="updateRequestStatus('${r.id}',4)">No Shuttle</button>
+                </div>
+              </div>`).join(''));
+      } catch(e){
+        el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>';
+      }
+    };
+    window.adminShowLostFound = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">Lost & Found</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'lost_found')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); el.innerHTML=`<div class="admin-section-title">Lost & Found (${docs.length})</div>`+(docs.length===0?'<div class="empty-state"><div class="empty-title">No reports</div></div>':docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.itemName||''}</div><div class="list-item-sub">${r.description||''} · ${r.location||''}</div><div class="list-item-sub">By: ${r.contactName||'-'}</div></div>${statusBadge(r.type)}</div></div>`).join('')); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
+    window.adminShowComplaints = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">Complaints</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'complaints')); const docs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)); el.innerHTML=`<div class="admin-section-title">Complaints (${docs.length})</div>`+(docs.length===0?'<div class="empty-state"><div class="empty-title">No complaints</div></div>':docs.map(r=>`<div class="list-item"><div class="list-item-row"><div><div class="list-item-title">${r.subject||''}</div><div class="list-item-sub">${r.userName||'-'} · ${formatTime(r.createdAt)}</div><div class="list-item-sub">${(r.message||'').slice(0,80)}</div>${r.adminReply?`<div class="list-item-sub" style="color:var(--primary);">Reply: ${r.adminReply}</div>`:''}</div>${statusBadge(r.status)}</div><div style="display:flex;gap:0.4rem;margin-top:0.5rem;"><input class="form-input" id="reply-${r.id}" placeholder="Reply..." style="flex:1;padding:0.5rem;font-size:0.82rem;"/><button class="btn btn-primary" style="width:auto;padding:0.5rem 0.75rem;font-size:0.78rem;" onclick="replyComplaint('${r.id}')">Send</button></div></div>`).join('')); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
+    window.replyComplaint = async function(id) { const reply=document.getElementById('reply-'+id)?.value.trim(); if(!reply) return; showLoading('Sending...'); try { await updateDoc(doc(db,'complaints',id),{adminReply:reply,status:'resolved'}); showToast('Reply sent!','success'); adminShowComplaints(); } catch(e){ showToast('Failed','error'); } finally { hideLoading(); } };
+    window.adminShowChats = async function() { const el=document.getElementById('admin-content'); el.innerHTML='<div class="admin-section-title">User Chats</div><div class="empty-state"><div class="loading-spinner"></div></div>'; try { const snap=await getDocs(collection(db,'users')); const users=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='user'); if(users.length===0){ el.innerHTML='<div class="admin-section-title">User Chats</div><div class="empty-state"><div class="empty-title">No users</div></div>'; return; } el.innerHTML='<div class="admin-section-title">Select a user to chat</div>'+users.map(u=>`<div class="admin-row" onclick="adminOpenChat('${u.id}','${(u.name||u.email||'User').replace(/'/g,"\\'")}')"><div class="admin-row-icon">${(u.name||'?')[0].toUpperCase()}</div><div><div class="admin-row-label">${u.name||u.email||'-'}</div><div style="font-size:0.72rem;color:var(--text-muted);">ID: ${u.pickupId||'-'}</div></div><span class="admin-row-arrow">💬</span></div>`).join(''); } catch(e){ el.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>'; } };
+    let adminChatUnsub=null, adminChatUserId=null;
+    window.adminOpenChat = function(uid, name) { adminChatUserId=uid; const el=document.getElementById('admin-content'); el.innerHTML=`<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;"><button onclick="adminShowChats()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;">←</button><div style="font-weight:700;">Chat with ${name}</div></div><div id="admin-chat-msgs" style="height:55vh;overflow-y:auto;padding:0.5rem;background:#F8FAFF;border-radius:14px;border:1px solid var(--border);margin-bottom:0.75rem;"></div><div style="display:flex;gap:0.5rem;"><input id="admin-chat-input" class="form-input" type="text" placeholder="Type a message..." style="flex:1;"/><button onclick="adminSendChat()" style="background:var(--primary);border:none;border-radius:12px;width:44px;height:44px;cursor:pointer;">➤</button></div>`; document.getElementById('admin-chat-input')?.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();adminSendChat();} }); if(adminChatUnsub) adminChatUnsub(); const q=query(collection(db,'chats',uid,'messages')); adminChatUnsub=onSnapshot(q, snap=>{ const msgs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0)); const el2=document.getElementById('admin-chat-msgs'); if(!el2) return; if(msgs.length===0){ el2.innerHTML='<div class="empty-state" style="padding:2rem;"><div class="empty-icon">💬</div><div class="empty-title">No messages yet</div></div>'; return; } el2.innerHTML=msgs.map(m=>{ const mine=m.senderRole==='admin'; const d=m.createdAt?.toDate?m.createdAt.toDate():new Date(); return `<div class="chat-wrap ${mine?'mine':'theirs'}">${!mine?`<div class="chat-sender">${m.senderName||'User'}</div>`:''}<div class="chat-bubble ${mine?'mine':'theirs'}">${m.text||''}<div class="chat-meta">${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div></div>`; }).join(''); el2.scrollTop=el2.scrollHeight; }); };
+    window.adminSendChat = async function() { const input=document.getElementById('admin-chat-input'); const text=input?.value.trim(); if(!text||!adminChatUserId) return; input.value=''; try { await addDoc(collection(db,'chats',adminChatUserId,'messages'),{ senderId:currentUser.uid, senderName:userData.name||'Admin', senderRole:'admin', text, createdAt:serverTimestamp() }); await addDoc(collection(db,'notifications'),{ userId:adminChatUserId, title:'New message from Admin', body:text.slice(0,60), type:'chat', read:false, createdAt:serverTimestamp() }); } catch(e){ showToast('Failed to send','error'); if(input) input.value=text; } };
+    window.adminSendNotification = function() { document.getElementById('sn-title').value=''; document.getElementById('sn-body').value=''; openModal('send-notif'); };
+    window.sendAdminNotification = async function() { const title=document.getElementById('sn-title').value.trim(); const body=document.getElementById('sn-body').value.trim(); const target=document.getElementById('sn-target').value; if(!title||!body){ showToast('Fill in all fields','error'); return; } showLoading('Sending...'); try { const snap=await getDocs(collection(db,'users')); const users=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>target==='all'?u.role==='user':u.role===target); const batch=writeBatch(db); users.forEach(u=>{ const ref=doc(collection(db,'notifications')); batch.set(ref,{ userId:u.id, title, body, type:'admin', read:false, createdAt:serverTimestamp() }); }); await batch.commit(); closeModal('send-notif'); showToast(`Sent to ${users.length} user${users.length!==1?'s':''}!`,'success'); } catch(e){ showToast('Failed','error'); } finally { hideLoading(); } };
+
+    // ADS
+    let _allAds=[], _adIndex=0, _adUnsub=null, _adDismissed=false;
+    function startAdListener() { if(_adUnsub) _adUnsub(); const q=query(collection(db,'ads'),where('isActive','==',true)); _adUnsub=onSnapshot(q, snap=>{ _allAds=snap.docs.map(d=>({id:d.id,...d.data()})); if(_allAds.length>0 && !_adDismissed) renderNextAd(); }); }
+    function renderNextAd() { const container=document.getElementById('dash-ad-container'); if(!container || !_allAds.length) return; const ad=_allAds[_adIndex % _allAds.length]; const link=ad.linkUrl?.trim()||''; let media=''; if(ad.videoUrl?.trim()){ media=`<video class="ad-video" src="${ad.videoUrl}" autoplay muted loop playsinline style="width:100%;max-height:180px;object-fit:cover;border-radius:16px 16px 0 0;"></video>`; } else if(ad.imageUrl?.trim()){ const url=toDirectImgUrl(ad.imageUrl); media=`<img class="ad-img" src="${url}" style="width:100%;height:140px;object-fit:cover;border-radius:16px 16px 0 0;" onerror="this.parentElement.querySelector('.ad-placeholder-fb').style.display='flex';this.style.display='none'"/><div class="ad-placeholder-fb" style="display:none;height:100px;align-items:center;justify-content:center;background:#E3F2FD;border-radius:16px 16px 0 0;font-size:2rem;">📢</div>`; } else { media=`<div style="height:80px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1565C0,#0D47A1);border-radius:16px 16px 0 0;font-size:2rem;">📢</div>`; } container.innerHTML=`<div class="ad-card" onclick="tapAd('${ad.id}','${link.replace(/'/g,"\\'")}')"><span class="ad-label">AD</span>${media}<div class="ad-body" style="display:flex;align-items:flex-start;justify-content:space-between;"><div><div class="ad-title">${ad.title||''}</div>${ad.body?`<div class="ad-text">${ad.body}</div>`:''}${link?`<div style="font-size:0.75rem;color:var(--primary);margin-top:0.3rem;">↗ Tap to open</div>`:''}</div><button onclick="event.stopPropagation();dismissAd()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;">✕</button></div></div>`; try { updateDoc(doc(db,'ads',ad.id),{ impressions:(ad.impressions||0)+1, lastSeen:serverTimestamp() }); } catch(e){} }
+    window.dismissAd = function() { _adDismissed=true; const c=document.getElementById('dash-ad-container'); if(c) c.innerHTML=''; setTimeout(()=>{ _adDismissed=false; _adIndex++; renderNextAd(); },30000); };
+    window.tapAd = async function(id,link) { try { const d=await getDoc(doc(db,'ads',id)); if(d.exists()) await updateDoc(doc(db,'ads',id),{ taps:(d.data().taps||0)+1, lastTap:serverTimestamp() }); } catch(e){} if(link) window.open(link.startsWith('http')?link:'https://'+link,'_blank'); };
+
+    // AUTH EVENTS
+    document.getElementById('login-btn').addEventListener('click', async()=>{ const email=document.getElementById('login-email').value.trim(); const pass=document.getElementById('login-password').value; const err=document.getElementById('login-error'); err.classList.remove('show'); if(!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; } showLoading('Signing in...'); try { await signInWithEmailAndPassword(auth,email,pass); } catch(e){ err.textContent=e.code==='auth/invalid-credential'?'Invalid email or password.':e.message; err.classList.add('show'); } finally { hideLoading(); } });
+    document.getElementById('register-btn').addEventListener('click', async()=>{ const name=document.getElementById('reg-name').value.trim(); const email=document.getElementById('reg-email').value.trim(); const pass=document.getElementById('reg-password').value; const role=document.getElementById('reg-role').value; const err=document.getElementById('register-error'); err.classList.remove('show'); if(!name||!email||!pass){ err.textContent='Please fill in all fields.'; err.classList.add('show'); return; } if(pass.length<6){ err.textContent='Password must be at least 6 characters.'; err.classList.add('show'); return; } showLoading('Creating account...'); try { const cred=await createUserWithEmailAndPassword(auth,email,pass); const uid=cred.user.uid; const pickupId=generatePickupId(uid); await setDoc(doc(db,'users',uid),{ name, email, role, pickupId, platform:'pwa', createdAt:serverTimestamp() }); } catch(e){ err.textContent=e.code==='auth/email-already-in-use'?'Email already registered.':e.message; err.classList.add('show'); } finally { hideLoading(); } });
+    document.getElementById('go-register').addEventListener('click',e=>{e.preventDefault();showScreen('register');});
+    document.getElementById('go-login').addEventListener('click',e=>{e.preventDefault();showScreen('login');});
+    window.logout = async function() { const ok=await showConfirm({icon:'🚪',title:'Sign Out',msg:'Are you sure?',okText:'Sign Out',okClass:'btn-danger'}); if(!ok) return; showLoading('Signing out...'); try{ await signOut(auth); }finally{ hideLoading(); } };
+    function showConfirm({icon='❓',title='Are you sure?',msg='',okText='Confirm',okClass='btn-primary'}) { return new Promise(resolve=>{ document.getElementById('confirm-icon').textContent=icon; document.getElementById('confirm-title').textContent=title; document.getElementById('confirm-msg').textContent=msg; const okBtn=document.getElementById('confirm-ok-btn'); const cnBtn=document.getElementById('confirm-cancel-btn'); okBtn.textContent=okText; okBtn.className='btn '+okClass; const ov=document.getElementById('confirm-overlay'); ov.classList.add('show'); const close=v=>{ ov.classList.remove('show'); resolve(v); }; okBtn.onclick=()=>close(true); cnBtn.onclick=()=>close(false); ov.onclick=e=>{ if(e.target===ov) close(false); }; }); }
+
+    if('serviceWorker' in navigator) navigator.serviceWorker.register('/assa/app/sw.js').catch(()=>{});
+</script>
 </body>
 </html>

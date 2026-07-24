@@ -1,6 +1,7 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
-
 import '../models/user_model.dart';
 import '../models/driver_model.dart';
 import '../models/admin_model.dart';
@@ -16,15 +17,12 @@ class FirestoreService {
   // ======================================================================
   // USER OPERATIONS
   // ======================================================================
-
   Future<UserModel?> getUser(String uid) async {
     try {
       final doc = await _db.collection('users').doc(uid).get();
       if (!doc.exists) return null;
       return UserModel.fromDocument(doc);
-    } catch (_) {
-      return null;
-    }
+    } catch (_) { return null; }
   }
 
   Future<DriverModel?> getDriver(String uid) async {
@@ -32,9 +30,7 @@ class FirestoreService {
       final doc = await _db.collection('users').doc(uid).get();
       if (!doc.exists) return null;
       return DriverModel.fromDocument(doc);
-    } catch (_) {
-      return null;
-    }
+    } catch (_) { return null; }
   }
 
   Future<AdminModel?> getAdmin(String uid) async {
@@ -42,18 +38,14 @@ class FirestoreService {
       final doc = await _db.collection('users').doc(uid).get();
       if (!doc.exists) return null;
       return AdminModel.fromDocument(doc);
-    } catch (_) {
-      return null;
-    }
+    } catch (_) { return null; }
   }
 
   Future<Map<String, dynamic>?> getUserData(String uid) async {
     try {
       final doc = await _db.collection('users').doc(uid).get();
       return doc.exists ? doc.data() : null;
-    } catch (_) {
-      return null;
-    }
+    } catch (_) { return null; }
   }
 
   Future<void> updateUserProfile({
@@ -77,7 +69,6 @@ class FirestoreService {
   // ======================================================================
   // DRIVER OPERATIONS
   // ======================================================================
-
   Stream<List<DriverModel>> getAllDrivers() {
     return _db
         .collection('users')
@@ -124,9 +115,7 @@ class FirestoreService {
         'approvedBy': approvedByUid,
       });
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   Future<bool> rejectDriver({
@@ -140,22 +129,76 @@ class FirestoreService {
         'rejectedBy': rejectedByUid,
       });
       return true;
+    } catch (_) { return false; }
+  }
+
+  // ─── NEW: Link Driver to AFIT KEKE ──────────────────────────────────────
+  Future<bool> linkDriverToShuttle({
+    required String driverUid,
+    required String shuttleId,
+  }) async {
+    try {
+      await _db.collection('users').doc(driverUid).update({
+        'shuttleId': shuttleId,
+        'AFIT KEKELinkedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
     } catch (_) {
       return false;
+    }
+  }
+
+  // ─── NEW: Get Driver by AFIT KEKE ID ────────────────────────────────────
+  Future<Map<String, dynamic>?> getDriverByShuttleId(String shuttleId) async {
+    try {
+      final snap = await _db
+          .collection('users')
+          .where('shuttleId', isEqualTo: shuttleId)
+          .where('role', isEqualTo: 'driver')
+          .where('status', isEqualTo: 'approved')
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+      return {'uid': snap.docs.first.id, ...snap.docs.first.data()};
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ─── NEW: Get All Mapped AFIT KEKEs ─────────────────────────────────────
+  Future<List<Map<String, String>>> getMappedShuttles() async {
+    try {
+      final snap = await _db
+          .collection('users')
+          .where('role', isEqualTo: 'driver')
+          .where('status', isEqualTo: 'approved')
+          .get();
+      final List<Map<String, String>> result = [];
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final shuttleId = data['shuttleId'] as String?;
+        if (shuttleId != null && shuttleId.isNotEmpty) {
+          result.add({
+            'shuttleId': shuttleId,
+            'driverUid': doc.id,
+            'driverName': data['name'] as String? ?? 'Unknown',
+          });
+        }
+      }
+      return result;
+    } catch (_) {
+      return [];
     }
   }
 
   // ======================================================================
   // ROUTE OPERATIONS
   // ======================================================================
-
   Future<bool> createRoute(RouteModel route) async {
     try {
       await _db.collection('routes').doc(route.routeId).set(route.toMap());
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   Future<bool> updateRoute({
@@ -165,18 +208,14 @@ class FirestoreService {
     try {
       await _db.collection('routes').doc(routeId).update(data);
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   Future<bool> deleteRoute(String routeId) async {
     try {
       await _db.collection('routes').doc(routeId).delete();
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   Stream<List<RouteModel>> getActiveRoutes() {
@@ -202,16 +241,14 @@ class FirestoreService {
         .where('isActive', isEqualTo: true)
         .limit(1)
         .snapshots()
-        .map((s) =>
-    s.docs.isEmpty ? null : RouteModel.fromDocument(s.docs.first));
+        .map((s) => s.docs.isEmpty ? null : RouteModel.fromDocument(s.docs.first));
   }
 
   String generateRouteId() => _uuid.v4();
 
   // ======================================================================
-  // RIDE REQUEST / BOOKING OPERATIONS
+  // BOOKING HELPERS
   // ======================================================================
-
   Future<Map<String, dynamic>> createBooking(BookingModel booking) async {
     try {
       await _db
@@ -239,9 +276,7 @@ class FirestoreService {
         });
       }
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   Stream<Map<String, dynamic>?> getRideStatusStream(String bookingId) {
@@ -258,8 +293,7 @@ class FirestoreService {
         .where('userId', isEqualTo: userId)
         .snapshots()
         .map((s) {
-      final list =
-      s.docs.map((d) => BookingModel.fromDocument(d)).toList();
+      final list = s.docs.map((d) => BookingModel.fromDocument(d)).toList();
       list.sort((a, b) => b.bookedAt.compareTo(a.bookedAt));
       return list;
     });
@@ -286,8 +320,7 @@ class FirestoreService {
 
   Stream<List<BookingModel>> getAllBookings() {
     return _db.collection('ride_requests').snapshots().map((s) {
-      final list =
-      s.docs.map((d) => BookingModel.fromDocument(d)).toList();
+      final list = s.docs.map((d) => BookingModel.fromDocument(d)).toList();
       list.sort((a, b) => b.bookedAt.compareTo(a.bookedAt));
       return list;
     });
@@ -295,7 +328,10 @@ class FirestoreService {
 
   String generateBookingId() => _uuid.v4();
 
-  Future<bool> submitOnlineRequest({
+  // ======================================================================
+  // ONLINE REQUEST
+  // ======================================================================
+  Future<String?> submitOnlineRequest({
     required String userId,
     required String userName,
     required String onlineUUID,
@@ -304,49 +340,64 @@ class FirestoreService {
     required String rideType,
     int passengerCount = 1,
   }) async {
-    for (int _attempt = 1; _attempt <= 3; _attempt++) {
+    for (int attempt = 1; attempt <= 3; attempt++) {
       try {
-        final id = _uuid.v4();
         final pickupCode = Esp32Service.getLocationCode(pickupLocation);
         final destCode = Esp32Service.getLocationCode(destination);
         final rideCode = Esp32Service.getRideTypeCode(rideType);
-
         final userSnap = await _db.collection('users').doc(userId).get();
         final pickupId = (userSnap.data()?['pickupId'] as String?) ?? '';
 
+        if (pickupId.length != 3) {
+          debugPrint(
+              '[Firestore] submitOnlineRequest: user $userId has no valid '
+                  '3-char pickupId ("$pickupId") — cannot submit.');
+          return null;
+        }
+
+        final effectivePax = rideCode == 1 ? 1 : passengerCount;
+        final id = _uuid.v4();
+
         await _db.collection('ride_requests').doc(id).set({
-          'pickupId': pickupId,
-          'pickup_code': pickupCode,
-          'destination_code': destCode,
-          'ride_type': rideCode,
-          'pax': passengerCount,
-          'status': 0,
-          'shuttle_id': 0,
-          'timestamp': FieldValue.serverTimestamp(),
-          'requestType': 'online',
-          'isSynced': true,
-          'assignedAt': null,
-          'gatewayId': '',
           'bookingId': id,
           'userId': userId,
           'userName': userName,
           'onlineUUID': onlineUUID,
+          'pickupId': pickupId,
           'pickupLocation': pickupLocation,
           'destination': destination,
           'rideTypeName': rideType,
+          'pickup_code': pickupCode,
+          'destination_code': destCode,
+          'ride_type': rideCode,
+          'passengerCount': effectivePax,
+          'pax': effectivePax,
+          'status': 0,
           'statusName': 'Pending',
-          'passengerCount': passengerCount,
+          'AFIT KEKE_id': 0,
+          'shuttleIdFeedback': '',
+          'requestType': 'online',
+          'isSynced': true,
+          'gatewayForwarded': false,
+          'groupKey': '${pickupCode}_${destCode}',
+          'intentStatus': 'none',
+          'assignedAt': null,
+          'gatewayId': '',
+          'timestamp': FieldValue.serverTimestamp(),
           'bookedAt': FieldValue.serverTimestamp(),
         });
-        return true;
-      } catch (e) {
-        if (_attempt == 3) return false;
-        await Future.delayed(Duration(milliseconds: 500 * _attempt));
+        return id;
+      } catch (_) {
+        if (attempt == 3) return null;
+        await Future.delayed(Duration(milliseconds: 500 * attempt));
       }
     }
-    return false;
+    return null;
   }
 
+  // ======================================================================
+  // OFFLINE REQUEST
+  // ======================================================================
   Future<bool> submitOfflineRequest({
     required String userId,
     required String userName,
@@ -356,108 +407,71 @@ class FirestoreService {
     required String rideType,
     int passengerCount = 1,
   }) async {
-    for (int _attempt = 1; _attempt <= 3; _attempt++) {
+    for (int attempt = 1; attempt <= 3; attempt++) {
       try {
         final id = _uuid.v4();
         final pickupCode = Esp32Service.getLocationCode(pickupLocation);
         final destCode = Esp32Service.getLocationCode(destination);
         final rideCode = Esp32Service.getRideTypeCode(rideType);
-
         final userSnap = await _db.collection('users').doc(userId).get();
         final pickupId = (userSnap.data()?['pickupId'] as String?) ?? '';
 
-        final data = {
-          'pickupId': pickupId,
-          'pickup_code': pickupCode,
-          'destination_code': destCode,
-          'ride_type': rideCode,
-          'pax': passengerCount,
-          'status': 0,
-          'shuttle_id': 0,
-          'timestamp': FieldValue.serverTimestamp(),
-          'requestType': 'offline',
-          'isSynced': false,
-          'assignedAt': null,
-          'gatewayId': '',
-          'bookingId': id,
+        await _db.collection('offline_queue').doc(id).set({
+          'queueId': id,
           'userId': userId,
           'userName': userName,
           'offlineUUID': offlineUUID,
+          'pickupId': pickupId,
           'pickupLocation': pickupLocation,
           'destination': destination,
           'rideTypeName': rideType,
-          'statusName': 'Pending',
+          'pickup_code': pickupCode,
+          'destination_code': destCode,
+          'ride_type': rideCode,
           'passengerCount': passengerCount,
-          'bookedAt': FieldValue.serverTimestamp(),
-        };
-
-        await _db.collection('ride_requests').doc(id).set(data);
-        await _db.collection('offline_requests').doc(id).set({
-          ...data,
-          'requestId': id,
+          'pax': passengerCount,
+          'requestType': 'offline',
+          'groupKey': '${pickupCode}_${destCode}',
+          'isSynced': false,
           'createdAt': FieldValue.serverTimestamp(),
         });
         return true;
-      } catch (e) {
-        if (_attempt == 3) return false;
-        await Future.delayed(Duration(milliseconds: 500 * _attempt));
+      } catch (_) {
+        if (attempt == 3) return false;
+        await Future.delayed(Duration(milliseconds: 500 * attempt));
       }
     }
     return false;
-  }
-
-  Future<bool> updateOfflineRequestFeedback({
-    required String offlineUUID,
-    required String shuttleId,
-  }) async {
-    try {
-      final q = await _db
-          .collection('ride_requests')
-          .where('offlineUUID', isEqualTo: offlineUUID)
-          .where('requestType', isEqualTo: 'offline')
-          .where('status', isEqualTo: 0)
-          .limit(1)
-          .get();
-      if (q.docs.isEmpty) return false;
-      final docId = q.docs.first.id;
-      final shuttleIdInt = int.tryParse(shuttleId) ?? 0;
-      final update = {
-        'shuttleIdFeedback': shuttleId,
-        'shuttle_id': shuttleIdInt,
-        'status': 1,
-        'statusName': 'Assigned',
-        'isSynced': true,
-      };
-      await _db.collection('ride_requests').doc(docId).update(update);
-      await _db.collection('offline_requests').doc(docId).update(update);
-      return true;
-    } catch (_) {
-      return false;
-    }
   }
 
   Future<void> syncOfflineRequests() async {
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
         final q = await _db
-            .collection('ride_requests')
-            .where('requestType', isEqualTo: 'offline')
+            .collection('offline_queue')
             .where('isSynced', isEqualTo: false)
             .get();
         if (q.docs.isEmpty) return;
-        final batch = _db.batch();
-        for (final doc in q.docs) {
-          batch.update(doc.reference, {
-            'isSynced': true,
-            'syncedAt': FieldValue.serverTimestamp(),
-          });
-          final offlineRef = _db.collection('offline_requests').doc(doc.id);
-          batch.update(offlineRef, {
-            'isSynced': true,
-            'syncedAt': FieldValue.serverTimestamp(),
-          });
+
+        for (final shadow in q.docs) {
+          final pid = (shadow.data()['offlineUUID'] as String?) ?? '';
+          if (pid.isEmpty) continue;
+
+          final match = await _db
+              .collection('ride_requests')
+              .where('offlineUUID', isEqualTo: pid)
+              .where('requestType', isEqualTo: 'offline')
+              .limit(1)
+              .get();
+
+          if (match.docs.isNotEmpty) {
+            await shadow.reference.update({
+              'isSynced': true,
+              'syncedAt': FieldValue.serverTimestamp(),
+              'rideRequestId': match.docs.first.id,
+            });
+          }
         }
-        await batch.commit();
         return;
       } catch (_) {
         if (attempt == 3) return;
@@ -466,33 +480,16 @@ class FirestoreService {
     }
   }
 
-  Future<void> cleanOldPuzzleScores() async {
-    try {
-      final cutoff = DateTime.now().subtract(const Duration(days: 28));
-      final q = await _db.collection('puzzle_scores')
-          .where('createdAt', isLessThan: Timestamp.fromDate(cutoff))
-          .get();
-      if (q.docs.isEmpty) return;
-      final batch = _db.batch();
-      for (final doc in q.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
-    } catch (_) {}
-  }
-
   // ======================================================================
   // NOTIFICATION OPERATIONS
   // ======================================================================
-
   Stream<List<NotificationModel>> getUserNotifications(String userId) {
     return _db
         .collection('notifications')
         .where('userId', isEqualTo: userId)
         .snapshots()
         .map((s) {
-      final list =
-      s.docs.map((d) => NotificationModel.fromDocument(d)).toList();
+      final list = s.docs.map((d) => NotificationModel.fromDocument(d)).toList();
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list.take(50).toList();
     });
@@ -500,14 +497,9 @@ class FirestoreService {
 
   Future<bool> markNotificationRead(String notificationId) async {
     try {
-      await _db
-          .collection('notifications')
-          .doc(notificationId)
-          .update({'read': true});
+      await _db.collection('notifications').doc(notificationId).update({'read': true});
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   Future<bool> markAllNotificationsRead(String userId) async {
@@ -523,9 +515,7 @@ class FirestoreService {
       }
       await batch.commit();
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   String generateNotificationId() => _uuid.v4();
@@ -533,15 +523,13 @@ class FirestoreService {
   // ======================================================================
   // ADS OPERATIONS
   // ======================================================================
-
   Stream<List<Map<String, dynamic>>> getActiveAds() {
     return _db
         .collection('ads')
         .where('isActive', isEqualTo: true)
         .snapshots()
         .map((s) {
-      final list =
-      s.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      final list = s.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       list.sort((a, b) {
         final at = a['createdAt'];
         final bt = b['createdAt'];
@@ -556,8 +544,7 @@ class FirestoreService {
 
   Stream<List<Map<String, dynamic>>> getAllAds() {
     return _db.collection('ads').snapshots().map((s) {
-      final list =
-      s.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      final list = s.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       list.sort((a, b) {
         final at = a['createdAt'];
         final bt = b['createdAt'];
@@ -574,6 +561,7 @@ class FirestoreService {
     required String title,
     String body = '',
     required String imageUrl,
+    String videoUrl = '',
     required String linkUrl,
     required String createdBy,
   }) async {
@@ -584,41 +572,35 @@ class FirestoreService {
         'title': title,
         'body': body,
         'imageUrl': imageUrl,
+        'videoUrl': videoUrl,
         'linkUrl': linkUrl,
-        'isActive':    true,
+        'isActive': true,
         'impressions': 0,
-        'taps':        0,
-        'createdBy':   createdBy,
-        'createdAt':   FieldValue.serverTimestamp(),
+        'taps': 0,
+        'createdBy': createdBy,
+        'createdAt': FieldValue.serverTimestamp(),
       });
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   Future<bool> toggleAdStatus(String adId, bool isActive) async {
     try {
       await _db.collection('ads').doc(adId).update({'isActive': isActive});
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   Future<bool> deleteAd(String adId) async {
     try {
       await _db.collection('ads').doc(adId).delete();
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   // ======================================================================
   // LOCATIONS OPERATIONS
   // ======================================================================
-
   Stream<List<String>>? _locationsStreamCache;
 
   Stream<List<String>> getLocationsStream() {
@@ -633,14 +615,11 @@ class FirestoreService {
       final list = data['list'];
       if (list is List) return list.cast<String>();
       return <String>[];
-    })
-        .asBroadcastStream();
+    }).asBroadcastStream();
     return _locationsStreamCache!;
   }
 
-  Future<List<String>> getLocations() async {
-    return Esp32Service.allLocations;
-  }
+  Future<List<String>> getLocations() async => Esp32Service.allLocations;
 
   Future<bool> addLocation(String locationName) async {
     try {
@@ -652,9 +631,7 @@ class FirestoreService {
         await ref.set({'list': [locationName]});
       }
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   Future<bool> removeLocation(String locationName) async {
@@ -663,15 +640,12 @@ class FirestoreService {
         'list': FieldValue.arrayRemove([locationName]),
       });
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   // ======================================================================
   // REPORTS OPERATIONS
   // ======================================================================
-
   Future<bool> submitReport({
     required String reportedBy,
     required String reporterName,
@@ -694,7 +668,65 @@ class FirestoreService {
         'createdAt': FieldValue.serverTimestamp(),
       });
       return true;
-    } catch (_) {
+    } catch (_) { return false; }
+  }
+
+  // ======================================================================
+  // DRIVER ACCEPT/REJECT (Grouped – batch update)
+  // ======================================================================
+  Future<bool> acceptRideGroup(List<String> requestIds, String driverId, String driverName, String shuttleId) async {
+    try {
+      final shuttleInt = int.tryParse(shuttleId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      final batch = _db.batch();
+      for (final rid in requestIds) {
+        batch.update(_db.collection('ride_requests').doc(rid), {
+          'status': 1,
+          'statusName': 'Assigned',
+          'driverId': driverId,
+          'driverName': driverName,
+          'AFIT KEKE_id': shuttleInt,
+          'shuttleIdFeedback': shuttleId,
+          'assignedAt': FieldValue.serverTimestamp(),
+        });
+        final doc = await _db.collection('ride_requests').doc(rid).get();
+        final userId = doc.data()?['userId'] as String?;
+        if (userId != null && userId.isNotEmpty) {
+          final notifRef = _db.collection('notifications').doc();
+          batch.set(notifRef, {
+            'userId': userId,
+            'title': '🚌 AFIT KEKE Assigned!',
+            'body': 'Driver $driverName (shuttle $shuttleId) accepted your request.',
+            'type': 'ride_assigned',
+            'requestId': rid,
+            'driverId': driverId,
+            'driverName': driverName,
+            'shuttleId': shuttleId,
+            'read': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+      await batch.commit();
+      return true;
+    } catch (e) {
+      debugPrint('acceptRideGroup error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> rejectRideGroup(List<String> requestIds) async {
+    try {
+      final batch = _db.batch();
+      for (final rid in requestIds) {
+        batch.update(_db.collection('ride_requests').doc(rid), {
+          'status': 4,
+          'statusName': 'Rejected',
+        });
+      }
+      await batch.commit();
+      return true;
+    } catch (e) {
+      debugPrint('rejectRideGroup error: $e');
       return false;
     }
   }
@@ -702,17 +734,16 @@ class FirestoreService {
   // ======================================================================
   // DATA EXPORT / ANALYTICS
   // ======================================================================
-
   Future<Map<String, dynamic>> getAnalyticsData() async {
     try {
       final results = await Future.wait([
         _db.collection('users').where('role', isEqualTo: 'user').count().get(),
-        _db.collection('users').where('role', isEqualTo: 'driver').where(
-            'status', isEqualTo: 'approved').count().get(),
+        _db.collection('users').where('role', isEqualTo: 'driver')
+            .where('status', isEqualTo: 'approved').count().get(),
         _db.collection('ride_requests').count().get(),
         _db.collection('routes').where('isActive', isEqualTo: true).count().get(),
-        _db.collection('users').where('role', isEqualTo: 'driver').where(
-            'status', isEqualTo: 'pending').count().get(),
+        _db.collection('users').where('role', isEqualTo: 'driver')
+            .where('status', isEqualTo: 'pending').count().get(),
       ]);
       return {
         'totalUsers': results[0].count ?? 0,
@@ -725,12 +756,12 @@ class FirestoreService {
       try {
         final snaps = await Future.wait([
           _db.collection('users').where('role', isEqualTo: 'user').get(),
-          _db.collection('users').where('role', isEqualTo: 'driver').where(
-              'status', isEqualTo: 'approved').get(),
+          _db.collection('users').where('role', isEqualTo: 'driver')
+              .where('status', isEqualTo: 'approved').get(),
           _db.collection('ride_requests').get(),
           _db.collection('routes').where('isActive', isEqualTo: true).get(),
-          _db.collection('users').where('role', isEqualTo: 'driver').where(
-              'status', isEqualTo: 'pending').get(),
+          _db.collection('users').where('role', isEqualTo: 'driver')
+              .where('status', isEqualTo: 'pending').get(),
         ]);
         return {
           'totalUsers': snaps[0].docs.length,
@@ -741,8 +772,11 @@ class FirestoreService {
         };
       } catch (_) {
         return {
-          'totalUsers': 0, 'totalDrivers': 0,
-          'totalBookings': 0, 'activeRoutes': 0, 'pendingDrivers': 0,
+          'totalUsers': 0,
+          'totalDrivers': 0,
+          'totalBookings': 0,
+          'activeRoutes': 0,
+          'pendingDrivers': 0,
         };
       }
     }
@@ -786,33 +820,38 @@ class FirestoreService {
     }).toList();
   }
 
+  Future<List<Map<String, dynamic>>> exportDriversData() async {
+    final snap = await _db
+        .collection('users')
+        .where('role', isEqualTo: 'driver')
+        .get();
+    return snap.docs.map((d) => _cleanForExport(d.data())).toList();
+  }
+
   // ======================================================================
-  // PUZZLE SCORES
+  // PUZZLE SCORES (simplified)
   // ======================================================================
+  Future<void> cleanOldPuzzleScores() async {
+    try {
+      final cutoff = DateTime.now().subtract(const Duration(days: 28));
+      final q = await _db
+          .collection('puzzle_scores')
+          .where('createdAt', isLessThan: Timestamp.fromDate(cutoff))
+          .get();
+      if (q.docs.isEmpty) return;
+      final batch = _db.batch();
+      for (final doc in q.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (_) {}
+  }
 
   Future<bool> hasPlayedPuzzle(String uid, String weekId) async {
     try {
       final doc = await _db.collection('puzzle_scores').doc('${uid}_$weekId').get();
       return doc.exists;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<int?> getUserLeaderboardScore(String uid, String period) async {
-    try {
-      final snap = await _db
-          .collection('puzzle_scores')
-          .where('userId', isEqualTo: uid)
-          .where(period.contains('W') ? 'weekKey' : 'monthKey', isEqualTo: period)
-          .get();
-      if (snap.docs.isEmpty) return null;
-      return snap.docs
-          .map((d) => (d.data()['score'] as num?)?.toInt() ?? 0)
-          .reduce((a, b) => a > b ? a : b);
-    } catch (_) {
-      return null;
-    }
+    } catch (_) { return false; }
   }
 
   Future<bool> savePuzzleImageDoc({
@@ -846,24 +885,22 @@ class FirestoreService {
       });
       await batch.commit();
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   // ======================================================================
   // LOST & FOUND
   // ======================================================================
-
   Stream<List<Map<String, dynamic>>> getActiveLostFoundItems() {
-    return _db.collection('lost_found')
-        .where('isActive', isEqualTo: true)
+    return _db
+        .collection('lost_found')
+        .where('is_active', isEqualTo: true)
         .snapshots()
         .map((s) {
       final list = s.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       list.sort((a, b) {
-        final at = a['createdAt'];
-        final bt = b['createdAt'];
+        final at = a['timestamp'];
+        final bt = b['timestamp'];
         if (at == null && bt == null) return 0;
         if (at == null) return 1;
         if (bt == null) return -1;
@@ -874,14 +911,15 @@ class FirestoreService {
   }
 
   Stream<List<Map<String, dynamic>>> getUserLostFoundItems(String uid) {
-    return _db.collection('lost_found')
+    return _db
+        .collection('lost_found')
         .where('userId', isEqualTo: uid)
         .snapshots()
         .map((s) {
       final list = s.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       list.sort((a, b) {
-        final at = a['createdAt'];
-        final bt = b['createdAt'];
+        final at = a['timestamp'];
+        final bt = b['timestamp'];
         if (at == null && bt == null) return 0;
         if (at == null) return 1;
         if (bt == null) return -1;
@@ -895,8 +933,8 @@ class FirestoreService {
     return _db.collection('lost_found').snapshots().map((s) {
       final list = s.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       list.sort((a, b) {
-        final at = a['createdAt'];
-        final bt = b['createdAt'];
+        final at = a['timestamp'];
+        final bt = b['timestamp'];
         if (at == null && bt == null) return 0;
         if (at == null) return 1;
         if (bt == null) return -1;
@@ -910,30 +948,244 @@ class FirestoreService {
     try {
       await _db.collection('lost_found').doc(docId).delete();
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   Future<bool> adminForceCloseLostFound(String docId) async {
     try {
       await _db.collection('lost_found').doc(docId).update({
-        'isActive': false,
+        'is_active': false,
         'status': 'Recovered',
         'closedBy': 'admin',
         'updatedAt': FieldValue.serverTimestamp(),
       });
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
-  Future<List<Map<String, dynamic>>> exportDriversData() async {
-    final snap = await _db
-        .collection('users')
-        .where('role', isEqualTo: 'driver')
-        .get();
-    return snap.docs.map((d) => _cleanForExport(d.data())).toList();
+  // ======================================================================
+  // CHAT OPERATIONS
+  // ======================================================================
+  Stream<List<Map<String, dynamic>>> getChatMessages(String userId) {
+    return _db
+        .collection('chats')
+        .doc(userId)
+        .collection('messages')
+        .snapshots()
+        .map((s) {
+      final list = s.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      list.sort((a, b) {
+        final at = a['createdAt'];
+        final bt = b['createdAt'];
+        if (at == null && bt == null) return 0;
+        if (at == null) return 1;
+        if (bt == null) return -1;
+        return (at as Timestamp).compareTo(bt as Timestamp);
+      });
+      return list;
+    });
+  }
+
+  Future<bool> sendChatMessage({
+    required String userId,
+    required String senderId,
+    required String senderName,
+    required String senderRole,
+    required String text,
+  }) async {
+    try {
+      await _db
+          .collection('chats')
+          .doc(userId)
+          .collection('messages')
+          .add({
+        'senderId': senderId,
+        'senderName': senderName,
+        'senderRole': senderRole,
+        'text': text,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      if (senderRole == 'admin') {
+        await _db.collection('notifications').add({
+          'userId': userId,
+          'title': '💬 New message from Admin',
+          'body': text.length > 60 ? '${text.substring(0, 60)}...' : text,
+          'type': 'chat',
+          'read': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+      return true;
+    } catch (_) { return false; }
+  }
+
+  // ======================================================================
+  // SYSTEM RESET (Admin only)
+  // ======================================================================
+  Future<void> _deleteCollectionBatch(String path) async {
+    final ref = _db.collection(path);
+    QuerySnapshot snap;
+    do {
+      snap = await ref.limit(400).get();
+      if (snap.docs.isEmpty) break;
+      final batch = _db.batch();
+      for (final doc in snap.docs) batch.delete(doc.reference);
+      await batch.commit();
+    } while (snap.docs.length >= 400);
+  }
+
+  Future<void> resetSystemData({
+    bool deleteRideRequests = true,
+    bool deleteDriverIntents = true,
+    bool deleteNotifications = false,
+    bool deleteUserProfiles = false,
+    bool deleteDriverProfiles = false,
+    bool deleteChats = false,
+  }) async {
+    final tasks = <Future>[];
+    if (deleteRideRequests) {
+      tasks.add(_deleteCollectionBatch('ride_requests'));
+      tasks.add(_deleteCollectionBatch('offline_queue'));
+    }
+    if (deleteDriverIntents) {
+      tasks.add(_deleteCollectionBatch('driver_intents'));
+    }
+    if (deleteNotifications) {
+      tasks.add(_deleteCollectionBatch('notifications'));
+    }
+    if (deleteUserProfiles) {
+      final snap = await _db
+          .collection('users')
+          .where('role', isEqualTo: 'user')
+          .get();
+      final b = _db.batch();
+      for (final d in snap.docs) b.delete(d.reference);
+      tasks.add(b.commit());
+    }
+    if (deleteDriverProfiles) {
+      final snap = await _db
+          .collection('users')
+          .where('role', isEqualTo: 'driver')
+          .get();
+      final b = _db.batch();
+      for (final d in snap.docs) b.delete(d.reference);
+      tasks.add(b.commit());
+    }
+    if (deleteChats) {
+      final chatDocs = await _db.collection('chats').get();
+      for (final chat in chatDocs.docs) {
+        final msgs = await chat.reference.collection('messages').get();
+        final b = _db.batch();
+        for (final m in msgs.docs) b.delete(m.reference);
+        b.delete(chat.reference);
+        tasks.add(b.commit());
+      }
+    }
+    await Future.wait(tasks);
+  }
+
+  // ======================================================================
+  // GAME HUB (Minimal)
+  // ======================================================================
+  static String get _weekKey {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    final week = ((monday.difference(DateTime(monday.year, 1, 1)).inDays +
+        DateTime(monday.year, 1, 1).weekday - 1) ~/ 7) + 1;
+    return '${monday.year}-W$week';
+  }
+
+  static String get _monthKey {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  }
+
+  Future<bool> saveGameScore({
+    required String gameType,
+    required int score,
+    required String userId,
+    required String userName,
+  }) async {
+    if (score <= 0 || userId.isEmpty) return false;
+    try {
+      final wk = _weekKey;
+      final mk = _monthKey;
+      await _db.collection('game_scores').doc(userId).set({
+        'userId': userId,
+        'userName': userName,
+        '${gameType}_weeklyPoints': FieldValue.increment(score),
+        '${gameType}_monthlyPoints': FieldValue.increment(score),
+        '${gameType}_weekKey': wk,
+        '${gameType}_monthKey': mk,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      final lbRef = _db.collection('game_leaderboard')
+          .doc('${gameType}_${wk}_$userId');
+      await lbRef.set({
+        'userId': userId,
+        'userName': userName,
+        'gameType': gameType,
+        'points': FieldValue.increment(score),
+        'weekKey': wk,
+        'monthKey': mk,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      return true;
+    } catch (_) { return false; }
+  }
+
+  Stream<Map<String, dynamic>> gameScoresStream(String userId) {
+    return _db.collection('game_scores').doc(userId)
+        .snapshots()
+        .map((s) => s.data() ?? {});
+  }
+
+  Stream<List<Map<String, dynamic>>> gameLeaderboardStream({
+    required String gameType,
+    required String periodField,
+    required String periodKey,
+  }) {
+    return _db.collection('game_leaderboard')
+        .where('gameType', isEqualTo: gameType)
+        .where(periodField, isEqualTo: periodKey)
+        .snapshots()
+        .map((s) {
+      final list = s.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      list.sort((a, b) => ((b['points'] as int? ?? 0)).compareTo((a['points'] as int? ?? 0)));
+      return list;
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getQuizQuestions({int limit = 10}) async {
+    try {
+      final snap = await _db.collection('game_questions')
+          .where('isActive', isEqualTo: true)
+          .get();
+      final list = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      list.shuffle();
+      return list.take(limit).toList();
+    } catch (_) { return []; }
+  }
+
+  Future<bool> addQuizQuestion({
+    required String question,
+    required String type,
+    required List<String> options,
+    required String answer,
+    required String addedBy,
+  }) async {
+    try {
+      await _db.collection('game_questions').add({
+        'question': question,
+        'type': type,
+        'options': options,
+        'answer': answer,
+        'isActive': true,
+        'addedBy': addedBy,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (_) { return false; }
   }
 }

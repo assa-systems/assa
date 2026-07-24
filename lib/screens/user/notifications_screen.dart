@@ -22,10 +22,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void initState() {
     super.initState();
     // Create stream once and reuse it — prevents blinking/reset on rebuild
+    // No orderBy — avoids composite index requirement. Sort client-side.
     _stream = FirebaseFirestore.instance
         .collection('notifications')
         .where('userId', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots();
   }
@@ -113,7 +113,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return _buildEmptyState();
                 }
-                final docs = snapshot.data!.docs;
+                final docs = [...snapshot.data!.docs];
+                docs.sort((a, b) {
+                  final at = (a.data() as Map)['createdAt'];
+                  final bt = (b.data() as Map)['createdAt'];
+                  if (at == null && bt == null) return 0;
+                  if (at == null) return 1;
+                  if (bt == null) return -1;
+                  return (bt as Timestamp).compareTo(at as Timestamp);
+                });
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: docs.length,
@@ -209,6 +217,7 @@ class _NotificationCard extends StatelessWidget {
       case 'booking': return Icons.receipt_long_rounded;
       case 'general': return Icons.campaign_rounded;
       case 'admin_chat': return Icons.admin_panel_settings_rounded;
+      case 'lost_found': return Icons.search_rounded;
       default: return Icons.notifications_rounded;
     }
   }
@@ -221,6 +230,7 @@ class _NotificationCard extends StatelessWidget {
       case 'booking': return AppColors.accent;
       case 'general': return AppColors.adminColor;
       case 'admin_chat': return const Color(0xFF6A1B9A);
+      case 'lost_found': return const Color(0xFF00897B);
       default: return AppColors.textSecondary;
     }
   }
@@ -303,6 +313,7 @@ class _NotificationDetailSheet extends StatelessWidget {
       case 'booking': return Icons.receipt_long_rounded;
       case 'general': return Icons.campaign_rounded;
       case 'admin_chat': return Icons.admin_panel_settings_rounded;
+      case 'lost_found': return Icons.search_rounded;
       default: return Icons.notifications_rounded;
     }
   }
@@ -315,6 +326,7 @@ class _NotificationDetailSheet extends StatelessWidget {
       case 'booking': return AppColors.accent;
       case 'general': return AppColors.adminColor;
       case 'admin_chat': return const Color(0xFF6A1B9A);
+      case 'lost_found': return const Color(0xFF00897B);
       default: return AppColors.textSecondary;
     }
   }

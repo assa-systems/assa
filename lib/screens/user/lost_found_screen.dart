@@ -1,3 +1,6 @@
+import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,6 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
 import 'package:assa/services/esp32_service.dart';
+import 'package:assa/services/storage_service.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:assa/widgets/common/common_widgets.dart';
 import 'package:assa/widgets/common/ad_overlay.dart';
@@ -18,7 +22,7 @@ import 'package:assa/widgets/common/ad_overlay.dart';
 //     itemType,        -- 'Lost' or 'Found'
 //     category,        -- Phone/Bag/ID Card/Keys/Laptop/Wallet/Other
 //     description, locationCode, locationName,
-//     imageUrl,        -- (optional, future feature)
+//     imageUrl,        -- (optional, base64 string or direct URL)
 //     status,          -- 'Lost' | 'Found' | 'Recovered'
 //     is_active: bool,
 //     finePaid: bool,  -- set by admin when owner pays fine
@@ -33,25 +37,7 @@ import 'package:assa/widgets/common/ad_overlay.dart';
 //     userId, amount, reason, sourceItemId,
 //     used: bool, usedAt, createdAt
 //   }
-//
-// REWARD FLOW:
-//   1. Finder posts item (itemType='Found')
-//   2. Owner sees item, taps "This is Mine" → ownerUserId set, status='Pending Claim'
-//   3. Admin reviews claim, sets fineAmount based on item category
-//   4. Owner pays fine (admin marks finePaid=true)
-//   5. System issues ride credit to finder equal to their best puzzle score
-//   6. Item status = 'Recovered', is_active = false
-//   7. Item removed from public listing, stays in history for both parties
 // ======================================================================
-
-// Convert Google Drive share link → direct image URL
-String _toDirectImageUrl(String url) {
-  if (url.isEmpty) return url;
-  if (!url.contains('drive.google.com')) return url;
-  final m = RegExp(r'(?:/file/d/|[?&]id=)([a-zA-Z0-9_-]+)').firstMatch(url);
-  if (m == null) return url;
-  return 'https://drive.google.com/uc?export=view&id=' + m.group(1)!;
-}
 
 class UserLostFoundScreen extends StatefulWidget {
   const UserLostFoundScreen({super.key});
@@ -63,11 +49,28 @@ class _LostFoundScreenState extends State<UserLostFoundScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
   final String _myUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  Map<String, dynamic>? _adData;
+  bool _adDismissed = false;
 
   @override
   void initState() {
     super.initState();
     _tab = TabController(length: 2, vsync: this);
+    _loadAd();
+  }
+
+  Future<void> _loadAd() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('ads')
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+      if (mounted && snap.docs.isNotEmpty) {
+        setState(() =>
+        _adData = {'id': snap.docs.first.id, ...snap.docs.first.data()});
+      }
+    } catch (_) {}
   }
 
   @override
@@ -88,7 +91,7 @@ class _LostFoundScreenState extends State<UserLostFoundScreen>
         label: const Text('📋  Post Item', style: TextStyle(color: Colors.white,
             fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 0.3)),
       ),
-      body: AdOverlayWrapper(child: SafeArea(
+      body: SafeArea(
         child: Column(children: [
           _buildHeader(context),
           Container(
@@ -113,8 +116,22 @@ class _LostFoundScreenState extends State<UserLostFoundScreen>
               ],
             ),
           ),
+          // Ad banner — natural bottom placement, dismissable
+          if (_adData != null && !_adDismissed)
+            AdDashboardCard(
+              ad:        _adData!,
+              onTap:     () {
+                final id = _adData!['id'] as String?;
+                if (id != null) {
+                  FirebaseFirestore.instance.collection('ads').doc(id)
+                      .update({'taps': FieldValue.increment(1)})
+                      .catchError((_) {});
+                }
+              },
+              onDismiss: () => setState(() => _adDismissed = true),
+            ),
         ]),
-      )),
+      ),
     );
   }
 
@@ -302,14 +319,7 @@ class _MyPostsTab extends StatelessWidget {
 }
 
 // ======================================================================
-// TAB 3: MY RIDE CREDITS (earned from returning items)
-// ======================================================================
-// ======================================================================
 // TAB 3: MY RIDE CREDITS
-// Each credit = a FREE ride earned when finder returns a lost item.
-// Amount (₦) = fine the owner paid. Ride type set by fine tier.
-// Finder taps "Book Free Ride" → ride booking sheet opens pre-filled.
-// On confirm: submitOnlineRequest() is called + credit marked used=true.
 // ======================================================================
 class _MyCreditsTab extends StatelessWidget {
   final String myUid;
@@ -542,7 +552,6 @@ class _MyCreditsTab extends StatelessWidget {
   }
 
   // Opens ride booking sheet pre-filled with the credit's ride type.
-  // On confirm → submitOnlineRequest() + mark credit used=true.
   void _openCreditBooking(
       BuildContext context, {
         required String creditId,
@@ -567,8 +576,6 @@ class _MyCreditsTab extends StatelessWidget {
 
 // ======================================================================
 // CREDIT RIDE BOOKING SHEET
-// Pre-filled with the ride type from the credit.
-// On confirm: submitOnlineRequest() called → credit marked used=true.
 // ======================================================================
 class _CreditRideBookingSheet extends StatefulWidget {
   final String creditId, rideType, myUid;
@@ -645,7 +652,7 @@ class _CreditRideBookingSheetState extends State<_CreditRideBookingSheet> {
         'rideTypeName':     widget.rideType,
         'statusName':       'Pending',
         'requestType':      'online',
-        'isCreditRide':     true,       // flag: booked using lost & found credit
+        'isCreditRide':     true,
         'creditId':         widget.creditId,
         'creditAmount':     widget.amount,
         'isSynced':         true,
@@ -681,10 +688,8 @@ class _CreditRideBookingSheetState extends State<_CreditRideBookingSheet> {
     }
   }
 
-  // Use Esp32Service as single source of truth for location codes
   int _locationCode(String name) => Esp32Service.getLocationCode(name);
 
-  // All 22 AFIT campus locations — same list used everywhere in the app
   List<String> get _allLocations => Esp32Service.allLocations;
 
   @override
@@ -868,16 +873,19 @@ class _ItemCard extends StatelessWidget {
     }
   }
 
+  // Helper to check if imageUrl is base64
+  bool _isBase64(String url) {
+    return url.startsWith('data:image');
+  }
+
   @override
   Widget build(BuildContext context) {
     final ts = data['timestamp'];
     final date = ts != null
         ? Helpers.formatDateTime((ts as Timestamp).toDate())
         : '';
-    final fineAmount   = data['fineAmount'] ?? 0;
     final status       = data['status'] ?? data['itemType'] ?? 'Unknown';
-    final isMyPost     = data['userId'] == myUid;
-    final alreadyClaimed = data['ownerUserId'] != null && data['ownerUserId'].toString().isNotEmpty;
+    final imageUrl = data['imageUrl'] ?? '';
 
     return GestureDetector(
       onTap: () => _showDetailSheet(context),
@@ -931,38 +939,79 @@ class _ItemCard extends StatelessWidget {
             ]),
           ),
 
-          // Image (if present)
-          if ((data['imageUrl'] ?? '').isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.zero,
-              child: CachedNetworkImage(
-                imageUrl: _toDirectImageUrl(data['imageUrl'] as String),
-                height: 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
+          // Image — using conditional: base64 or network
+          if (imageUrl.isNotEmpty)
+            Stack(children: [
+              ClipRRect(
+                borderRadius: BorderRadius.zero,
+                child: _isBase64(imageUrl)
+                    ? Image.memory(
+                  base64Decode(imageUrl.split(',').last),
                   height: 180,
-                  color: AppColors.surfaceVariant,
-                  child: const Center(child: CircularProgressIndicator(
-                      strokeWidth: 2, color: AppColors.primary)),
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  height: 60,
-                  color: AppColors.surfaceVariant,
-                  child: const Center(child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.broken_image_rounded,
-                          color: AppColors.textHint, size: 20),
-                      SizedBox(width: 6),
-                      Text('Image unavailable',
-                          style: TextStyle(fontSize: 12,
-                              color: AppColors.textHint)),
-                    ],
-                  )),
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 60,
+                    color: AppColors.surfaceVariant,
+                    child: const Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image_rounded,
+                              color: AppColors.textHint, size: 20),
+                          SizedBox(width: 6),
+                          Text('Image unavailable',
+                              style: TextStyle(fontSize: 12,
+                                  color: AppColors.textHint)),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                    : CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  httpHeaders: const {'User-Agent': 'Mozilla/5.0'},
+                  placeholder: (_, __) => Container(
+                    height: 180,
+                    color: AppColors.surfaceVariant,
+                    child: const Center(child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Color(0xFF00897B))),
+                  ),
+                  errorWidget: (_, __, ___) => Container(
+                    height: 60,
+                    color: AppColors.surfaceVariant,
+                    child: const Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image_rounded,
+                              color: AppColors.textHint, size: 20),
+                          SizedBox(width: 6),
+                          Text('Image unavailable',
+                              style: TextStyle(fontSize: 12,
+                                  color: AppColors.textHint)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              // Gradient overlay at bottom of image
+              Positioned(
+                bottom: 0, left: 0, right: 0, height: 70,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                      begin: Alignment.bottomCenter, end: Alignment.topCenter,
+                    ),
+                  ),
+                ),
+              ),
+            ]),
 
           // Body
           Padding(
@@ -993,9 +1042,9 @@ class _ItemCard extends StatelessWidget {
                 ]),
               ],
 
-              // Fine amount (shown once admin sets it)
-
-              if (alreadyClaimed && data['itemType'] == 'Found' &&
+              if (data['ownerUserId'] != null &&
+                  data['ownerUserId'].toString().isNotEmpty &&
+                  data['itemType'] == 'Found' &&
                   data['status'] != 'Recovered') ...[
                 const SizedBox(height: 8),
                 Container(
@@ -1038,12 +1087,12 @@ class _ItemCard extends StatelessWidget {
             ]),
           ),
         ]),
-      ),  // end Container
-    );  // end GestureDetector
+      ),
+    );
   }
 
   void _showDetailSheet(BuildContext context) {
-    final imageUrl = _toDirectImageUrl(data['imageUrl'] ?? '');
+    final imageUrl = data['imageUrl'] ?? '';
     final ts = data['timestamp'];
     final date = ts != null
         ? Helpers.formatDateTime((ts as Timestamp).toDate()) : '';
@@ -1114,11 +1163,23 @@ class _ItemCard extends StatelessWidget {
                 controller: scrollCtrl,
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
-                  // Image — full size
+                  // Image — conditional
                   if (imageUrl.isNotEmpty) ...[
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: CachedNetworkImage(
+                      child: _isBase64(imageUrl)
+                          ? Image.memory(
+                        base64Decode(imageUrl.split(',').last),
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 200, color: Colors.grey.shade100,
+                          child: const Center(
+                              child: Text('Image unavailable',
+                                  style: TextStyle(color: Colors.grey))),
+                        ),
+                      )
+                          : CachedNetworkImage(
                         imageUrl: imageUrl,
                         width: double.infinity,
                         fit: BoxFit.contain,
@@ -1128,17 +1189,19 @@ class _ItemCard extends StatelessWidget {
                                 strokeWidth: 2))),
                         errorWidget: (_, __, ___) => Container(
                           height: 80, color: Colors.grey.shade100,
-                          child: const Center(child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.broken_image_rounded,
-                                  color: Colors.grey, size: 20),
-                              SizedBox(width: 6),
-                              Text('Image unavailable',
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.grey)),
-                            ],
-                          )),
+                          child: const Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.broken_image_rounded,
+                                    color: Colors.grey, size: 20),
+                                SizedBox(width: 6),
+                                Text('Image unavailable',
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1280,6 +1343,20 @@ class _ItemCard extends StatelessWidget {
           'status':      'Pending Claim',
           'updatedAt':   FieldValue.serverTimestamp(),
         });
+        // Notify the finder so it surfaces in Notifications + Dashboard
+        final finderId = data['finderUserId'] as String? ?? data['userId'] as String?;
+        if (finderId != null && finderId.isNotEmpty && finderId != myUid) {
+          await FirebaseFirestore.instance.collection('notifications').add({
+            'userId':    finderId,
+            'title':     '🔍 Item Claimed',
+            'body':      'Someone claimed the ${data['category'] ?? 'item'} you found '
+                '("${data['description'] ?? ''}"). Admin will review the claim.',
+            'type':      'lost_found',
+            'lostFoundId': docId,
+            'read':      false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Claim submitted! Admin will review and set the fine.'),
@@ -1341,6 +1418,9 @@ class _PostItemSheetState extends State<_PostItemSheet> {
   final _descCtrl     = TextEditingController();
   final _locationCtrl = TextEditingController();
   final _contactCtrl  = TextEditingController();
+  final _storage      = StorageService();
+  File? _pickedImageFile;
+  bool _pickingImage = false;
   String  _itemType        = 'Found';
   String  _category        = 'Phone';
   String? _locationName;
@@ -1368,7 +1448,6 @@ class _PostItemSheetState extends State<_PostItemSheet> {
     _locationCtrl.addListener(() {
       if (mounted) setState(() {
         _showSuggestions = _locationCtrl.text.isNotEmpty;
-        // clear selection if text changed
         if (_locationName != null && _locationCtrl.text != _locationName) {
           _locationName = null;
         }
@@ -1412,7 +1491,6 @@ class _PostItemSheetState extends State<_PostItemSheet> {
       ));
       return;
     }
-    // Accept either a suggestion-selected location or free-typed text
     final locationText = _locationName ?? _locationCtrl.text.trim();
     if (locationText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -1428,19 +1506,39 @@ class _PostItemSheetState extends State<_PostItemSheet> {
           .collection('users').doc(widget.myUid).get())
           .data()?['role'] ?? 'user';
 
-      await FirebaseFirestore.instance.collection('lost_found').add({
+      // Reserve the doc ID up front so the Storage upload path can use it
+      final docRef = FirebaseFirestore.instance.collection('lost_found').doc();
+
+      String uploadedImageUrl = '';
+      if (_pickedImageFile != null) {
+        final uploadResult = await _storage.uploadLostFoundImage(
+          imageFile: _pickedImageFile!,
+          itemId: docRef.id,
+        );
+        if (uploadResult['success'] == true) {
+          uploadedImageUrl = uploadResult['url'] as String? ?? '';
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(uploadResult['error'] ?? 'Image upload failed — posting without photo.'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
+      }
+
+      await docRef.set({
         'userId':       widget.myUid,
         'userName':     _userName,
         'userRole':     role,
-        'itemType':     _itemType,       // 'Lost' or 'Found'
+        'itemType':     _itemType,
         'category':     _category,
         'description':  _descCtrl.text.trim(),
         'locationCode': Esp32Service.getLocationCode(locationText),
         'locationName': locationText,
-        'imageUrl':     '',
-        'status':       _itemType,       // initial status = itemType
+        'imageUrl': uploadedImageUrl,
+        'status':       _itemType,
         'is_active':    true,
-        'fineAmount':   0,               // admin sets this later
+        'fineAmount':   0,
         'finePaid':     false,
         'rewardGiven':  false,
         'finderUserId': _itemType == 'Found' ? widget.myUid : '',
@@ -1450,15 +1548,48 @@ class _PostItemSheetState extends State<_PostItemSheet> {
         'updatedAt':    FieldValue.serverTimestamp(),
       });
 
+      // Broadcast a Lost & Found notification when a "Found" item is
+      // posted, so other users see it in Notifications + Dashboard.
+      if (_itemType == 'Found') {
+        try {
+          final usersSnap = await FirebaseFirestore.instance
+              .collection('users')
+              .where('role', isEqualTo: 'user')
+              .get();
+          final batch = FirebaseFirestore.instance.batch();
+          for (final u in usersSnap.docs) {
+            if (u.id == widget.myUid) continue;
+            final ref = FirebaseFirestore.instance.collection('notifications').doc();
+            batch.set(ref, {
+              'userId':      u.id,
+              'title':       '🔍 Item Found',
+              'body':        '${_category} found at $locationText. '
+                  'Check Lost & Found in case it\'s yours.',
+              'type':        'lost_found',
+              'lostFoundId': docRef.id,
+              'read':        false,
+              'createdAt':   FieldValue.serverTimestamp(),
+            });
+          }
+          await batch.commit();
+        } catch (_) {
+          // Non-fatal — the item post itself already succeeded above.
+        }
+      }
+
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_itemType == 'Found'
-              ? 'Found item posted! Other users can now see and claim this item.'
-              : 'Lost item posted! You\'ll be notified if someone finds it.'),
-          backgroundColor: const Color(0xFF00897B),
-          behavior: SnackBarBehavior.floating,
-        ));
+        await showFullScreenAd(context);
+
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(_itemType == 'Found'
+                ? 'Found item posted! Other users can now see and claim this item.'
+                : 'Lost item posted! You\'ll be notified if someone finds it.'),
+            backgroundColor: const Color(0xFF00897B),
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
       }
     } catch (_) {
       if (mounted) setState(() => _submitting = false);
@@ -1563,7 +1694,6 @@ class _PostItemSheetState extends State<_PostItemSheet> {
               style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
-            // Typed location field with live suggestions
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               TextField(
                 controller: _locationCtrl,
@@ -1650,6 +1780,56 @@ class _PostItemSheetState extends State<_PostItemSheet> {
 
             const SizedBox(height: 16),
 
+            // Photo picker
+            const Text('Photo (optional)', style: TextStyle(fontSize: 14,
+                fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: _pickingImage ? null : () async {
+                setState(() => _pickingImage = true);
+                try {
+                  final picked = await ImagePicker().pickImage(
+                      source: ImageSource.gallery, imageQuality: 75, maxWidth: 1600);
+                  if (picked != null) {
+                    setState(() => _pickedImageFile = File(picked.path));
+                  }
+                } catch (_) {}
+                if (mounted) setState(() => _pickingImage = false);
+              },
+              child: Container(
+                height: _pickedImageFile != null ? 160 : 56,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF00897B), width: 1.5),
+                ),
+                child: _pickedImageFile != null
+                    ? ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: Image.file(_pickedImageFile!,
+                        fit: BoxFit.cover, width: double.infinity))
+                    : _pickingImage
+                    ? const Center(child: CircularProgressIndicator(
+                    color: Color(0xFF00897B), strokeWidth: 2))
+                    : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.add_photo_alternate_rounded, size: 22,
+                      color: Color(0xFF00897B)),
+                  SizedBox(width: 8),
+                  Text('Tap to add photo', style: TextStyle(
+                      fontSize: 13, color: Color(0xFF00897B),
+                      fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ),
+            if (_pickedImageFile != null) ...[
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: () => setState(() => _pickedImageFile = null),
+                child: const Text('Remove photo',
+                    style: TextStyle(fontSize: 11, color: AppColors.error)),
+              ),
+            ],
+
             const SizedBox(height: 16),
             // Contact Info
             const Text('Contact Info', style: TextStyle(fontSize: 14,
@@ -1682,8 +1862,6 @@ class _PostItemSheetState extends State<_PostItemSheet> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               ),
             ),
-
-
 
             const SizedBox(height: 24),
             CustomButton(

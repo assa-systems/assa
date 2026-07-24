@@ -1,43 +1,10 @@
+// lost_found_admin_screen.dart (full file with fixes)
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
 import 'package:assa/widgets/common/common_widgets.dart';
-
-// ======================================================================
-// ADMIN: LOST & FOUND MANAGEMENT
-//
-// COMPLETE REWARD FLOW:
-//   1. User posts found item → lost_found doc created (finderUserId = poster)
-//   2. Owner sees item → taps "This is Mine" → ownerUserId set, status = 'Pending Claim'
-//   3. Admin opens this screen → reviews claim → sets fine (₦) based on item category
-//      Category defaults are pre-filled but admin can override:
-//        Phone:   ₦3000   Laptop:  ₦5000   ID Card: ₦1000
-//        Keys:    ₦500    Bag:     ₦1500   Wallet:  ₦2000
-//        Clothes: ₦500    Other:   ₦1000
-//   4. Admin taps "Fine Paid" → system:
-//        a. Issues ride_credits doc to finderUserId:
-//           { userId, amount (= fineAmount in Naira), reason, sourceItemId,
-//             used: false, rideType: 'Shared', createdAt }
-//        b. Sets lost_found: status='Recovered', is_active=false, rewardGiven=true
-//   5. Finder sees credit in "My Credits" tab → taps "Book Free Ride"
-//      → opens ride booking pre-filled with credit deducted on booking
-//
-// NOTE: The reward amount = the fine amount (₦). This is the value
-//       the finder receives as a PAID RIDE credit from the owner's payment.
-//       It is NOT based on puzzle scores.
-// ======================================================================
-
-
-String _toDirectImageUrl(String url) {
-  if (url.isEmpty) return url;
-  if (url.contains('drive.google.com')) {
-    final m = RegExp(r'(?:/file/d/|[?&]id=)([a-zA-Z0-9_-]+)').firstMatch(url);
-    if (m != null) return 'https://drive.google.com/uc?export=view&id=\${m.group(1)!}';
-  }
-  return url;
-}
 
 class AdminLostFoundScreen extends StatefulWidget {
   const AdminLostFoundScreen({super.key});
@@ -117,7 +84,6 @@ class _AdminLostFoundScreenState extends State<AdminLostFoundScreen>
                 style: TextStyle(color: Color(0xAAFFFFFF), fontSize: 11)),
           ]),
         ),
-        // Show pending count badge
         StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('lost_found')
@@ -254,11 +220,7 @@ class _AdminLostFoundScreenState extends State<AdminLostFoundScreen>
   }
 }
 
-// ======================================================================
-// CLAIM CARD
-// Admin reviews claim → approves free return → privately contacts finder.
-// No fine. Owner gets item back free. Admin decides if/how to reward finder.
-// ======================================================================
+// ── Claim Card ──────────────────────────────────────────────────────────
 class _ClaimCard extends StatefulWidget {
   final Map<String, dynamic>  data;
   final String                docId;
@@ -270,8 +232,6 @@ class _ClaimCard extends StatefulWidget {
 class _ClaimCardState extends State<_ClaimCard> {
   bool _processing = false;
 
-  // Approve the claim — item returned to owner FREE, no fine.
-  // Admin will privately contact finder via Private Messages if rewarding.
   Future<void> _approveClaim() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -307,10 +267,42 @@ class _ClaimCardState extends State<_ClaimCard> {
           .update({
         'status':    'Recovered',
         'is_active': false,
-        'finePaid':  false,    // no fine charged
+        'finePaid':  false,
         'fineAmount': 0,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // Notify finder + claimant so it surfaces in Notifications + Dashboard
+      final finderId = widget.data['finderUserId'] as String? ?? widget.data['userId'] as String?;
+      final ownerId  = widget.data['ownerUserId'] as String?;
+      final itemDesc = widget.data['description'] as String? ?? 'item';
+      final notifyBatch = FirebaseFirestore.instance.batch();
+      if (finderId != null && finderId.isNotEmpty) {
+        final ref = FirebaseFirestore.instance.collection('notifications').doc();
+        notifyBatch.set(ref, {
+          'userId':      finderId,
+          'title':       '✅ Item Returned',
+          'body':        'The $itemDesc you found has been returned to its owner. Thank you!',
+          'type':        'lost_found',
+          'lostFoundId': widget.docId,
+          'read':        false,
+          'createdAt':   FieldValue.serverTimestamp(),
+        });
+      }
+      if (ownerId != null && ownerId.isNotEmpty) {
+        final ref = FirebaseFirestore.instance.collection('notifications').doc();
+        notifyBatch.set(ref, {
+          'userId':      ownerId,
+          'title':       '✅ Claim Approved',
+          'body':        'Your claim for "$itemDesc" was approved. It has been marked returned.',
+          'type':        'lost_found',
+          'lostFoundId': widget.docId,
+          'read':        false,
+          'createdAt':   FieldValue.serverTimestamp(),
+        });
+      }
+      await notifyBatch.commit();
+
       if (mounted) {
         setState(() => _processing = false);
         _snack('Item marked as recovered. Contact the finder privately to reward them.');
@@ -348,8 +340,6 @@ class _ClaimCardState extends State<_ClaimCard> {
             blurRadius: 6, offset: const Offset(0, 2))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-        // ── Header ───────────────────────────────────────────────────
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -368,12 +358,9 @@ class _ClaimCardState extends State<_ClaimCard> {
                 fontSize: 10, color: AppColors.textSecondary)),
           ]),
         ),
-
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-            // ── Item details ─────────────────────────────────────────
             _InfoRow('Category', category),
             const SizedBox(height: 6),
             _InfoRow('Description', d['description'] ?? ''),
@@ -386,8 +373,6 @@ class _ClaimCardState extends State<_ClaimCard> {
               _InfoRow('Finder Contact', d['contactInfo'] ?? ''),
             ],
             const Divider(height: 24, color: AppColors.divider),
-
-            // ── Claim action ─────────────────────────────────────────
             if (!recovered) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -446,7 +431,6 @@ class _ClaimCardState extends State<_ClaimCard> {
                 ]),
               ),
             ],
-
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerRight,
@@ -488,9 +472,7 @@ class _ClaimCardState extends State<_ClaimCard> {
   }
 }
 
-// ======================================================================
-// ADMIN ITEM CARD — used in All Active and History tabs
-// ======================================================================
+// ── Admin Item Card (All Active / History) ─────────────────────────────
 class _AdminItemCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final String docId;
@@ -506,7 +488,7 @@ class _AdminItemCard extends StatelessWidget {
     final ts        = data['timestamp'];
     final date      = ts != null
         ? Helpers.formatDateTime((ts as Timestamp).toDate()) : '';
-    final imageUrl  = _toDirectImageUrl(data['imageUrl'] ?? '');
+    final imageUrl  = data['imageUrl'] ?? '';   // raw field, no conversion
 
     return GestureDetector(
       onTap: () => _showDetailSheet(context, typeColor, date, imageUrl),
@@ -545,15 +527,13 @@ class _AdminItemCard extends StatelessWidget {
             const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: imageUrl,
-                height: 120, width: double.infinity, fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                    height: 120, color: AppColors.surfaceVariant,
-                    child: const Center(child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.primary))),
-                errorWidget: (_, __, ___) => const SizedBox.shrink(),
-              ),
+              child: imageUrl.startsWith('data:image')
+                  ? Image.memory(base64Decode(imageUrl.split(',').last),
+                  height: 120, width: double.infinity, fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => const SizedBox.shrink())
+                  : Image.network(imageUrl,
+                  height: 120, width: double.infinity, fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => const SizedBox.shrink()),
             ),
           ],
           const SizedBox(height: 8),
@@ -683,20 +663,20 @@ class _AdminItemCard extends StatelessWidget {
                 children: [
                   if (imageUrl.isNotEmpty) ...[
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        width: double.infinity,
-                        fit: BoxFit.contain,
-                        placeholder: (_, __) => Container(
-                            height: 200, color: Colors.grey.shade100,
-                            child: const Center(child: CircularProgressIndicator(
-                                strokeWidth: 2))),
-                        errorWidget: (_, __, ___) => Container(
-                            height: 60, color: Colors.grey.shade100,
-                            child: const Center(child: Text('Image unavailable',
-                                style: TextStyle(color: Colors.grey)))),
-                      ),
+                        borderRadius: BorderRadius.circular(16),
+                        child: imageUrl.startsWith('data:image')
+                            ? Image.memory(base64Decode(imageUrl.split(',').last),
+                            width: double.infinity, fit: BoxFit.contain,
+                            errorBuilder: (c, e, s) => Container(
+                                height: 200, color: Colors.grey.shade100,
+                                child: const Center(child: Text('Image unavailable',
+                                    style: TextStyle(color: Colors.grey)))))
+                            : Image.network(imageUrl,
+                            width: double.infinity, fit: BoxFit.contain,
+                            errorBuilder: (c, e, s) => Container(
+                                height: 200, color: Colors.grey.shade100,
+                                child: const Center(child: Text('Image unavailable',
+                                    style: TextStyle(color: Colors.grey)))))
                     ),
                     const SizedBox(height: 20),
                   ],
@@ -762,7 +742,6 @@ class _AdminItemCard extends StatelessWidget {
 }
 
 // ── Helper widgets ─────────────────────────────────────────────────────
-
 Widget _InfoRow(String label, String value) {
   return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
     SizedBox(

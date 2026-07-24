@@ -1,3 +1,5 @@
+// admin_chat_screen.dart (full file with image support)
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -33,13 +35,12 @@ class _AdminChatScreenState extends State<AdminChatScreen>
   void initState() {
     super.initState();
     _tab = TabController(length: 3, vsync: this);
-    // Auto-open finder's chat when navigated from Lost & Found claim flow
     if (widget.preOpenUserId != null && widget.preOpenUserId!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         Navigator.push(context, MaterialPageRoute(
           builder: (_) => _SupportChatViewer(
-            chatId:   'support_\${widget.preOpenUserId}',
+            chatId:   'support_${widget.preOpenUserId}',
             userName: widget.preOpenUserName ?? 'Finder',
             userId:   widget.preOpenUserId!,
           ),
@@ -58,7 +59,6 @@ class _AdminChatScreenState extends State<AdminChatScreen>
       body: SafeArea(child: Column(children: [
         _Header(onBack: () => Navigator.pop(context)),
         const SizedBox(height: 12),
-        // Search
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
@@ -84,7 +84,6 @@ class _AdminChatScreenState extends State<AdminChatScreen>
           ),
         ),
         const SizedBox(height: 12),
-        // Tab bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
@@ -162,7 +161,6 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 14),
-        // Icon cluster
         Stack(clipBehavior: Clip.none, children: [
           Container(
             width: 44, height: 44,
@@ -194,7 +192,6 @@ class _Header extends StatelessWidget {
           Text('Warn · Congratulate · View complaints',
               style: TextStyle(fontSize: 11, color: Colors.white70)),
         ])),
-        // Stats badge
         StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('support_chats').snapshots(),
@@ -291,7 +288,6 @@ class _PersonTile extends StatelessWidget {
         final unread = unreadSnap.data?.docs.length ?? 0;
         return GestureDetector(
           onTap: () {
-            // For users: open their complaint thread. For drivers: open private chat.
             if (role == 'user') {
               Navigator.push(context, MaterialPageRoute(
                   builder: (_) => _SupportChatViewer(
@@ -315,7 +311,6 @@ class _PersonTile extends StatelessWidget {
                   blurRadius: 10, offset: const Offset(0, 3))],
             ),
             child: Row(children: [
-              // Avatar with gradient
               Container(
                 width: 48, height: 48,
                 decoration: BoxDecoration(
@@ -406,7 +401,7 @@ class _SupportList extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
           itemCount: docs.length,
           itemBuilder: (_, i) {
-            final chatId = docs[i].id; // 'support_{userId}'
+            final chatId = docs[i].id;
             final uid    = chatId.replaceFirst('support_', '');
             return _SupportTile(chatId: chatId, userId: uid);
           },
@@ -516,7 +511,7 @@ class _SupportTile extends StatelessWidget {
   }
 }
 
-// ── Support chat viewer (read + admin can reply) ───────────────────────
+// ── Support chat viewer ────────────────────────────────────────────────
 class _SupportChatViewer extends StatefulWidget {
   final String chatId, userName, userId;
   const _SupportChatViewer({required this.chatId, required this.userName,
@@ -567,7 +562,6 @@ class _SupportChatViewerState extends State<_SupportChatViewer> {
         'isPrivate':  _isPrivate,
         'timestamp':  FieldValue.serverTimestamp(),
       });
-      // Notify user
       await FirebaseFirestore.instance.collection('notifications').add({
         'userId':    widget.userId,
         'title':     _isPrivate
@@ -666,14 +660,19 @@ class _SupportChatViewerState extends State<_SupportChatViewer> {
                   final isBot     = d['isBot']     == true;
                   final isPrivate = d['isPrivate'] == true;
                   final text      = d['text']      ?? '';
+                  final image     = d['image']     ?? '';  // image field
                   final sender    = d['senderName'] ?? '';
                   final ts        = d['timestamp']  as Timestamp?;
                   final time      = ts != null
                       ? TimeOfDay.fromDateTime(ts.toDate()).format(context)
                       : '';
                   return _SupportBubble(
-                      text: text, sender: sender, time: time,
-                      isAdmin: isAdmin, isBot: isBot,
+                      text: text,
+                      image: image,
+                      sender: sender,
+                      time: time,
+                      isAdmin: isAdmin,
+                      isBot: isBot,
                       isPrivate: isPrivate);
                 },
               );
@@ -681,7 +680,7 @@ class _SupportChatViewerState extends State<_SupportChatViewer> {
           ),
         ),
 
-        // Reply bar with mode toggle
+        // Reply bar
         Container(
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -785,7 +784,6 @@ class _SupportChatViewerState extends State<_SupportChatViewer> {
   }
 }
 
-
 // ── Mode toggle chip ───────────────────────────────────────────────────
 class _ModeChip extends StatelessWidget {
   final String label;
@@ -817,16 +815,22 @@ class _ModeChip extends StatelessWidget {
   );
 }
 
+// ── Support Bubble with image support ─────────────────────────────────
 class _SupportBubble extends StatelessWidget {
-  final String text, sender, time;
+  final String text, image, sender, time;
   final bool isAdmin, isBot, isPrivate;
-  const _SupportBubble({required this.text, required this.sender,
-    required this.time, required this.isAdmin, required this.isBot,
-    this.isPrivate = false});
+  const _SupportBubble({
+    required this.text,
+    this.image = '',
+    required this.sender,
+    required this.time,
+    required this.isAdmin,
+    required this.isBot,
+    this.isPrivate = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Admin replies align right, user/bot align left
     final isRight = isAdmin;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -868,6 +872,30 @@ class _SupportBubble extends StatelessWidget {
                             : const Color(0xFF1A237E)),
                   ),
                 ),
+              // Display image if present
+              if (image.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: image.startsWith('data:image')
+                      ? Image.memory(
+                    base64Decode(image.split(',').last),
+                    height: 150,
+                    width: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) =>
+                    const Icon(Icons.broken_image, size: 40),
+                  )
+                      : Image.network(
+                    image,
+                    height: 150,
+                    width: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) =>
+                    const Icon(Icons.broken_image, size: 40),
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
               Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 14, vertical: 10),
@@ -910,7 +938,7 @@ class _SupportBubble extends StatelessWidget {
   }
 }
 
-// ── Private chat room (admin ↔ user/driver) ────────────────────────────
+// ── Private chat room ────────────────────────────────────────────────────
 class _ChatRoom extends StatefulWidget {
   final String targetUid, targetName, targetRole;
   const _ChatRoom({required this.targetUid, required this.targetName,
@@ -926,8 +954,6 @@ class _ChatRoomState extends State<_ChatRoom> {
 
   String get _adminUid  => FirebaseAuth.instance.currentUser?.uid ?? '';
   String get _chatId    => _sortedChatId(_adminUid, widget.targetUid);
-  // _ChatRoom is now exclusively for PRIVATE contact (not complaint panel)
-  // Both users and drivers use private_chats — users see this in their Admin Inbox
   String get _collection => 'private_chats';
   String get _docId      => _chatId;
 
@@ -1070,7 +1096,7 @@ class _ChatRoomState extends State<_ChatRoom> {
           ]),
         ),
 
-        // Private notice banner (users only)
+        // Private notice
         if (!isDriver)
           Container(
             padding: const EdgeInsets.symmetric(
@@ -1087,6 +1113,8 @@ class _ChatRoomState extends State<_ChatRoom> {
               )),
             ]),
           ),
+
+        // Quick templates
         Container(
           height: 46,
           color: Colors.white,
@@ -1161,14 +1189,19 @@ class _ChatRoomState extends State<_ChatRoom> {
                   final d    = docs[i].data() as Map<String, dynamic>;
                   final isMe = d['isAdmin'] == true;
                   final text = d['text']    ?? '';
+                  final image = d['image']  ?? '';
                   final sender = d['senderName'] ?? '';
                   final ts   = d['timestamp'] as Timestamp?;
                   final time = ts != null
                       ? TimeOfDay.fromDateTime(ts.toDate()).format(context)
                       : '';
                   return _PrivateBubble(
-                      text: text, time: time,
-                      isMe: isMe, sender: sender, grad: grad);
+                      text: text,
+                      image: image,
+                      time: time,
+                      isMe: isMe,
+                      sender: sender,
+                      grad: grad);
                 },
               );
             },
@@ -1233,12 +1266,19 @@ class _ChatRoomState extends State<_ChatRoom> {
   }
 }
 
+// ── Private Bubble with image support ─────────────────────────────────
 class _PrivateBubble extends StatelessWidget {
-  final String text, time, sender;
+  final String text, image, time, sender;
   final bool isMe;
   final List<Color> grad;
-  const _PrivateBubble({required this.text, required this.time,
-    required this.isMe, required this.sender, required this.grad});
+  const _PrivateBubble({
+    required this.text,
+    this.image = '',
+    required this.time,
+    required this.isMe,
+    required this.sender,
+    required this.grad,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1276,6 +1316,29 @@ class _PrivateBubble extends StatelessWidget {
                       fontSize: 10, fontWeight: FontWeight.w700,
                       color: grad.first)),
                 ),
+              if (image.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: image.startsWith('data:image')
+                      ? Image.memory(
+                    base64Decode(image.split(',').last),
+                    height: 150,
+                    width: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) =>
+                    const Icon(Icons.broken_image, size: 40),
+                  )
+                      : Image.network(
+                    image,
+                    height: 150,
+                    width: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) =>
+                    const Icon(Icons.broken_image, size: 40),
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
               Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 14, vertical: 10),

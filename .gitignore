@@ -4,3 +4,9 @@ build/
 .flutter-plugins-dependencies
 google-services.json
 ios/Runner/GoogleService-Info.plist 
+node_modules/
+*.log
+service-account*.json
+*.lnk
+git reset*
+.idea/

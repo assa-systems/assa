@@ -16,7 +16,6 @@ enum BiometricType { fingerprint, face, iris }
 
 class AuthService {
   final FirebaseAuth    _auth         = FirebaseAuth.instance;
-  final GoogleSignIn    _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
   final FirebaseFirestore _firestore  = FirebaseFirestore.instance;
   final Random          _rng          = Random.secure();
 
@@ -280,8 +279,9 @@ class AuthService {
 
   Future<Map<String, dynamic>> signInWithGoogle() async {
     try {
-      try { await _googleSignIn.signOut(); } catch (_) {}
-      final googleUser = await _googleSignIn.signIn();
+      final googleSignIn = GoogleSignIn();
+      try { await googleSignIn.signOut(); } catch (_) {}
+      final googleUser = await googleSignIn.signIn();
       if (googleUser == null) return {'success': false, 'error': ''};
 
       final googleAuth = await googleUser.authentication;
@@ -527,7 +527,7 @@ class AuthService {
   // ════════════════════════════════════════════════════════════════════
 
   Future<void> logout() async {
-    await _googleSignIn.signOut();
+    try { await GoogleSignIn().signOut(); } catch (_) {}
     await _auth.signOut();
   }
 

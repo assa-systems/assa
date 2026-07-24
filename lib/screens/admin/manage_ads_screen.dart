@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
 import 'package:assa/services/firestore_service.dart';
+import 'package:assa/services/storage_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:assa/widgets/common/common_widgets.dart';
 
@@ -15,12 +18,17 @@ class ManageAdsScreen extends StatefulWidget {
 
 class _ManageAdsScreenState extends State<ManageAdsScreen> {
   final _firestore  = FirestoreService();
+  final _storage    = StorageService();
   final _titleCtrl  = TextEditingController();
   final _bodyCtrl   = TextEditingController();
   final _linkCtrl   = TextEditingController();
   final _imageCtrl  = TextEditingController();
 
   bool  _isCreating = false;
+
+  // Device image upload (gallery/camera) — replaces Google Drive link paste
+  File? _pickedAdImage;
+  bool  _pickingImage = false;
 
   @override
   void initState() {
@@ -67,6 +75,7 @@ class _ManageAdsScreenState extends State<ManageAdsScreen> {
     _bodyCtrl.clear();
     _linkCtrl.clear();
     _imageCtrl.clear();
+    _pickedAdImage = null;
 
     showModalBottomSheet(
       context: context,
@@ -114,21 +123,61 @@ class _ManageAdsScreenState extends State<ManageAdsScreen> {
                 maxLines: 3),
             const SizedBox(height: 12),
 
-            // Image URL
-            CustomTextField(
-                label: 'Image URL (optional)',
-                hint: 'Paste Google Drive or direct image link',
-                controller: _imageCtrl,
-                prefixIcon: Icons.image_rounded,
-                keyboardType: TextInputType.url),
-            const SizedBox(height: 4),
-            const Padding(
-              padding: EdgeInsets.only(left: 4),
-              child: Text(
-                'Tip: Upload to Google Drive > Share > "Anyone with link" > paste link here',
-                style: TextStyle(fontSize: 10, color: AppColors.textHint),
+            // Image — picked directly from device (gallery or camera)
+            const Align(alignment: Alignment.centerLeft,
+              child: Text('Ad Image (optional)',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary)),
+            ),
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: _pickingImage ? null : () async {
+                setSt(() => _pickingImage = true);
+                try {
+                  final picked = await ImagePicker().pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: 75, maxWidth: 1600);
+                  if (picked != null) {
+                    setSt(() => _pickedAdImage = File(picked.path));
+                  }
+                } catch (_) {}
+                setSt(() => _pickingImage = false);
+              },
+              child: Container(
+                height: _pickedAdImage != null ? 150 : 56,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.adminColor, width: 1.5),
+                ),
+                child: _pickingImage
+                    ? const Center(child: CircularProgressIndicator(
+                    color: AppColors.adminColor, strokeWidth: 2))
+                    : _pickedAdImage != null
+                    ? ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: Image.file(_pickedAdImage!,
+                        fit: BoxFit.cover, width: double.infinity))
+                    : const Row(mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_photo_alternate_rounded,
+                          size: 20, color: AppColors.adminColor),
+                      SizedBox(width: 8),
+                      Text('Tap to choose photo from device',
+                          style: TextStyle(fontSize: 13,
+                              color: AppColors.adminColor,
+                              fontWeight: FontWeight.w600)),
+                    ]),
               ),
             ),
+            if (_pickedAdImage != null) ...[
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: () => setSt(() => _pickedAdImage = null),
+                child: const Text('Remove photo',
+                    style: TextStyle(fontSize: 11, color: AppColors.error)),
+              ),
+            ],
             const SizedBox(height: 12),
 
             // Link URL
@@ -139,43 +188,6 @@ class _ManageAdsScreenState extends State<ManageAdsScreen> {
                 prefixIcon: Icons.link_rounded,
                 keyboardType: TextInputType.url),
             const SizedBox(height: 20),
-
-            // Preview
-            ValueListenableBuilder(
-              valueListenable: _imageCtrl,
-              builder: (_, __, ___) {
-                final imgUrl = _toDirectUrl(_imageCtrl.text.trim());
-                if (imgUrl.isEmpty) return const SizedBox.shrink();
-                return Column(children: [
-                  const Align(alignment: Alignment.centerLeft,
-                    child: Text('Image Preview',
-                        style: TextStyle(fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary)),
-                  ),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: CachedNetworkImage(
-                      imageUrl: imgUrl,
-                      height: 120, width: double.infinity,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
-                          height: 120, color: Colors.grey.shade100,
-                          child: const Center(child: CircularProgressIndicator(
-                              strokeWidth: 2))),
-                      errorWidget: (_, __, ___) => Container(
-                          height: 50, color: Colors.grey.shade100,
-                          child: const Center(child: Text(
-                              'Cannot preview - ensure link is public',
-                              style: TextStyle(fontSize: 11,
-                                  color: Colors.grey)))),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ]);
-              },
-            ),
 
             CustomButton(
               text: 'Create Ad',
@@ -188,10 +200,27 @@ class _ManageAdsScreenState extends State<ManageAdsScreen> {
                 }
                 setSt(() => _isCreating = true);
                 final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+                // Upload picked device photo (if any) to Firebase Storage first
+                String uploadedImageUrl = '';
+                if (_pickedAdImage != null) {
+                  final adFolderId = 'ad_${DateTime.now().millisecondsSinceEpoch}';
+                  final uploadResult = await _storage.uploadAdImage(
+                    imageFile: _pickedAdImage!,
+                    adId: adFolderId,
+                  );
+                  if (uploadResult['success'] == true) {
+                    uploadedImageUrl = uploadResult['url'] as String? ?? '';
+                  } else if (mounted) {
+                    Helpers.showErrorSnackBar(context,
+                        uploadResult['error'] ?? 'Image upload failed.');
+                  }
+                }
+
                 final success = await _firestore.createAd(
                   title:     _titleCtrl.text.trim(),
                   body:      _bodyCtrl.text.trim(),
-                  imageUrl:  _toDirectUrl(_imageCtrl.text.trim()),
+                  imageUrl:  uploadedImageUrl,
                   linkUrl:   _linkCtrl.text.trim(),
                   createdBy: uid,
                 );

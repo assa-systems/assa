@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ============================================================
+  NETWORK SECURITY CONFIGURATION
+  Location: android/app/src/main/res/xml/network_security_config.xml
+  ============================================================
+  This file allows the app to communicate with the ESP32 AP
+  over plain HTTP (no HTTPS). Without this, Android 9+ blocks
+  all cleartext traffic even with usesCleartextTraffic="true".
+
+  The ESP32 AP at 192.168.4.1 does NOT support HTTPS (it's a
+  microcontroller serving a simple captive portal). Android
+  requires explicit permission for cleartext connections to
+  specific domains/IPs.
+  ============================================================
+-->
+<network-security-config>
+    <!-- Allow cleartext HTTP to ESP32 AP and localhost -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">192.168.4.1</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+
+    <!-- Default configuration: use system certificates -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -56,6 +56,8 @@ class DriverModel {
   final DateTime createdAt;
   final DateTime? approvedAt;
   final String? approvedBy; // uid of admin who approved
+  final int totalRatings;
+  final double averageRating;
 
   DriverModel({
     required this.uid,
@@ -73,6 +75,8 @@ class DriverModel {
     required this.createdAt,
     this.approvedAt,
     this.approvedBy,
+    this.totalRatings = 0,
+    this.averageRating = 0.0,
   }) : vehicleInfo = vehicleInfo ?? VehicleInfo();
 
   // ── From Firestore ─────────────────────────────────────────────────
@@ -99,6 +103,8 @@ class DriverModel {
           ? (map['approvedAt'] as Timestamp).toDate()
           : null,
       approvedBy: map['approvedBy'],
+      totalRatings: map['totalRatings'] as int? ?? 0,
+      averageRating: (map['averageRating'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -127,6 +133,8 @@ class DriverModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'approvedAt': approvedAt != null ? Timestamp.fromDate(approvedAt!) : null,
       'approvedBy': approvedBy,
+      'totalRatings': totalRatings,
+      'averageRating': averageRating,
     };
   }
 
@@ -147,6 +155,8 @@ class DriverModel {
     DateTime? createdAt,
     DateTime? approvedAt,
     String? approvedBy,
+    int? totalRatings,
+    double? averageRating,
   }) {
     return DriverModel(
       uid: uid ?? this.uid,
@@ -164,6 +174,8 @@ class DriverModel {
       createdAt: createdAt ?? this.createdAt,
       approvedAt: approvedAt ?? this.approvedAt,
       approvedBy: approvedBy ?? this.approvedBy,
+      totalRatings: totalRatings ?? this.totalRatings,
+      averageRating: averageRating ?? this.averageRating,
     );
   }
 

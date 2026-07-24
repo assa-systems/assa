@@ -6,6 +6,7 @@ import 'package:assa/firebase_options.dart';
 import 'package:assa/core/theme/app_theme.dart';
 import 'package:assa/screens/splash/splash_screen.dart';
 import 'package:assa/services/notification_service.dart';
+import 'package:assa/services/theme_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +22,10 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  // Load persisted theme choice before first frame so there's no flash
+  // of the wrong theme on launch.
+  await ThemeController.instance.init();
 
   try {
     await Firebase.initializeApp(
@@ -46,11 +51,22 @@ class AssaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ASSA',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const SplashScreen(),
+    // FIX: wrapped MaterialApp in an AnimatedBuilder listening to
+    // ThemeController so Theme screen changes apply instantly app-wide.
+    // AppTheme.lightTheme stays the default light theme exactly as
+    // before; darkTheme/themeMode are additive only.
+    return AnimatedBuilder(
+      animation: ThemeController.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'ASSA',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: ThemeData.dark(useMaterial3: false),
+          themeMode: ThemeController.instance.themeMode,
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }

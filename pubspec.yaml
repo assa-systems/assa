@@ -11,15 +11,15 @@ dependencies:
     sdk: flutter
 
   # Firebase
-  firebase_core: ^3.6.0
-  firebase_auth: ^5.3.1
-  firebase_messaging: ^15.2.10
-  flutter_local_notifications: ^17.2.2
-  cloud_firestore: ^5.4.4
-  firebase_storage: ^12.3.2
+  firebase_core: ^4.5.0
+  firebase_auth: ^6.2.0
+  firebase_messaging: ^16.1.2
+  flutter_local_notifications: ^21.0.0
+  cloud_firestore: ^6.3.0
+  firebase_storage: ^13.1.0
 
   # Google Sign-In
-  google_sign_in: ^6.2.0
+  google_sign_in: ^6.2.1
 
   # State Management
   provider: ^6.1.2
@@ -30,6 +30,7 @@ dependencies:
   # Network & Connectivity
   connectivity_plus: ^5.0.2
 
+
   # Image Handling
   image_picker: ^1.1.2
   cached_network_image: ^3.3.1
@@ -38,6 +39,7 @@ dependencies:
   intl: ^0.19.0
   uuid: ^4.3.3
   shared_preferences: ^2.2.3
+  wifi_iot: ^0.3.19
 
   # Security
   crypto: ^3.0.3
@@ -45,11 +47,20 @@ dependencies:
   # URL Launcher
   url_launcher: ^6.2.6
 
+  # splash _screen
+  video_player: ^2.8.3
 
+
+
+  # HTTP client (for FCM push API calls)
+  http: ^1.2.1
 
   # UI
   shimmer: ^3.0.0
   google_fonts: ^6.2.1
+  flutter_chess_board: ^1.0.1
+  chess: ^0.7.0
+  package_info_plus: ^10.2.1
 
 dev_dependencies:
   flutter_test:
