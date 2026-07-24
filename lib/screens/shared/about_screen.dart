@@ -174,9 +174,6 @@ class _AboutScreenState extends State<AboutScreen> {
     },
   ];
 
-  String _appVersion = '';
-  String _buildNumber = '';
-  bool _loadingVersion = true;
   bool _isAdmin = false;
   Map<String, String> _teamPhotos = {};
 
@@ -657,7 +654,32 @@ class _AcknowledgementTile extends StatelessWidget {
                 ),
                 Text(
                   role,
-             class _TeamMemberTile extends StatelessWidget {
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.primary.withOpacity(0.7),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  contribution,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── TEAM MEMBER TILE ──────────────────────────────────────────────────
+class _TeamMemberTile extends StatelessWidget {
   final String name, matric, role, bio, qualification, id;
   final String? photoUrl;
   final bool isAdmin;
@@ -898,33 +920,6 @@ class _AcknowledgementTile extends StatelessWidget {
           fontWeight: FontWeight.w800,
           color: AppColors.primary,
         ),
-      ),
-    );
-  }
-}              role,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.primary.withOpacity(0.7),
-                          fontWeight: FontWeight.w600,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  bio,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

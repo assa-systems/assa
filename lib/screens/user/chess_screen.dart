@@ -299,7 +299,7 @@ class _ChessScreenState extends State<ChessScreen> {
       final to = bestMove['to'] as List<int>;
 
       setState(() => _aiThinking = false);
-      _executeMove(from[0], from[1], to[0], to[1]);
+      _makeMove(from[0], from[1], to[0], to[1]);
     });
   }
 
