@@ -70,7 +70,7 @@ class _DataExportScreenState extends State<DataExportScreen>
       // Status breakdown
       final statusMap = <String, int>{};
       for (final d in allBookings) {
-        final data   = d.data() as Map<String, dynamic>;
+        final data   = d.data();
         final status = data['status'] as int? ?? 0;
         final label  = _statusLabel(status);
         statusMap[label] = (statusMap[label] ?? 0) + 1;
@@ -83,7 +83,7 @@ class _DataExportScreenState extends State<DataExportScreen>
         perDay[_dayLabel(day)] = 0;
       }
       for (final d in recentRides) {
-        final data = d.data() as Map<String, dynamic>;
+        final data = d.data();
         final ts   = data['timestamp'];
         if (ts == null) continue;
         final date = (ts as Timestamp).toDate();
@@ -94,7 +94,7 @@ class _DataExportScreenState extends State<DataExportScreen>
       // Route popularity (top destinations)
       final routeMap = <String, int>{};
       for (final d in allBookings) {
-        final data = d.data() as Map<String, dynamic>;
+        final data = d.data();
         final dest = data['destination']?.toString() ?? 'Unknown';
         if (dest.isNotEmpty && dest != 'Unknown') {
           routeMap[dest] = (routeMap[dest] ?? 0) + 1;

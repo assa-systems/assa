@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
 import 'package:assa/services/auth_service.dart';
@@ -20,7 +19,6 @@ import 'package:assa/screens/admin/admin_notifications_screen.dart';
 import 'package:assa/screens/admin/manage_admins_screen.dart';
 import 'package:assa/screens/admin/lost_found_admin_screen.dart';
 import 'package:assa/screens/admin/manage_puzzle_screen.dart';
-import 'package:assa/screens/admin/manage_game_questions_screen.dart';
 import 'package:assa/screens/shared/settings_screen.dart';
 import 'package:assa/screens/shared/about_screen.dart';
 
@@ -32,7 +30,6 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> {
   final _auth = AuthService();
-  final _firestore = FirestoreService();
   Map<String, dynamic>? _adminData;
   bool _isLoading = true;
   int _unreadNotifications = 0;

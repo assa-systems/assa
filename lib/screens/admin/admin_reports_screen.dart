@@ -328,7 +328,6 @@ class _ComplaintTile extends StatelessWidget {
       builder: (_, uSnap) {
         final ud   = uSnap.data?.data() as Map<String, dynamic>?;
         final name = ud?['name']  ?? 'User';
-        final email= ud?['email'] ?? '';
         return StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('support_chats').doc(chatId)

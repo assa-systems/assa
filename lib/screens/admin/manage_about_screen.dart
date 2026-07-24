@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
-import 'package:assa/widgets/common/common_widgets.dart';
 
 class ManageAboutScreen extends StatefulWidget {
   const ManageAboutScreen({super.key});

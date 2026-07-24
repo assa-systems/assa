@@ -62,13 +62,7 @@ class _ManageAdsScreenState extends State<ManageAdsScreen> {
     super.dispose();
   }
 
-  // Convert Google Drive share link to direct image URL
-  String _toDirectUrl(String url) {
-    if (!url.contains('drive.google.com')) return url;
-    final m = RegExp(r'(?:/file/d/|[?&]id=)([a-zA-Z0-9_-]+)').firstMatch(url);
-    if (m == null) return url;
-    return 'https://drive.google.com/uc?export=view&id=' + m.group(1)!;
-  }
+
 
   void _showCreateAdSheet() {
     _titleCtrl.clear();

@@ -9,16 +9,7 @@ import 'package:assa/core/utils/helpers.dart';
 import 'package:assa/services/storage_service.dart';
 import 'package:assa/widgets/common/common_widgets.dart';
 
-// Convert any Google Drive share link to a direct-loadable image URL
-String _toDirectImageUrl(String url) {
-  if (!url.contains('drive.google.com')) return url;
-  final fileIdMatch = RegExp(
-    r'(?:/file/d/|[?&]id=)([a-zA-Z0-9_-]+)',
-  ).firstMatch(url);
-  if (fileIdMatch == null) return url;
-  final fileId = fileIdMatch.group(1)!;
-  return 'https://drive.google.com/uc?export=view&id=' + fileId;
-}
+
 
 class ManagePuzzleScreen extends StatefulWidget {
   const ManagePuzzleScreen({super.key});
@@ -174,7 +165,6 @@ class _UploadSectionState extends State<_UploadSection> {
   final _storage   = StorageService();
 
   bool   _saving   = false;
-  bool   _urlValid = false;
 
   // Device image upload (gallery/camera) — replaces Google Drive link paste
   File? _pickedImage;
@@ -714,8 +704,7 @@ class _ScoreBoard extends StatelessWidget {
           ]));
         }
 
-        final topScore = (docs.first.data() as Map)['score'] as int? ?? 0;
-        final avgScore = docs.fold<int>(0, (s, d) => s + ((d.data() as Map)['score'] as int? ?? 0)) ~/ docs.length;
+
 
         return Column(children: [
           // Stats strip + reset button

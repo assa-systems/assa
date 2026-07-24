@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../core/constants/app_colors.dart';
 import '../../services/auth_service.dart';
-import '../../widgets/common/common_widgets.dart';
 import 'admin_dashboard.dart';
 
 class AdminPasscodeScreen extends StatefulWidget {

@@ -15,7 +15,6 @@ const _kAdminGrad   = [Color(0xFF4A148C), Color(0xFF7B1FA2), Color(0xFF9C27B0)];
 const _kDriverGrad  = [Color(0xFF0D47A1), Color(0xFF1565C0)];
 const _kSupportGrad = [Color(0xFF004D40), Color(0xFF00695C)];
 const _kUserColor   = Color(0xFF7B1FA2);
-const _kDriverColor = Color(0xFF1565C0);
 const _kSupportColor= Color(0xFF00695C);
 
 class AdminChatScreen extends StatefulWidget {
@@ -423,7 +422,6 @@ class _SupportTile extends StatelessWidget {
       builder: (_, userSnap) {
         final userData  = userSnap.data?.data() as Map<String, dynamic>?;
         final name      = userData?['name'] ?? 'User';
-        final email     = userData?['email'] ?? '';
 
         return StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
