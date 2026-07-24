@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:assa/core/constants/app_colors.dart';
 
@@ -27,54 +31,68 @@ class _AboutScreenState extends State<AboutScreen> {
   // Air Force Institute of Technology (AFIT), Kaduna
   static const List<Map<String, String>> _teamMembers = [
     {
+      'id': 'aminu',
       'name': 'Aminu Abdulrahman',
       'matric': 'U21TE1031',
       'role': 'Mobile App Developer / Team Lead & Integrator',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'bio': 'Led the team, built the cross-platform Flutter application, '
           'integrated Firebase backend, and ensured seamless communication '
           'between the mobile app and the LoRa network.',
     },
     {
+      'id': 'edet',
       'name': 'Edet Promise',
       'matric': 'U20TE1034',
       'role': 'Hardware Integration',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'bio': 'Developed and optimized the Arduino firmware for the Nano '
           'microcontrollers, focusing on LoRa communication stack and '
           'memory efficiency across all node types.',
     },
     {
+      'id': 'victor',
       'name': 'Adegoke Victor',
       'matric': 'U21TE1006',
       'role': 'Hardware Engineer',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'bio': 'Designed and assembled the hardware modules including the '
           'Gateway, Access Points, Repeater, and Shuttle Units.',
     },
     {
+      'id': 'abdulazeem',
       'name': 'Adegbola Abdulazeem Adebayo',
       'matric': 'U21TE1021',
       'role': 'UI/UX Designer & Frontend Developer',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'bio': 'Designed the user interface and user experience for the '
           'Flutter application, ensuring intuitive navigation and a '
           'polished visual design.',
     },
     {
+      'id': 'odedebumi',
       'name': 'Odebumi Adedayo Feyintoluwani',
       'matric': 'U21TE1043',
       'role': 'QA / Testing Engineer',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'bio': 'Conducted all system-level testing, including range tests, '
           'latency measurements, and end-to-end functional validation.',
     },
     {
+      'id': 'akaa',
       'name': 'Akaa Elisha Terzungwe',
       'matric': 'U21TE1044',
       'role': 'Networking Engineer',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'bio': 'Configured the LoRa radio parameters, performed duty-cycle '
           'analysis, and ensured NCC regulatory compliance.',
     },
     {
+      'id': 'okonkwo',
       'name': 'Okonkwo Micheal Chiemerie',
       'matric': 'U21TE1045',
       'role': 'Documentation / Technical Writer',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'bio': 'Authored the project report, prepared the technical '
           'documentation, and managed the project repository.',
     },
@@ -156,10 +174,73 @@ class _AboutScreenState extends State<AboutScreen> {
     },
   ];
 
+  String _appVersion = '';
+  String _buildNumber = '';
+  bool _loadingVersion = true;
+  bool _isAdmin = false;
+  Map<String, String> _teamPhotos = {};
+
   @override
   void initState() {
     super.initState();
+    _checkAdminRole();
+    _loadTeamPhotos();
     _loadVersion();
+  }
+
+  Future<void> _checkAdminRole() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (mounted && doc.exists && doc.data()?['role'] == 'admin') {
+        setState(() => _isAdmin = true);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadTeamPhotos() async {
+    try {
+      final snap = await FirebaseFirestore.instance.collection('team_members').get();
+      final map = <String, String>{};
+      for (final d in snap.docs) {
+        if (d.data().containsKey('photoUrl')) {
+          map[d.id] = d.data()['photoUrl'].toString();
+        }
+      }
+      if (mounted) setState(() => _teamPhotos = map);
+    } catch (_) {}
+  }
+
+  Future<void> _pickAndUploadPhoto(String memberId) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70, maxWidth: 600);
+      if (file == null) return;
+
+      final bytes = await file.readAsBytes();
+      final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      await FirebaseFirestore.instance.collection('team_members').doc(memberId).set({
+        'photoUrl': base64Image,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (mounted) {
+        setState(() {
+          _teamPhotos[memberId] = base64Image;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Member photo updated successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update photo: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _loadVersion() async {
@@ -180,7 +261,7 @@ class _AboutScreenState extends State<AboutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -328,10 +409,15 @@ class _AboutScreenState extends State<AboutScreen> {
                           ),
                         ),
                         ..._teamMembers.map((p) => _TeamMemberTile(
+                          id: p['id'] ?? '',
                           name: p['name'] ?? '',
                           matric: p['matric'] ?? '',
                           role: p['role'] ?? '',
+                          qualification: p['qualification'] ?? 'B.Eng Telecommunications Engineering (AFIT)',
                           bio: p['bio'] ?? '',
+                          photoUrl: _teamPhotos[p['id']],
+                          isAdmin: _isAdmin,
+                          onPickPhoto: () => _pickAndUploadPhoto(p['id'] ?? ''),
                         )),
                       ],
                     ),
@@ -571,106 +657,251 @@ class _AcknowledgementTile extends StatelessWidget {
                 ),
                 Text(
                   role,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.primary.withOpacity(0.7),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  contribution,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+             class _TeamMemberTile extends StatelessWidget {
+  final String name, matric, role, bio, qualification, id;
+  final String? photoUrl;
+  final bool isAdmin;
+  final VoidCallback? onPickPhoto;
 
-// ── TEAM MEMBER TILE ──────────────────────────────────────────────────
-class _TeamMemberTile extends StatelessWidget {
-  final String name, matric, role, bio;
   const _TeamMemberTile({
     required this.name,
     required this.matric,
     required this.role,
     required this.bio,
+    required this.qualification,
+    required this.id,
+    this.photoUrl,
+    this.isAdmin = false,
+    this.onPickPhoto,
   });
+
+  void _showZoomDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1B1F27),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SizedBox(
+                      width: 260,
+                      height: 260,
+                      child: InteractiveViewer(
+                        minScale: 0.8,
+                        maxScale: 4.0,
+                        child: photoUrl != null && photoUrl!.isNotEmpty
+                            ? (photoUrl!.startsWith('data:image')
+                                ? Image.memory(
+                                    base64Decode(photoUrl!.split(',').last),
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.network(
+                                    photoUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => _fallbackAvatar(),
+                                  ))
+                            : _fallbackAvatar(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    qualification,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Color(0xFF64B5F6), fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    role,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    bio,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white60, fontSize: 11, height: 1.5),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    '💡 Pinch image to zoom in up close',
+                    style: TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _fallbackAvatar() {
+    return Container(
+      color: AppColors.primary.withOpacity(0.2),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: Colors.white),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primary.withOpacity(0.12),
-            ),
-            child: Center(
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+    return GestureDetector(
+      onTap: () => _showZoomDialog(context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withOpacity(0.12),
                 ),
+                child: photoUrl != null && photoUrl!.isNotEmpty
+                    ? (photoUrl!.startsWith('data:image')
+                        ? Image.memory(base64Decode(photoUrl!.split(',').last), fit: BoxFit.cover)
+                        : Image.network(photoUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _avatarText()))
+                    : _avatarText(),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(4),
+                  Text(
+                    qualification,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          matric,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary.withOpacity(0.7),
+                          ),
+                        ),
                       ),
-                      child: Text(
-                        matric,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary.withOpacity(0.7),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          role,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.primary.withOpacity(0.7),
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    bio,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                  if (isAdmin && onPickPhoto != null) ...[
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: onPickPhoto,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.photo_camera_rounded, size: 14, color: AppColors.primary),
+                            SizedBox(width: 4),
+                            Text('Choose Photo from Device', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        role,
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _avatarText() {
+    return Center(
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : '?',
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+}              role,
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.primary.withOpacity(0.7),

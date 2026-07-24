@@ -62,8 +62,17 @@ class AssaApp extends StatelessWidget {
           title: 'ASSA',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
-          darkTheme: ThemeData.dark(useMaterial3: false),
+          darkTheme: AppTheme.darkTheme,
           themeMode: ThemeController.instance.themeMode,
+          builder: (context, child) {
+            final scale = ThemeController.instance.textScaleFactor;
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(scale),
+              ),
+              child: child!,
+            );
+          },
           home: const SplashScreen(),
         );
       },

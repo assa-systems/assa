@@ -357,8 +357,7 @@ class _RequestScreenState extends State<RequestScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Text(
-              'You are in offline mode. To send a request, connect '
-                  'to the campus ASSA-AP WiFi network first.',
+              'You can still book a ride offline! find a campus access point, connect to the ASSA-AP Hotspot, and submit your ride request. make sure to not disconnect until you received feedback.',
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
@@ -626,7 +625,7 @@ class _RequestScreenState extends State<RequestScreen> {
             Text(
               _isOnline
                   ? 'All campus locations available.'
-                  : 'Campus WiFi mode — all locations available without internet.',
+                  : 'You can still book a ride offline! find a campus access point, connect to the ASSA-AP Hotspot, and submit your ride request. make sure to not disconnect until you received feedback.',
               style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
           ]),

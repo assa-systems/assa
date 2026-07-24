@@ -20,6 +20,9 @@ class ThemeController extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.light;
   ThemeMode get themeMode => _themeMode;
 
+  double _textScaleFactor = 1.0;
+  double get textScaleFactor => _textScaleFactor;
+
   bool _loaded = false;
   bool get isLoaded => _loaded;
 
@@ -31,8 +34,10 @@ class ThemeController extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_prefsKey);
       _themeMode = _fromString(saved);
+      _textScaleFactor = prefs.getDouble('assa_text_scale') ?? 1.0;
     } catch (_) {
       _themeMode = ThemeMode.light;
+      _textScaleFactor = 1.0;
     }
     _loaded = true;
     notifyListeners();
@@ -44,6 +49,15 @@ class ThemeController extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKey, _toString(mode));
+    } catch (_) {}
+  }
+
+  Future<void> setTextScaleFactor(double factor) async {
+    _textScaleFactor = factor.clamp(1.0, 2.0);
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('assa_text_scale', _textScaleFactor);
     } catch (_) {}
   }
 

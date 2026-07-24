@@ -14,6 +14,7 @@ import 'package:assa/screens/user/puzzle_screen.dart';
 import 'package:assa/screens/user/lost_found_screen.dart';
 import 'package:assa/screens/user/notifications_screen.dart';
 import 'package:assa/screens/shared/settings_screen.dart';
+import 'package:assa/screens/shared/about_screen.dart';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Global key configuration mapping template tracking hooks
@@ -553,7 +554,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadDriverData,
@@ -721,19 +722,32 @@ class _DriverDashboardState extends State<DriverDashboard> {
   }
 
   Widget _buildQuickActions() {
-    return Row(children: [
-      Expanded(child: _ActionCard(
-        icon: Icons.extension_rounded, label: 'Weekly Puzzle',
-        subtitle: 'Slide tiles & earn pts', color: const Color(0xFF6A1B9A),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PuzzleScreen())),
-      )),
-      const SizedBox(width: 12),
-      Expanded(child: _ActionCard(
-        icon: Icons.search_rounded, label: 'Lost & Found',
-        subtitle: 'Report or find items', color: const Color(0xFF00695C),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserLostFoundScreen())),
-      )),
-    ]);
+    return Column(
+      children: [
+        Row(children: [
+          Expanded(child: _ActionCard(
+            icon: Icons.extension_rounded, label: 'Weekly Puzzle',
+            subtitle: 'Slide tiles & earn pts', color: const Color(0xFF6A1B9A),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PuzzleScreen())),
+          )),
+          const SizedBox(width: 12),
+          Expanded(child: _ActionCard(
+            icon: Icons.search_rounded, label: 'Lost & Found',
+            subtitle: 'Report or find items', color: const Color(0xFF00695C),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserLostFoundScreen())),
+          )),
+        ]),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: _ActionCard(
+            icon: Icons.info_outline_rounded, label: 'About ASSA',
+            subtitle: 'Meet team & application details', color: const Color(0xFF1565C0),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen())),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildPassengersSection(String uid, String shuttleId) {

@@ -227,4 +227,33 @@ class AppTheme {
       ),
     );
   }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF0D1117),
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFF42A5F5),
+        onPrimary: Colors.black,
+        secondary: Color(0xFF90CAF9),
+        surface: Color(0xFF161B22),
+        onSurface: Colors.white,
+        error: AppColors.error,
+      ),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF161B22),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF30363D), width: 0.5),
+        ),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF161B22),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+    );
+  }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/screens/shared/theme_screen.dart';
 import 'package:assa/screens/shared/about_screen.dart';
+import 'package:assa/services/theme_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -9,7 +10,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -25,6 +26,9 @@ class SettingsScreen extends StatelessWidget {
                     onTap: () => Navigator.push(context,
                         MaterialPageRoute(builder: (_) => const ThemeScreen())),
                   ),
+                  const SizedBox(height: 8),
+                  const _AccessibilityZoomTile(),
+                  const SizedBox(height: 8),
                   _SettingsTile(
                     icon: Icons.info_outline_rounded,
                     title: 'About ASSA',
@@ -130,6 +134,86 @@ class _SettingsTile extends StatelessWidget {
             const Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AccessibilityZoomTile extends StatefulWidget {
+  const _AccessibilityZoomTile();
+
+  @override
+  State<_AccessibilityZoomTile> createState() => _AccessibilityZoomTileState();
+}
+
+class _AccessibilityZoomTileState extends State<_AccessibilityZoomTile> {
+  @override
+  Widget build(BuildContext context) {
+    final scale = ThemeController.instance.textScaleFactor;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.zoom_in_rounded, color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Accessibility Zoom',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary)),
+                    Text('Enlarge text & UI up to ${(scale * 100).round()}%',
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+              Text('${(scale * 100).round()}%',
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.primary)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: AppColors.primary,
+              inactiveTrackColor: AppColors.primary.withOpacity(0.15),
+              thumbColor: AppColors.primary,
+            ),
+            child: Slider(
+              value: scale,
+              min: 1.0,
+              max: 2.0,
+              divisions: 10,
+              label: '${(scale * 100).round()}%',
+              onChanged: (newScale) {
+                setState(() {
+                  ThemeController.instance.setTextScaleFactor(newScale);
+                });
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

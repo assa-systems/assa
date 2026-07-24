@@ -21,6 +21,7 @@ import 'package:assa/screens/user/lost_found_screen.dart';
 import 'package:assa/screens/user/game_hub_screen.dart';
 import 'package:assa/widgets/common/ad_overlay.dart';
 import 'package:assa/services/offline_request_store.dart';
+import 'package:assa/screens/shared/about_screen.dart';
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -252,7 +253,7 @@ class _UserDashboardState extends State<UserDashboard> {
     final name = _userData?['name'] ?? 'User';
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -1106,6 +1107,14 @@ class _UserDashboardState extends State<UserDashboard> {
           onTap: () => Navigator.push(context,
               MaterialPageRoute(
                   builder: (_) => ReportScreen(userData: _userData))),
+        ),
+        _ActionCard(
+          title: 'About ASSA',
+          subtitle: 'Meet team & details',
+          icon: Icons.info_outline_rounded,
+          color: const Color(0xFF1565C0),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const AboutScreen())),
         ),
       ],
     );

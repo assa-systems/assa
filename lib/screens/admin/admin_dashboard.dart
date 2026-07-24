@@ -22,6 +22,7 @@ import 'package:assa/screens/admin/lost_found_admin_screen.dart';
 import 'package:assa/screens/admin/manage_puzzle_screen.dart';
 import 'package:assa/screens/admin/manage_game_questions_screen.dart';
 import 'package:assa/screens/shared/settings_screen.dart';
+import 'package:assa/screens/shared/about_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -657,6 +658,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
           icon: Icons.analytics_rounded,
           color: AppColors.textSecondary,
           onTap: () => _navigate(const DataExportScreen()),
+        ),
+        _AdminActionCard(
+          title: 'About ASSA',
+          subtitle: 'Meet team & project info',
+          icon: Icons.info_outline_rounded,
+          color: const Color(0xFF1565C0),
+          onTap: () => _navigate(const AboutScreen()),
         ),
       ],
     );

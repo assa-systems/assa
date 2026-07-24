@@ -35,6 +35,8 @@ class _ChessScreenState extends State<ChessScreen> {
   List<List<int>> _validMoves = [];
   bool _gameOver = false;
   String? _winnerLabel;
+  bool _vsAi = true;
+  bool _aiThinking = false;
 
   static String get _weekKey {
     final now = DateTime.now();
@@ -244,6 +246,61 @@ class _ChessScreenState extends State<ChessScreen> {
         _whiteTurn = !_whiteTurn;
       }
     });
+
+    if (!_whiteTurn && _vsAi && !_gameOver) {
+      _triggerAiMove();
+    }
+  }
+
+  void _triggerAiMove() {
+    if (_aiThinking || _gameOver || _whiteTurn) return;
+    setState(() => _aiThinking = true);
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted || _gameOver || _whiteTurn) return;
+
+      // Find all valid moves for Black
+      final blackMoves = <Map<String, dynamic>>[];
+      for (int r = 0; r < 8; r++) {
+        for (int c = 0; c < 8; c++) {
+          if (_colorOf(_board[r][c]) == 'b') {
+            final valid = _movesFor(r, c);
+            for (final m in valid) {
+              final targetPiece = _board[m[0]][m[1]];
+              int weight = 0;
+              if (targetPiece.isNotEmpty) {
+                switch (_typeOf(targetPiece)) {
+                  case 'K': weight = 1000; break;
+                  case 'Q': weight = 90; break;
+                  case 'R': weight = 50; break;
+                  case 'B': case 'N': weight = 30; break;
+                  case 'P': weight = 10; break;
+                }
+              }
+              blackMoves.add({'from': [r, c], 'to': m, 'weight': weight});
+            }
+          }
+        }
+      }
+
+      if (blackMoves.isEmpty) {
+        setState(() {
+          _aiThinking = false;
+          _gameOver = true;
+          _winnerLabel = 'White (Checkmate/No moves)';
+        });
+        return;
+      }
+
+      // Sort by capture value, then pick best
+      blackMoves.sort((a, b) => (b['weight'] as int).compareTo(a['weight'] as int));
+      final bestMove = blackMoves.first;
+      final from = bestMove['from'] as List<int>;
+      final to = bestMove['to'] as List<int>;
+
+      setState(() => _aiThinking = false);
+      _executeMove(from[0], from[1], to[0], to[1]);
+    });
   }
 
   Future<void> _recordWin() async {
@@ -299,15 +356,35 @@ class _ChessScreenState extends State<ChessScreen> {
                       const SizedBox(height: 16),
                       _buildBoard(),
                       const SizedBox(height: 20),
-                      OutlinedButton.icon(
-                        onPressed: _resetBoard,
-                        icon: const Icon(Icons.replay_rounded,
-                            size: 16, color: Colors.white70),
-                        label: const Text('New Game',
-                            style: TextStyle(color: Colors.white70)),
-                        style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.white24)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _resetBoard,
+                            icon: const Icon(Icons.replay_rounded,
+                                size: 16, color: Colors.white70),
+                            label: const Text('New Game',
+                                style: TextStyle(color: Colors.white70)),
+                            style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.white24)),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              setState(() => _vsAi = !_vsAi);
+                              _resetBoard();
+                            },
+                            icon: Icon(_vsAi ? Icons.smart_toy_rounded : Icons.people_rounded, size: 16),
+                            label: Text(_vsAi ? 'Mode: Vs AI' : 'Mode: 2 Players'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1565C0),
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 24),
+                      _buildHowToPlayBox(),
                     ],
                   ),
                 ),
@@ -315,6 +392,42 @@ class _ChessScreenState extends State<ChessScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHowToPlayBox() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.menu_book_rounded, color: Color(0xFF64B5F6), size: 18),
+              SizedBox(width: 8),
+              Text('How to Play Chess',
+                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          SizedBox(height: 10),
+          Text(
+            '• Objective: Capture the opponent\'s King (♔ / ♚) to win the game.\n'
+            '• Pawn (♙/♟): Moves forward 1 square (or 2 on initial move). Captures 1 square diagonally.\n'
+            '• Knight (♘/♞): Moves in an "L-shape" (2 squares one way, 1 square perpendicular). Can jump over pieces.\n'
+            '• Bishop (♗/♝): Moves diagonally any distance across open squares.\n'
+            '• Rook (♖/♜): Moves horizontally or vertically any distance across open squares.\n'
+            '• Queen (♕/♛): Combines Rook and Bishop moves (diagonals, rows, columns).\n'
+            '• King (♔/♚): Moves 1 square in any direction.\n'
+            '• Game Modes: Toggle between playing against AI Bot or same-device 2-player mode.',
+            style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.5),
+          ),
+        ],
       ),
     );
   }
