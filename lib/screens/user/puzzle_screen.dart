@@ -681,7 +681,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                 children: [
                   Text('THIS WEEK · ${_puzzleSize.label.toUpperCase()}',
                       style: const TextStyle(
-                          fontSize: 9,
+                          fontSize: 10,
                           color: Colors.white60,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.2)),
@@ -1065,7 +1065,7 @@ class _StatChip extends StatelessWidget {
             style: TextStyle(
                 fontSize: 13, fontWeight: FontWeight.w800, color: color)),
         Text(label,
-            style: const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
+            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
       ],
     );
   }
@@ -1413,7 +1413,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                         child: const Text('YOU',
                             style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 9,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w800)),
                       ),
                     ],
@@ -1427,7 +1427,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                             borderRadius: BorderRadius.circular(4)),
                         child: Text(gridLabel,
                             style: const TextStyle(
-                                fontSize: 9,
+                                fontSize: 10,
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w600)),
                       ),

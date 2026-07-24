@@ -658,7 +658,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-      child: Text(label, style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w600)),
+      child: Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
     );
   }
 
@@ -687,7 +687,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
             if (_unreadNotifs > 0)
               Positioned(top: 8, right: 8,
                   child: Container(width: 16, height: 16, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                      child: Center(child: Text('$_unreadNotifs', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700))))),
+                      child: Center(child: Text('$_unreadNotifs', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700))))),
           ]),
           IconButton(onPressed: _showSettingsSheet, icon: const Icon(Icons.settings_rounded, color: Colors.white, size: 26)),
         ]),
@@ -892,13 +892,13 @@ class _PassengerCard extends StatelessWidget {
                 color: data['requestType'] == 'offline' ? const Color(0xFFFFCA28).withOpacity(0.15) : AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(5),
               ),
-              child: Text((data['requestType'] ?? 'online').toUpperCase(), style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: data['requestType'] == 'offline' ? const Color(0xFFE65100) : AppColors.primary)),
+              child: Text((data['requestType'] ?? 'online').toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: data['requestType'] == 'offline' ? const Color(0xFFE65100) : AppColors.primary)),
             ),
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
-              child: Text(statusName.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color, letterSpacing: 0.5)),
+              child: Text(statusName.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color, letterSpacing: 0.5)),
             ),
           ]),
         ),

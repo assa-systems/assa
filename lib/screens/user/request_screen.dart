@@ -358,14 +358,14 @@ class _RequestScreenState extends State<RequestScreen> {
             ),
             child: const Text(
               'You are in offline mode. To send a request, connect '
-                  'to the campus AFIT KEKE WiFi network first.',
+                  'to the campus ASSA-AP WiFi network first.',
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 16),
           _StepTile('1', 'Open your phone WiFi settings'),
-          _StepTile('2', 'Connect to the AFIT KEKE WiFi network (named "ASSA-System")'),
+          _StepTile('2', 'Connect to the campus WiFi network (named "ASSA-AP")'),
           _StepTile('3', 'Wait 5 seconds, then return here'),
           _StepTile('4', 'Tap Send again'),
           const SizedBox(height: 8),
@@ -527,26 +527,46 @@ class _RequestScreenState extends State<RequestScreen> {
   // ─── UI Builders ──────────────────────────────────────────────────────
   Widget _buildHeader(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [Color(0xFF1565C0), Color(0xFF0D47A1)]),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.fromLTRB(8, 12, 16, 20),
+      padding: const EdgeInsets.fromLTRB(8, 14, 16, 22),
       child: Row(children: [
         IconButton(
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
         ),
         const Expanded(
-          child: Text('Book a Ride',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Book a Ride',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+              Text('Instant campus shuttle dispatch',
+                  style: TextStyle(color: Colors.white70, fontSize: 11)),
+            ],
+          ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.white.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.2)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(
@@ -555,10 +575,10 @@ class _RequestScreenState extends State<RequestScreen> {
                   : _isEsp32Reachable ? Icons.wifi_rounded : Icons.wifi_off_rounded,
               color: Colors.white, size: 12,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               _checkingConnectivity ? 'Checking...'
-                  : _isEsp32Reachable ? 'Campus Mode' : 'No WiFi',
+                  : _isEsp32Reachable ? 'ASSA-AP Mode' : 'No WiFi',
               style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
             ),
           ]),
@@ -794,6 +814,7 @@ class _OnlineFeedbackDialogState extends State<_OnlineFeedbackDialog> {
   Timer? _cancelTimer;
   int _status = 0;
   String _shuttleId = '';
+  String _pickupId = '';
 
   @override
   void initState() {
@@ -807,6 +828,7 @@ class _OnlineFeedbackDialogState extends State<_OnlineFeedbackDialog> {
       final d = snap.data() as Map<String, dynamic>;
       setState(() {
         _status = (d['status'] as int?) ?? 0;
+        _pickupId = (d['pickupId'] as String?) ?? (d['onlineUUID'] as String?) ?? '';
         final raw = d['shuttleIdFeedback'];
         _shuttleId = (raw != null && raw.toString().isNotEmpty && raw.toString() != '0')
             ? raw.toString() : '';
@@ -874,6 +896,13 @@ class _OnlineFeedbackDialogState extends State<_OnlineFeedbackDialog> {
                 : 'Request Sent!',
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
           ),
+          if (!noShuttle && _pickupId.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Online Mode  •  ID: $_pickupId',
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+            ),
+          ],
           if (noShuttle) ...[
             const SizedBox(height: 8),
             const Text(

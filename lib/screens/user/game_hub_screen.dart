@@ -35,7 +35,6 @@ class _GameHubScreenState extends State<GameHubScreen> {
 
   static const _games = [
     _GameMeta('puzzle', 'Puzzle', Icons.extension_rounded, const Color(0xFF6A1B9A)),
-    _GameMeta('quiz', 'Quiz', Icons.quiz_rounded, const Color(0xFF1565C0)),
     _GameMeta('chess', 'Chess', Icons.grid_on_rounded, const Color(0xFF37474F)),
     _GameMeta('block', 'Block Arrange', Icons.view_module_rounded, const Color(0xFF00897B)),
   ];

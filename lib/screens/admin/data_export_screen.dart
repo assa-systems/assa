@@ -534,7 +534,7 @@ class _BarChart extends StatelessWidget {
             return Expanded(child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
               child: Column(children: [
-                Text('${e.value}', style: TextStyle(fontSize: 9,
+                Text('${e.value}', style: TextStyle(fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color: e.value > 0 ? barColor : AppColors.textHint)),
                 const SizedBox(height: 4),
@@ -557,7 +557,7 @@ class _BarChart extends StatelessWidget {
           children: data.keys.map((k) => Expanded(
             child: Text(k.split(' ').first, // Just Mon/Tue/etc
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 9,
+                style: const TextStyle(fontSize: 10,
                     color: AppColors.textHint)),
           )).toList(),
         ),

@@ -661,7 +661,7 @@ class _TeamMemberTile extends StatelessWidget {
                       child: Text(
                         matric,
                         style: TextStyle(
-                          fontSize: 9,
+                          fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: AppColors.primary.withOpacity(0.7),
                         ),

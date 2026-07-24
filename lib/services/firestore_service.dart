@@ -11,6 +11,7 @@ import '../models/notification_model.dart';
 import 'esp32_service.dart';
 
 class FirestoreService {
+  static final FirestoreService instance = FirestoreService();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final Uuid _uuid = const Uuid();
 
@@ -515,7 +516,35 @@ class FirestoreService {
       }
       await batch.commit();
       return true;
-    } catch (_) { return false; }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteNotification(String notificationId) async {
+    try {
+      await _db.collection('notifications').doc(notificationId).delete();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteAllUserNotifications(String userId) async {
+    try {
+      final snap = await _db
+          .collection('notifications')
+          .where('userId', isEqualTo: userId)
+          .get();
+      final batch = _db.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   String generateNotificationId() => _uuid.v4();

@@ -154,7 +154,7 @@ Widget _StatChip(String label, String value, Color color) => Expanded(
     child: Column(children: [
       Text(value, style: TextStyle(fontSize: 16,
           fontWeight: FontWeight.w800, color: color)),
-      Text(label, style: const TextStyle(fontSize: 9,
+      Text(label, style: const TextStyle(fontSize: 10,
           color: AppColors.textSecondary)),
     ]),
   ),

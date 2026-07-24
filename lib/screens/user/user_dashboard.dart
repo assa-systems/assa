@@ -372,7 +372,7 @@ class _UserDashboardState extends State<UserDashboard> {
                             child: Text('$_unreadNotifications',
                                 style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 9,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w700))),
                       ),
                     ),
@@ -692,7 +692,7 @@ class _UserDashboardState extends State<UserDashboard> {
                         const Text('🚌  Ride Active',
                             style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 17,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w900)),
                         const SizedBox(height: 2),
                         Container(
@@ -824,7 +824,7 @@ class _UserDashboardState extends State<UserDashboard> {
                             Text('Shuttle ID:  $shuttleId',
                                 style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 22,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 1.5)),
                           ],
@@ -1071,7 +1071,7 @@ class _UserDashboardState extends State<UserDashboard> {
         ),
         _ActionCard(
           title: 'Game Hub',
-          subtitle: 'Play · Puzzle · Quiz · Tap',
+          subtitle: 'Play · Puzzle · Chess',
           icon: Icons.sports_esports_rounded,
           color: const Color(0xFF6A1B9A),
           onTap: _navigateToGameHub,
@@ -1243,7 +1243,7 @@ class _ActionCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(subtitle,
                             style: TextStyle(
-                                fontSize: 10.5,
+                                fontSize: 10,
                                 color: Colors.white.withOpacity(0.80),
                                 height: 1.3)),
                       ],
@@ -1516,7 +1516,7 @@ class _AdBillboard extends StatelessWidget {
                   child: const Text('AD',
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 9,
+                          fontSize: 10,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.5)),
                 ),
@@ -1540,7 +1540,7 @@ class _AdBillboard extends StatelessWidget {
                         Text('TAP TO OPEN',
                             style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 8,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.8)),
                       ],
@@ -1565,7 +1565,7 @@ class _AdBillboard extends StatelessWidget {
                             const Text('AFIT SHUTTLE',
                                 style: TextStyle(
                                     color: Colors.white70,
-                                    fontSize: 9,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 1.2)),
                           ],
@@ -1574,7 +1574,7 @@ class _AdBillboard extends StatelessWidget {
                       Text(title,
                           style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 17,
+                              fontSize: 18,
                               fontWeight: FontWeight.w900,
                               height: 1.2,
                               shadows: [

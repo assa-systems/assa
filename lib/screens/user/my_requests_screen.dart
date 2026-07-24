@@ -319,7 +319,7 @@ class _InlineAdBannerState extends State<_InlineAdBanner> {
                       borderRadius: BorderRadius.circular(4)),
                   child: const Text('AD',
                       style: TextStyle(color: Colors.white70,
-                          fontSize: 8, fontWeight: FontWeight.w800,
+                          fontSize: 10, fontWeight: FontWeight.w800,
                           letterSpacing: 1)),
                 ),
                 const SizedBox(height: 3),
@@ -421,7 +421,7 @@ class _RequestCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text('OFFLINE',
-                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700,
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
                         color: AppColors.pendingColor)),
               ),
             const Spacer(),
@@ -881,7 +881,7 @@ class _RequestDetailSheet extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                      fontSize: 8,
+                      fontSize: 10,
                       fontWeight: isCurrent
                           ? FontWeight.w700 : FontWeight.w400,
                       color: isCurrent

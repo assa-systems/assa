@@ -548,14 +548,14 @@ class _ImageHistory extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                        child: Text(gridLbl, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color)),
+                        child: Text(gridLbl, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color)),
                       ),
                       if (isActive) ...[
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: AppColors.successLight, borderRadius: BorderRadius.circular(4)),
-                          child: const Text('ACTIVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: AppColors.success)),
+                          child: const Text('ACTIVE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.success)),
                         ),
                       ],
                     ]),
@@ -792,7 +792,7 @@ class _ScoreBoard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(4)),
-                            child: Text(gLabel, style: const TextStyle(fontSize: 9, color: AppColors.textSecondary, fontWeight: FontWeight.w700)),
+                            child: Text(gLabel, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w700)),
                           ),
                         ],
                       ]),
@@ -805,7 +805,7 @@ class _ScoreBoard extends StatelessWidget {
                       GestureDetector(
                         onTap: () => _confirmDelete(context, doc.id, d['userName'] ?? 'Unknown'),
                         child: const Text('delete',
-                            style: TextStyle(fontSize: 9, color: AppColors.error,
+                            style: TextStyle(fontSize: 10, color: AppColors.error,
                                 decoration: TextDecoration.underline, decorationColor: AppColors.error)),
                       ),
                     ]),

@@ -204,7 +204,7 @@ class _QuestionCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(type == 'tf' ? 'TRUE/FALSE' : 'MCQ',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800,
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800,
                       color: type == 'tf' ? AppColors.success : AppColors.adminColor,
                       letterSpacing: 0.8)),
             ),
@@ -382,7 +382,7 @@ class _AddQuestionSheetState extends State<_AddQuestionSheet> {
                     borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 16),
             const Text('Add Quiz Question',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary)),
             const SizedBox(height: 20),
 

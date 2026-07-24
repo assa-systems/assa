@@ -643,7 +643,7 @@ class _AdminItemCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text((data['status'] ?? '').toUpperCase(),
-                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800,
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800,
                           color: data['status'] == 'Recovered'
                               ? AppColors.success : AppColors.warning)),
                 ),

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
 import 'package:assa/screens/user/report_screen.dart';
+import 'package:assa/services/firestore_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -47,7 +48,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _deleteNotification(String docId) async {
-    await FirebaseFirestore.instance.collection('notifications').doc(docId).delete();
+    try {
+      await FirestoreService.instance.deleteNotification(docId);
+    } catch (_) {}
   }
 
   Future<void> _deleteAll() async {
@@ -65,12 +68,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
     if (confirmed != true) return;
-    final snap = await FirebaseFirestore.instance
-        .collection('notifications').where('userId', isEqualTo: uid).get();
-    final batch = FirebaseFirestore.instance.batch();
-    for (final doc in snap.docs) batch.delete(doc.reference);
-    await batch.commit();
-    if (mounted) Helpers.showSuccessSnackBar(context, 'All notifications cleared.');
+    try {
+      await FirestoreService.instance.deleteAllUserNotifications(uid);
+      if (mounted) Helpers.showSuccessSnackBar(context, 'All notifications cleared.');
+    } catch (_) {
+      if (mounted) Helpers.showErrorSnackBar(context, 'Failed to clear notifications.');
+    }
   }
 
   void _openNotification(Map<String, dynamic> data, String docId) {
@@ -399,8 +402,9 @@ class _NotificationDetailSheet extends StatelessWidget {
         SizedBox(width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () async {
-              await FirebaseFirestore.instance
-                  .collection('notifications').doc(docId).delete();
+              try {
+                await FirestoreService.instance.deleteNotification(docId);
+              } catch (_) {}
               if (context.mounted) Navigator.pop(context);
             },
             icon: const Icon(Icons.delete_outline_rounded, size: 16),

@@ -223,7 +223,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         child: Text('$pendingDrivers',
                             style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 9,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w700))),
                   ),
                 ),
@@ -249,7 +249,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         child: Text('$_unreadNotifications',
                             style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 9,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w700))),
                   ),
                 ),
@@ -650,13 +650,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           icon: Icons.extension_rounded,
           color: const Color(0xFF6A1B9A),
           onTap: () => _navigate(const ManagePuzzleScreen()),
-        ),
-        _AdminActionCard(
-          title: 'Quiz Questions',
-          subtitle: 'Add MCQ & True/False',
-          icon: Icons.quiz_rounded,
-          color: const Color(0xFF1565C0),
-          onTap: () => _navigate(const ManageGameQuestionsScreen()),
         ),
         _AdminActionCard(
           title: 'Export Data',

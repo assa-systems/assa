@@ -215,7 +215,7 @@ class _AdFullScreen extends StatelessWidget {
                       Icon(Icons.campaign_rounded, color: Colors.white54, size: 11),
                       SizedBox(width: 4),
                       Text('ADVERTISEMENT', style: TextStyle(
-                          color: Colors.white54, fontSize: 9,
+                          color: Colors.white54, fontSize: 10,
                           fontWeight: FontWeight.w700, letterSpacing: 1.2)),
                     ]),
                   ),
@@ -384,7 +384,7 @@ class AdDashboardCard extends StatelessWidget {
                     border: Border.all(color: Colors.white30),
                   ),
                   child: const Text('AD', style: TextStyle(
-                      color: Colors.white, fontSize: 9,
+                      color: Colors.white, fontSize: 10,
                       fontWeight: FontWeight.w900, letterSpacing: 1.5)),
                 ),
                 const SizedBox(width: 4),

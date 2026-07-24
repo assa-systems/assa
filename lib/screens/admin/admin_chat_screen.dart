@@ -208,7 +208,7 @@ class _Header extends StatelessWidget {
                     color: Colors.white, fontSize: 16,
                     fontWeight: FontWeight.w900)),
                 const Text('chats', style: TextStyle(
-                    color: Colors.white70, fontSize: 9)),
+                    color: Colors.white70, fontSize: 10)),
               ]),
             );
           },
@@ -928,7 +928,7 @@ class _SupportBubble extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 3, left: 4, right: 4),
                 child: Text(time, style: const TextStyle(
-                    fontSize: 9.5, color: Colors.grey)),
+                    fontSize: 10, color: Colors.grey)),
               ),
             ],
           )),
@@ -1368,7 +1368,7 @@ class _PrivateBubble extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 3, left: 4, right: 4),
                 child: Text(time, style: const TextStyle(
-                    fontSize: 9.5, color: Colors.grey)),
+                    fontSize: 10, color: Colors.grey)),
               ),
             ],
           )),

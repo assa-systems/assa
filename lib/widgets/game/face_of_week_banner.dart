@@ -244,7 +244,7 @@ class FaceOfWeekBanner extends StatelessWidget {
               const Text('🏆 FACE OF THE WEEK',
                   style: TextStyle(
                       color: Color(0xFF3E2000),
-                      fontSize: 8,
+                      fontSize: 10,
                       fontWeight: FontWeight.w800)),
               Text(winner.userName,
                   style: const TextStyle(
