@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:assa/core/constants/app_colors.dart';
 
 // ════════════════════════════════════════════════════════════════════
@@ -103,34 +104,40 @@ class _AboutScreenState extends State<AboutScreen> {
     {
       'name': 'Engr. J. Raymond',
       'role': 'Project Supervisor',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'contribution': 'Whose sharp insight, patient guidance, and '
           'constructive advice steered this project from concept to reality.',
     },
     {
       'name': 'Squadron Leader O.K. Olatunji',
       'role': 'Head of Department',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'contribution': 'For his invaluable support throughout the '
           'implementation of this project.',
     },
     {
       'name': 'Engr. Christopher A. Alabi',
       'role': 'Project Coordinator',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'contribution': 'Whose contributions played a major role in shaping '
           'this project into a polished, presentable work.',
     },
     {
       'name': 'Engr. Dr. F.C. Njoku',
       'role': 'Level Adviser',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'contribution': 'For his guidance throughout our academic journey.',
-    },
-    {
-      'name': 'Engr. Dr. Z. Augustine',
-      'role': 'Lecturer',
-      'contribution': 'For the knowledge imparted throughout our studies.',
     },
     {
       'name': 'Mrs. O.O. Adekogba',
       'role': 'Lecturer',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
+      'contribution': 'For the knowledge imparted throughout our studies.',
+    },
+    {
+      'name': 'Engr. Dr. Z. Augustine',
+      'role': 'Lecturer',
+      'qualification': 'B.Eng Telecommunications Engineering (AFIT)',
       'contribution': 'For the knowledge imparted throughout our studies.',
     },
   ];
@@ -205,6 +212,15 @@ class _AboutScreenState extends State<AboutScreen> {
           map[d.id] = d.data()['photoUrl'].toString();
         }
       }
+      // Merge with local fallback overrides
+      final prefs = await SharedPreferences.getInstance();
+      for (final member in _teamMembers) {
+        final id = member['id'] ?? '';
+        final localPhoto = prefs.getString('local_team_photo_$id');
+        if (localPhoto != null && localPhoto.isNotEmpty) {
+          map[id] = localPhoto;
+        }
+      }
       if (mounted) setState(() => _teamPhotos = map);
     } catch (_) {}
   }
@@ -212,29 +228,47 @@ class _AboutScreenState extends State<AboutScreen> {
   Future<void> _pickAndUploadPhoto(String memberId) async {
     try {
       final picker = ImagePicker();
-      final XFile? file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70, maxWidth: 600);
+      final XFile? file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50, maxWidth: 350);
       if (file == null) return;
 
       final bytes = await file.readAsBytes();
       final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
 
-      await FirebaseFirestore.instance.collection('team_members').doc(memberId).set({
-        'photoUrl': base64Image,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      // Always save locally so updating works instantly on-device
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('local_team_photo_$memberId', base64Image);
+      } catch (_) {}
 
       if (mounted) {
         setState(() {
           _teamPhotos[memberId] = base64Image;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Member photo updated successfully!')),
-        );
+      }
+
+      // Try uploading to Cloud Firestore
+      try {
+        await FirebaseFirestore.instance.collection('team_members').doc(memberId).set({
+          'photoUrl': base64Image,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Member photo updated & synced successfully!')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Member photo updated on device! (Cloud sync requires admin role)')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update photo: $e')),
+          SnackBar(content: Text('Failed to select photo: $e')),
         );
       }
     }

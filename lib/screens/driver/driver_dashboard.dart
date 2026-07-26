@@ -117,11 +117,13 @@ bool _canReach(String from, String to) {
 Map<String, List<Map<String, dynamic>>> _groupPendingRequests(List<Map<String, dynamic>> requests) {
   final Map<String, List<Map<String, dynamic>>> groups = {};
   for (final req in requests) {
-    final dest = req['destination'] ?? '';
-    final pickup = req['pickupLocation'] ?? '';
+    final dest = (req['destination'] as String?) ?? 'Unknown';
+    final pickup = (req['pickupLocation'] as String?) ?? 'Unknown';
     bool added = false;
     for (final key in groups.keys) {
-      final groupDest = key.split('_')[1];
+      final parts = key.split('_');
+      if (parts.length < 2) continue;
+      final groupDest = parts[1];
       if (groupDest != dest) continue;
       if (_canReach(pickup, groupDest)) {
         groups[key]!.add(req);
@@ -136,13 +138,14 @@ Map<String, List<Map<String, dynamic>>> _groupPendingRequests(List<Map<String, d
   }
   final locs = Esp32Service.allLocations;
   for (final key in groups.keys) {
-    final dest = key.split('_')[1];
+    final parts = key.split('_');
+    final dest = parts.length >= 2 ? parts[1] : '';
     final destIndex = locs.indexOf(dest);
     groups[key]!.sort((a, b) {
       final aIndex = locs.indexOf(a['pickupLocation'] ?? '');
       final bIndex = locs.indexOf(b['pickupLocation'] ?? '');
-      final aDist = (destIndex - aIndex).abs();
-      final bDist = (destIndex - bIndex).abs();
+      final aDist = destIndex >= 0 && aIndex >= 0 ? (destIndex - aIndex).abs() : 0;
+      final bDist = destIndex >= 0 && bIndex >= 0 ? (destIndex - bIndex).abs() : 0;
       return aDist.compareTo(bDist);
     });
   }
@@ -587,12 +590,13 @@ class _DriverDashboardState extends State<DriverDashboard> {
   }
 
   Widget _buildGroupCard(String groupKey, List<Map<String, dynamic>> group) {
+    if (group.isEmpty) return const SizedBox.shrink();
     final first = group.first;
-    final pickup = first['pickupLocation'];
-    final dest = first['destination'];
+    final pickup = (first['pickupLocation'] as String?) ?? 'Unknown Pickup';
+    final dest = (first['destination'] as String?) ?? 'Unknown Destination';
     final totalPax = group.fold<int>(0, (sum, r) => sum + ((r['passengerCount'] as int?) ?? 1));
-    final pickupIds = group.map((r) => r['pickupId'] as String? ?? '???').join(', ');
-    final requestTypes = group.map((r) => r['requestType'] as String? ?? 'online').toSet();
+    final pickupIds = group.map((r) => (r['pickupId'] as String?) ?? '???').join(', ');
+    final requestTypes = group.map((r) => (r['requestType'] as String?) ?? 'online').toSet();
     final hasOnline = requestTypes.contains('online');
     final hasOffline = requestTypes.contains('offline');
 
@@ -780,12 +784,21 @@ class _DriverDashboardState extends State<DriverDashboard> {
           }
           var docs = snapshot.data?.docs ?? [];
           docs.sort((a, b) {
-            final at = (a.data() as Map)['timestamp'];
-            final bt = (b.data() as Map)['timestamp'];
-            if (at == null && bt == null) return 0;
-            if (at == null) return 1;
-            if (bt == null) return -1;
-            return (bt as Timestamp).compareTo(at as Timestamp);
+            try {
+              final aData = a.data() as Map<String, dynamic>?;
+              final bData = b.data() as Map<String, dynamic>?;
+              final at = aData?['timestamp'];
+              final bt = bData?['timestamp'];
+              if (at == null && bt == null) return 0;
+              if (at == null) return 1;
+              if (bt == null) return -1;
+              if (at is Timestamp && bt is Timestamp) {
+                return bt.compareTo(at);
+              }
+              return 0;
+            } catch (_) {
+              return 0;
+            }
           });
           if (_statusFilter == 'Active') {
             docs = docs.where((d) {
