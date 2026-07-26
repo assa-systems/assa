@@ -239,7 +239,20 @@ class AppTheme {
         secondary: Color(0xFF90CAF9),
         surface: Color(0xFF161B22),
         onSurface: Colors.white,
+        onSurfaceVariant: Color(0xFFC9D1D9),
         error: AppColors.error,
+      ),
+      textTheme: const TextTheme(
+        headlineLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+        headlineMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+        headlineSmall: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontFamily: 'Poppins'),
+        titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontFamily: 'Poppins'),
+        titleMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontFamily: 'Poppins'),
+        titleSmall: TextStyle(color: Color(0xFFC9D1D9), fontFamily: 'Poppins'),
+        bodyLarge: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+        bodyMedium: TextStyle(color: Color(0xFFE6EDF3), fontFamily: 'Poppins'),
+        bodySmall: TextStyle(color: Color(0xFF8B949E), fontFamily: 'Poppins'),
+        labelLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontFamily: 'Poppins'),
       ),
       cardTheme: CardThemeData(
         color: const Color(0xFF161B22),
@@ -253,6 +266,22 @@ class AppTheme {
         backgroundColor: Color(0xFF161B22),
         foregroundColor: Colors.white,
         elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: const Color(0xFF161B22),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+        contentTextStyle: const TextStyle(color: Color(0xFFE6EDF3), fontSize: 14, fontFamily: 'Poppins'),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Color(0xFF161B22),
+        modalBackgroundColor: Color(0xFF161B22),
+      ),
+      listTileTheme: const ListTileThemeData(
+        titleTextStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontFamily: 'Poppins'),
+        subtitleTextStyle: TextStyle(color: Color(0xFF8B949E), fontFamily: 'Poppins'),
+        iconColor: Color(0xFF42A5F5),
       ),
     );
   }

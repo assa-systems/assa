@@ -90,7 +90,7 @@ class _ManageDriversScreenState extends State<ManageDriversScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(children: [
           _buildHeader(context),

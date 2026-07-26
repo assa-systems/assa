@@ -73,7 +73,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen>
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(children: [
           _buildHeader(context),

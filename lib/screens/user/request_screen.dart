@@ -421,7 +421,7 @@ class _RequestScreenState extends State<RequestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: LoadingOverlay(
         isLoading: _isLoading,
         message: 'Sending your request...',

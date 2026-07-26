@@ -84,4 +84,20 @@ class AppColors {
     end: Alignment.bottomRight,
     colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
   );
+
+  // ── Dynamic Theme Helpers ─────────────────────────────────────────
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color getTextPrimary(BuildContext context) =>
+      isDark(context) ? Colors.white : textPrimary;
+
+  static Color getTextSecondary(BuildContext context) =>
+      isDark(context) ? const Color(0xFFC9D1D9) : textSecondary;
+
+  static Color getSurfaceColor(BuildContext context) =>
+      isDark(context) ? const Color(0xFF161B22) : surface;
+
+  static Color getCardBorder(BuildContext context) =>
+      isDark(context) ? const Color(0xFF30363D) : cardBorder;
 }

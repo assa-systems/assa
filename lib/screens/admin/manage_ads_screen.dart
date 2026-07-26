@@ -261,7 +261,7 @@ class _ManageAdsScreenState extends State<ManageAdsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreateAdSheet,
         backgroundColor: AppColors.adminColor,

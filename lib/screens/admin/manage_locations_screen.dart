@@ -110,7 +110,7 @@ class _ManageLocationsScreenState extends State<ManageLocationsScreen>
   Widget build(BuildContext context) {
     final isOnlineTab = _tabController.index == 0;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       floatingActionButton: isOnlineTab
           ? FloatingActionButton(
         onPressed: _showAddSheet,

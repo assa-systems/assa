@@ -116,7 +116,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final name = _adminData?['name'] ?? 'Admin';
     final pendingDrivers = (_adminData?['pendingDrivers'] ?? 0) as int;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadData,

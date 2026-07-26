@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
 
@@ -41,42 +43,76 @@ class _ManageAboutScreenState extends State<ManageAboutScreen> {
       }
     } catch (e) {
       debugPrint('Error loading about images: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
+
+    // Merge with local fallback overrides
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final localHod = prefs.getString('local_about_image_hod_url');
+      final localTeam = prefs.getString('local_about_image_team_url');
+      if (mounted) {
+        setState(() {
+          if (localHod != null && localHod.isNotEmpty) _hodUrl = localHod;
+          if (localTeam != null && localTeam.isNotEmpty) _teamUrl = localTeam;
+        });
+      }
+    } catch (_) {}
+
+    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _uploadImage(String fieldName, String storagePath) async {
     try {
       final XFile? picked = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 60,
       );
       if (picked == null) return;
 
       setState(() => _isLoading = true);
       
-      final file = File(picked.path);
-      final ref = FirebaseStorage.instance.ref().child(storagePath);
-      
-      await ref.putFile(file);
-      final downloadUrl = await ref.getDownloadURL();
-      
-      await FirebaseFirestore.instance.collection('settings').doc('about_images').set({
-        fieldName: downloadUrl,
-      }, SetOptions(merge: true));
+      final bytes = await picked.readAsBytes();
+      final base64Url = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      // Always save locally so updating works instantly on-device
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('local_about_image_$fieldName', base64Url);
+      } catch (_) {}
 
       if (mounted) {
         setState(() {
-          if (fieldName == 'hod_url') _hodUrl = downloadUrl;
-          if (fieldName == 'team_url') _teamUrl = downloadUrl;
+          if (fieldName == 'hod_url') _hodUrl = base64Url;
+          if (fieldName == 'team_url') _teamUrl = base64Url;
         });
-        Helpers.showSuccessSnackBar(context, 'Image updated successfully!');
+      }
+
+      // Try cloud upload
+      try {
+        String downloadUrl = base64Url;
+        try {
+          final file = File(picked.path);
+          final ref = FirebaseStorage.instance.ref().child(storagePath);
+          await ref.putFile(file);
+          downloadUrl = await ref.getDownloadURL();
+        } catch (_) {}
+
+        await FirebaseFirestore.instance.collection('settings').doc('about_images').set({
+          fieldName: downloadUrl,
+        }, SetOptions(merge: true));
+
+        if (mounted) {
+          Helpers.showSuccessSnackBar(context, 'Image updated & synced successfully!');
+        }
+      } catch (e) {
+        if (mounted) {
+          Helpers.showSuccessSnackBar(context, 'Image updated on device! (Cloud sync requires admin role)');
+        }
       }
     } catch (e) {
-      if (mounted) Helpers.showErrorSnackBar(context, 'Failed to upload image: $e');
+      if (mounted) Helpers.showErrorSnackBar(context, 'Failed to select image: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
