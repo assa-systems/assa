@@ -206,6 +206,17 @@ class _AboutScreenState extends State<AboutScreen> {
     super.dispose();
   }
 
+  Future<void> _checkAdminRole() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (mounted && doc.exists && doc.data()?['role'] == 'admin') {
+        setState(() => _isAdmin = true);
+      }
+    } catch (_) {}
+  }
+
   void _listenToAboutImages() {
     _aboutImagesSub = FirebaseFirestore.instance
         .collection('settings')
