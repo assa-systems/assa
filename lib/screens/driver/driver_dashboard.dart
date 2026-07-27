@@ -15,6 +15,7 @@ import 'package:assa/screens/user/lost_found_screen.dart';
 import 'package:assa/screens/user/notifications_screen.dart';
 import 'package:assa/screens/shared/settings_screen.dart';
 import 'package:assa/screens/shared/about_screen.dart';
+import 'package:assa/services/offline_request_store.dart';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Global key configuration mapping template tracking hooks
@@ -171,6 +172,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
   StreamSubscription<QuerySnapshot>? _requestSub;
   // FIX: Changed from QuerySnapshot to DocumentSnapshot
   StreamSubscription<DocumentSnapshot>? _shuttleStatusSub;
+  Timer? _offlinePollTimer;
 
   @override
   void initState() {
@@ -178,13 +180,49 @@ class _DriverDashboardState extends State<DriverDashboard> {
     _loadDriverData();
     _listenToRequests();
     _listenToShuttleStatus();
+    _startOfflinePolling();
   }
 
   @override
   void dispose() {
     _requestSub?.cancel();
     _shuttleStatusSub?.cancel();
+    _offlinePollTimer?.cancel();
     super.dispose();
+  }
+
+  void _startOfflinePolling() {
+    _offlinePollTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
+      if (!mounted) return;
+      try {
+        final isConnected = await Esp32Service.instance.isConnectedToEsp32();
+        if (!isConnected) return;
+
+        final offlineReqs = await Esp32Service.instance.fetchOfflineRequestsFromEsp32();
+        if (offlineReqs.isEmpty) return;
+
+        bool hasNew = false;
+        final existingIds = _allPending.map((r) => r['id']?.toString() ?? r['pickupId']?.toString() ?? '').toSet();
+
+        for (final oReq in offlineReqs) {
+          final oId = oReq['id']?.toString() ?? oReq['pickupId']?.toString() ?? '';
+          if (oId.isNotEmpty && !existingIds.contains(oId)) {
+            _allPending.add(oReq);
+            hasNew = true;
+          }
+        }
+
+        if (hasNew && mounted) {
+          HapticFeedback.heavyImpact();
+          setState(() {
+            _groups = _groupPendingRequests(_allPending);
+          });
+          showToast('📶 New Offline Request received via ASSA-AP WiFi!', 'success');
+        }
+      } catch (e) {
+        debugPrint('Offline poll error: $e');
+      }
+    });
   }
 
   void _listenToRequests() {
@@ -323,6 +361,31 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     final driverName = _driverData?['name'] ?? 'Driver';
 
+    final isOfflineGroup = group.any((r) => r['requestType'] == 'offline');
+    if (isOfflineGroup) {
+      final publicShuttleId = Esp32Service.getPublicShuttleId(shuttleId);
+      for (final req in group) {
+        final bookingId = req['id']?.toString() ?? req['pickupId']?.toString() ?? '';
+        if (bookingId.isNotEmpty) {
+          await Esp32Service.instance.sendOfflineStatusUpdateToEsp32(
+            bookingId: bookingId,
+            status: 2, // Accepted
+            shuttleId: publicShuttleId,
+          );
+          await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.accepted, publicShuttleId);
+        }
+      }
+      if (mounted) {
+        hideLoading(context);
+        showToast('📶 Accepted ${group.length} offline request(s) via ASSA-AP WiFi!', 'success');
+        setState(() {
+          _allPending.removeWhere((r) => group.any((g) => g['id'] == r['id']));
+          _groups = _groupPendingRequests(_allPending);
+        });
+        return;
+      }
+    }
+
     try {
       final batch = FirebaseFirestore.instance.batch();
       for (final req in group) {
@@ -399,6 +462,31 @@ class _DriverDashboardState extends State<DriverDashboard> {
     if (confirmed != true) return;
     if (mounted) showLoading(context, 'Rejecting...');
 
+    final isOfflineGroup = group.any((r) => r['requestType'] == 'offline');
+    if (isOfflineGroup) {
+      final publicShuttleId = Esp32Service.getPublicShuttleId(_driverData?['shuttleId'] ?? '');
+      for (final req in group) {
+        final bookingId = req['id']?.toString() ?? req['pickupId']?.toString() ?? '';
+        if (bookingId.isNotEmpty) {
+          await Esp32Service.instance.sendOfflineStatusUpdateToEsp32(
+            bookingId: bookingId,
+            status: 4, // Rejected
+            shuttleId: publicShuttleId,
+          );
+          await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.rejected, publicShuttleId);
+        }
+      }
+      if (mounted) {
+        hideLoading(context);
+        showToast('Rejected ${group.length} offline request(s)', 'error');
+        setState(() {
+          _allPending.removeWhere((r) => group.any((g) => g['id'] == r['id']));
+          _groups = _groupPendingRequests(_allPending);
+        });
+        return;
+      }
+    }
+
     try {
       final batch = FirebaseFirestore.instance.batch();
       for (final req in group) {
@@ -461,7 +549,33 @@ class _DriverDashboardState extends State<DriverDashboard> {
     }
   }
 
-  Future<void> _updatePassengerStatus(String requestId, int newStatus, String userId) async {
+  Future<void> _updatePassengerStatus(String requestId, int newStatus, String userId, [Map<String, dynamic>? data]) async {
+    final isOffline = data?['requestType'] == 'offline';
+    if (isOffline) {
+      final bookingId = requestId;
+      final shuttleId = Esp32Service.getPublicShuttleId(_driverData?['shuttleId'] ?? '');
+      await Esp32Service.instance.sendOfflineStatusUpdateToEsp32(
+        bookingId: bookingId,
+        status: newStatus,
+        shuttleId: shuttleId,
+      );
+
+      OfflineStatus offStatus;
+      if (newStatus == 3) {
+        offStatus = OfflineStatus.confirmed;
+      } else if (newStatus == 4) {
+        offStatus = OfflineStatus.completed;
+      } else if (newStatus == 5) {
+        offStatus = OfflineStatus.rejected;
+      } else {
+        offStatus = OfflineStatus.accepted;
+      }
+
+      await OfflineRequestStore.instance.updateStatus(bookingId, offStatus, shuttleId);
+      showToast('📶 Offline Feedback sent to passenger via ASSA-AP WiFi!', 'success');
+      return;
+    }
+
     final statusName = Esp32Service.getStatusName(newStatus);
     try {
       await FirebaseFirestore.instance.collection('ride_requests').doc(requestId).update({
@@ -819,7 +933,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
             return _PassengerCard(
               requestId: doc.id,
               data: data,
-              onUpdateStatus: (newStatus) => _updatePassengerStatus(doc.id, newStatus, data['userId'] ?? ''),
+              onUpdateStatus: (newStatus) => _updatePassengerStatus(doc.id, newStatus, data['userId'] ?? '', data),
             );
           }).toList());
         },

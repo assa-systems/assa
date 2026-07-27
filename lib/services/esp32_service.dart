@@ -382,6 +382,120 @@ class Esp32Service {
     }
   }
 
+  // ─── DRIVER: Fetch pending offline requests from ESP32 AP ──────────────
+  Future<List<Map<String, dynamic>>> fetchOfflineRequestsFromEsp32() async {
+    await _forceWifi(true);
+    try {
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 3)
+        ..idleTimeout = const Duration(seconds: 3);
+
+      final request = await client
+          .getUrl(Uri.parse('http://$esp32IpAddress:$esp32Port$pollEndpoint'))
+          .timeout(const Duration(seconds: 3));
+
+      final response = await request.close().timeout(const Duration(seconds: 3));
+      final body = await response.transform(utf8.decoder).join();
+      client.close();
+
+      if (response.statusCode == 200 && body.trim().isNotEmpty) {
+        final List<Map<String, dynamic>> results = [];
+        try {
+          final msgs = jsonDecode(body) as List<dynamic>;
+          for (final msg in msgs) {
+            if (msg is Map<String, dynamic> && (msg['t'] == 'REQ' || msg['type'] == 'REQ')) {
+              final String pay = msg['pay']?.toString() ?? '';
+              final parts = pay.split('|');
+              // Format: BookingID|UserName|PickupID|PickupCode|DestCode|RideType|Pax
+              if (parts.length >= 5) {
+                final bookingId = parts[0];
+                final userName = parts[1].isNotEmpty ? parts[1] : 'Offline Passenger';
+                final pid = parts[2].isNotEmpty ? parts[2] : bookingId;
+                final pc = int.tryParse(parts[3]) ?? 1;
+                final dc = int.tryParse(parts[4]) ?? 1;
+                final rt = parts.length >= 6 ? (int.tryParse(parts[5]) == 1 ? 'Chartered' : 'Shared') : 'Shared';
+                final pax = parts.length >= 7 ? (int.tryParse(parts[6]) ?? 1) : 1;
+
+                String pickupName = 'AFIT Gates';
+                String destName = 'AFIT Gates';
+                locationCodeMap.forEach((name, code) {
+                  if (code == pc) pickupName = name;
+                  if (code == dc) destName = name;
+                });
+
+                results.add({
+                  'id': bookingId,
+                  'pickupId': pid,
+                  'userName': userName,
+                  'pickupLocation': pickupName,
+                  'destination': destName,
+                  'rideTypeName': rt,
+                  'passengerCount': pax,
+                  'requestType': 'offline',
+                  'status': 0, // Pending
+                  'timestamp': DateTime.now(),
+                });
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Error parsing offline requests: $e');
+        }
+        return results;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Fetch offline requests error: $e');
+      return [];
+    } finally {
+      await _forceWifi(false);
+    }
+  }
+
+  // ─── DRIVER: Send offline status feedback to ESP32 AP ────────────────
+  Future<bool> sendOfflineStatusUpdateToEsp32({
+    required String bookingId,
+    required int status,
+    required String shuttleId,
+  }) async {
+    await _forceWifi(true);
+    try {
+      final payStr = '$bookingId|$status|$shuttleId';
+      final body = StringBuffer();
+      body.write('t=STS');
+      body.write('&dst=0');
+      body.write('&pay=${Uri.encodeComponent(payStr)}');
+
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 4)
+        ..idleTimeout = const Duration(seconds: 4);
+
+      final request = await client
+          .postUrl(Uri.parse('http://$esp32IpAddress:$esp32Port$requestEndpoint'))
+          .timeout(const Duration(seconds: 5));
+
+      final bodyBytes = utf8.encode(body.toString());
+      request.headers.set(
+        HttpHeaders.contentTypeHeader,
+        'application/x-www-form-urlencoded',
+      );
+      request.contentLength = bodyBytes.length;
+      request.add(bodyBytes);
+
+      final response = await request.close().timeout(const Duration(seconds: 5));
+      final bodyResponse = await response.transform(utf8.decoder).join();
+      client.close();
+
+      debugPrint('[ESP32 DRIVER STS] Response: $bodyResponse');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Send offline status update error: $e');
+      return false;
+    } finally {
+      await _forceWifi(false);
+    }
+  }
+
   // ─── Packet Building ────────────────────────────────────────────────────
   static Uint8List buildPacket({
     required String pickupId,
