@@ -99,7 +99,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2FF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(children: [
           _buildHeader(context),
@@ -178,13 +178,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Text('Notifications', style: TextStyle(color: Colors.white,
               fontSize: 18, fontWeight: FontWeight.w700)),
           Text('Tap to read · Swipe left to delete',
-              style: TextStyle(color: Color(0xAAFFFFFF), fontSize: 12)),
+              style: TextStyle(color: Colors.white70, fontSize: 11)),
         ])),
-        TextButton(onPressed: _markAllRead,
-            child: const Text('Mark all read',
-                style: TextStyle(color: Colors.white, fontSize: 12))),
+        IconButton(onPressed: _markAllRead,
+            icon: const Icon(Icons.done_all_rounded, color: Colors.white),
+            tooltip: 'Mark all read'),
         IconButton(onPressed: _deleteAll,
-            icon: const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 22),
+            icon: const Icon(Icons.delete_sweep_rounded, color: Colors.white),
             tooltip: 'Clear all'),
       ]),
     );
@@ -193,10 +193,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _buildEmptyState() {
     return Center(
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Icon(Icons.notifications_none_rounded, size: 64, color: AppColors.textHint),
+        Icon(Icons.notifications_none_rounded, size: 64, color: AppColors.textHint),
         const SizedBox(height: 16),
-        const Text('No notifications', style: TextStyle(fontSize: 16,
-            fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text('No Notifications Yet',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
+                color: AppColors.getTextPrimary(context))),
         const SizedBox(height: 8),
         const Text("You're all caught up!",
             style: TextStyle(fontSize: 13, color: AppColors.textHint)),
@@ -254,10 +255,10 @@ class _NotificationCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isRead ? AppColors.surface : color.withOpacity(0.05),
+          color: isRead ? AppColors.getSurfaceColor(context) : color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: isRead ? AppColors.cardBorder : color.withOpacity(0.3)),
+              color: isRead ? AppColors.getCardBorder(context) : color.withOpacity(0.3)),
           boxShadow: [BoxShadow(
               color: AppColors.shadow, blurRadius: 4, offset: const Offset(0, 1))],
         ),
@@ -272,14 +273,14 @@ class _NotificationCard extends StatelessWidget {
               Expanded(child: Text(data['title'] ?? '',
                   style: TextStyle(fontSize: 13,
                       fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
-                      color: AppColors.textPrimary))),
+                      color: AppColors.getTextPrimary(context)))),
               if (!isRead)
                 Container(width: 8, height: 8,
                     decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
             ]),
             const SizedBox(height: 4),
             Text(data['body'] ?? '',
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+                style: TextStyle(fontSize: 12, color: AppColors.getTextSecondary(context), height: 1.4),
                 maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 6),
             Row(children: [

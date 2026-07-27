@@ -22,6 +22,7 @@ import 'package:assa/screens/user/game_hub_screen.dart';
 import 'package:assa/widgets/common/ad_overlay.dart';
 import 'package:assa/services/offline_request_store.dart';
 import 'package:assa/screens/shared/about_screen.dart';
+import 'package:assa/widgets/common/rating_dialog.dart';
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -476,7 +477,7 @@ class _UserDashboardState extends State<UserDashboard> {
 
   // ── Active Booking Banner (shows offline pending or online active) ──
   Widget _buildActiveBookingBanner(String uid) {
-    // 1. Offline pending request – show offline banner
+    // 1. Offline active booking (Local store)
     if (_offlinePending != null) {
       final r = _offlinePending!;
       final statusName = r.status.label;
@@ -484,135 +485,169 @@ class _UserDashboardState extends State<UserDashboard> {
       if (shuttleId.isNotEmpty) {
         shuttleId = Esp32Service.getPublicShuttleId(shuttleId);
       }
+      final isAcceptedOrConfirmed = r.status == OfflineStatus.accepted || r.status == OfflineStatus.confirmed;
+
       return GestureDetector(
-        onTap: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const MyRequestsScreen())),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRequestsScreen())),
         child: Container(
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-                colors: [
-                  AppColors.pendingColor.withOpacity(0.85),
-                  AppColors.pendingColor,
-                ]),
-            borderRadius: BorderRadius.circular(16),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.4), width: 1.5),
             boxShadow: [
               BoxShadow(
-                  color: AppColors.pendingColor.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4))
+                color: const Color(0xFF0F172A).withOpacity(0.5),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              )
             ],
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.wifi_rounded, color: Colors.white, size: 28),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              // Header pills
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0EA5E9).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF0EA5E9)),
+                    ),
+                    child: const Row(
                       children: [
-                        const Text('Offline Ride',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700)),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.25),
-                              borderRadius: BorderRadius.circular(8)),
-                          child: Text(statusName,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600)),
-                        ),
+                        Icon(Icons.wifi_rounded, color: Color(0xFF38BDF8), size: 14),
+                        SizedBox(width: 4),
+                        Text('📶 Offline AP Mode', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.w800)),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text('${r.pickupLocation} → ${r.destination}',
-                        style: const TextStyle(
-                            color: Color(0xDDFFFFFF), fontSize: 12),
-                        overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 8),
-                    // Pickup ID — shown prominently here too, matching the
-                    // "YOUR PICKUP ID" card above and the boxed Shuttle ID
-                    // treatment in the online banner below, so this offline
-                    // request is visibly tied to the same PID the driver
-                    // will see on the shuttle's LCD.
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.confirmation_number_rounded,
-                              color: Colors.white, size: 14),
-                          const SizedBox(width: 6),
-                          Text('PID: ${r.pid}',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1)),
-                        ],
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    if (shuttleId.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text('Shuttle: $shuttleId',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700)),
+                    child: Text('ID: ${r.pid}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isAcceptedOrConfirmed ? AppColors.success.withOpacity(0.25) : AppColors.warning.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(statusName, style: TextStyle(color: isAcceptedOrConfirmed ? AppColors.success : AppColors.warning, fontSize: 11, fontWeight: FontWeight.w800)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              // Route visualization
+              Row(
+                children: [
+                  const Icon(Icons.location_on_rounded, color: Color(0xFF10B981), size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(r.pickupLocation, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(Icons.arrow_forward_rounded, color: Colors.white54, size: 16),
+                  ),
+                  const Icon(Icons.flag_rounded, color: Color(0xFFEF4444), size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(r.destination, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+              if (shuttleId.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.directions_bus_rounded, color: Color(0xFF38BDF8), size: 18),
+                      const SizedBox(width: 8),
+                      Text('Assigned Shuttle: $shuttleId', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
                     ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              // Interactive completion CTA or Cancel button
+              if (isAcceptedOrConfirmed)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final rated = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => RatingDialog(shuttleId: shuttleId, requestId: r.pid, isOffline: true),
+                      );
+                      if (rated == true) {
+                        await _refreshOfflinePending();
+                        if (context.mounted) {
+                          Helpers.showSuccessSnackBar(context, '🎉 Ride Completed & Rated! Thank you for using ASSA.');
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                    label: const Text('Acknowledge & Complete Ride', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
+                    ),
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text('Tap to view details or cancel', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                    ),
+                    OutlinedButton(
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Cancel Offline Ride?'),
+                            content: const Text('Are you sure you want to cancel this request?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+                              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Cancel', style: TextStyle(color: AppColors.error))),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          await OfflineRequestStore.instance.cancel(r.pid);
+                          await _refreshOfflinePending();
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.error),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('Cancel', style: TextStyle(color: AppColors.error, fontSize: 11, fontWeight: FontWeight.w700)),
+                    ),
                   ],
                 ),
-              ),
-              GestureDetector(
-                onTap: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Cancel Offline Ride?'),
-                      content: const Text('Remove this request?'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('No')),
-                        TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Yes, Cancel',
-                                style: TextStyle(color: AppColors.error))),
-                      ],
-                    ),
-                  );
-                  if (confirmed == true) {
-                    await OfflineRequestStore.instance.cancel(r.pid);
-                    await _refreshOfflinePending();
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8)),
-                  child: const Text('Cancel',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700)),
-                ),
-              ),
             ],
           ),
         ),
@@ -650,208 +685,189 @@ class _UserDashboardState extends State<UserDashboard> {
           shuttleId = Esp32Service.getPublicShuttleId(shuttleId);
         }
         final driverName = data['driverName'] ?? '';
+        final userPid = (_userData?['pickupId'] as String?) ?? '---';
+        final isDriverAssignedOrPickedUp = statusCode == 1 || statusCode == 2 || statusCode == 3;
 
         return GestureDetector(
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const MyRequestsScreen())),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRequestsScreen())),
           child: Container(
             margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+                colors: [Color(0xFF0F172A), Color(0xFF1E1B4B)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF818CF8).withOpacity(0.4), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                    color: const Color(0xFF1B5E20).withOpacity(0.45),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6))
+                  color: const Color(0xFF1E1B4B).withOpacity(0.5),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                )
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top row: icon + status badge + cancel
+                // Top row: Mode + PID + Status badge
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: const Color(0xFF6366F1).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF818CF8)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.cloud_done_rounded, color: Color(0xFF818CF8), size: 14),
+                          SizedBox(width: 4),
+                          Text('🌐 Online Mode', style: TextStyle(color: Color(0xFF818CF8), fontSize: 11, fontWeight: FontWeight.w800)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.directions_bus_rounded,
-                          color: Colors.white, size: 26),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('🚌  Ride Active',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900)),
-                        const SizedBox(height: 2),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20)),
-                          child: Text(statusName,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5)),
-                        ),
-                      ],
+                      child: Text('ID: $userPid', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1)),
                     ),
                     const Spacer(),
-                    GestureDetector(
-                      onTap: () async {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Cancel Ride?'),
-                            content: const Text(
-                                'Are you sure you want to cancel?'),
-                            actions: [
-                              TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: const Text('No')),
-                              TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: const Text('Yes, Cancel',
-                                      style:
-                                      TextStyle(color: AppColors.error))),
-                            ],
-                          ),
-                        );
-                        if (confirmed == true) {
-                          await FirebaseFirestore.instance
-                              .collection('ride_requests')
-                              .doc(docId)
-                              .update(
-                              {'status': 5, 'statusName': 'Cancelled'});
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Ride cancelled.'),
-                                    backgroundColor: AppColors.error));
-                          }
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10)),
-                        child: const Text('Cancel',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDriverAssignedOrPickedUp ? AppColors.success.withOpacity(0.25) : AppColors.warning.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      child: Text(statusName, style: TextStyle(color: isDriverAssignedOrPickedUp ? AppColors.success : AppColors.warning, fontSize: 11, fontWeight: FontWeight.w800)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
-                // Route
+                // Route timeline
                 Row(
                   children: [
-                    const Icon(Icons.radio_button_checked,
-                        color: Colors.white70, size: 14),
+                    const Icon(Icons.location_on_rounded, color: Color(0xFF10B981), size: 18),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: Text('$origin  →  $dest',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700),
-                          overflow: TextOverflow.ellipsis),
+                      child: Text(origin, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child: Icon(Icons.arrow_forward_rounded, color: Colors.white54, size: 16),
+                    ),
+                    const Icon(Icons.flag_rounded, color: Color(0xFFEF4444), size: 18),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(dest, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8)),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.confirmation_number_rounded,
-                          color: Colors.white, size: 14),
-                      const SizedBox(width: 6),
-                      Text('PID: ${(_userData?['pickupId'] as String?) ?? '---'}',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1)),
-                    ],
-                  ),
-                ),
-                if (shuttleId.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  // Shuttle ID — bold and prominent
+                if (shuttleId.isNotEmpty || driverName.isNotEmpty) ...[
+                  const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.4)),
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withOpacity(0.15)),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            const Icon(
-                                Icons.confirmation_number_rounded,
-                                color: Colors.white,
-                                size: 18),
-                            const SizedBox(width: 8),
-                            Text('Shuttle ID:  $shuttleId',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.5)),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.directions_bus_rounded, color: Colors.white, size: 20),
                         ),
-                        if (driverName.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Row(
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.person_rounded,
-                                  color: Colors.white70, size: 16),
-                              const SizedBox(width: 8),
-                              Text('Driver: $driverName',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700)),
+                              if (shuttleId.isNotEmpty)
+                                Text('Shuttle Unit: $shuttleId', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                              if (driverName.isNotEmpty)
+                                Text('Driver: $driverName', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
                             ],
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ),
                 ],
-                const SizedBox(height: 10),
-                const Text('Tap to view full details',
-                    style: TextStyle(color: Colors.white60, fontSize: 11)),
+                const SizedBox(height: 16),
+                // Action row: Acknowledge & Complete Ride or Cancel
+                if (isDriverAssignedOrPickedUp)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final rated = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => RatingDialog(shuttleId: shuttleId, requestId: docId, isOffline: false),
+                        );
+                        if (rated == true && context.mounted) {
+                          Helpers.showSuccessSnackBar(context, '🎉 Ride Completed & Rated! Thank you for using ASSA.');
+                        }
+                      },
+                      icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                      label: const Text('Acknowledge & Complete Ride', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 3,
+                      ),
+                    ),
+                  )
+                else
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Waiting for driver assignment...', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      ),
+                      OutlinedButton(
+                        onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Cancel Ride?'),
+                              content: const Text('Are you sure you want to cancel this request?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Cancel', style: TextStyle(color: AppColors.error))),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) {
+                            await FirebaseFirestore.instance.collection('ride_requests').doc(docId).update({
+                              'status': 5,
+                              'statusName': 'Cancelled',
+                            });
+                            if (context.mounted) {
+                              Helpers.showSuccessSnackBar(context, 'Ride request cancelled.');
+                            }
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.error),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Cancel', style: TextStyle(color: AppColors.error, fontSize: 11, fontWeight: FontWeight.w700)),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

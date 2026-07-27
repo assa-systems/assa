@@ -762,20 +762,18 @@ class _RequestDetailSheet extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        await FirebaseFirestore.instance
-                            .collection('ride_requests')
-                            .doc(docId)
-                            .update({'status': 4, 'statusName': 'Completed'});
-                        if (context.mounted && shuttleId.isNotEmpty) {
-                          await showDialog(
-                            context: context,
-                            builder: (_) => RatingDialog(
-                              shuttleId: shuttleId,
-                              requestId: docId,
-                            ),
-                          );
+                        final rated = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => RatingDialog(
+                            shuttleId: shuttleId,
+                            requestId: docId,
+                            isOffline: isOffline,
+                          ),
+                        );
+                        if (rated == true && context.mounted) {
+                          Navigator.pop(context);
+                          Helpers.showSuccessSnackBar(context, '🎉 Ride Completed & Rated! Thank you for using ASSA.');
                         }
-                        if (context.mounted) Navigator.pop(context);
                       },
                       icon: const Icon(Icons.check_circle_outline, size: 18, color: Colors.white),
                       label: const Text('Complete', style: TextStyle(color: Colors.white)),

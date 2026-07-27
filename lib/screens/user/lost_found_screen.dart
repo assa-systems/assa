@@ -82,7 +82,7 @@ class _LostFoundScreenState extends State<UserLostFoundScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openPostSheet(context),
         backgroundColor: const Color(0xFF00897B),
@@ -892,9 +892,9 @@ class _ItemCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color:        AppColors.surface,
+          color:        AppColors.getSurfaceColor(context),
           borderRadius: BorderRadius.circular(16),
-          border:       Border.all(color: AppColors.cardBorder),
+          border:       Border.all(color: AppColors.getCardBorder(context)),
           boxShadow: [BoxShadow(color: AppColors.shadow,
               blurRadius: 6, offset: const Offset(0, 2))],
         ),
