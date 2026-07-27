@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
 import 'package:assa/models/driver_model.dart';
 
@@ -28,8 +27,6 @@ class DriverOfTheWeekBanner extends StatelessWidget {
         if (topDriver.averageRating == 0 && topDriver.totalRatings == 0) {
           return const SizedBox.shrink();
         }
-
-        final isDark = Theme.of(context).brightness == Brightness.dark;
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
