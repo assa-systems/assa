@@ -372,7 +372,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
             status: 2, // Accepted
             shuttleId: publicShuttleId,
           );
-          await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.accepted, publicShuttleId);
+          await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.accepted, shuttleId: publicShuttleId);
         }
       }
       if (mounted) {
@@ -473,7 +473,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
             status: 4, // Rejected
             shuttleId: publicShuttleId,
           );
-          await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.rejected, publicShuttleId);
+          await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.rejected, shuttleId: publicShuttleId);
         }
       }
       if (mounted) {
@@ -571,7 +571,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
         offStatus = OfflineStatus.accepted;
       }
 
-      await OfflineRequestStore.instance.updateStatus(bookingId, offStatus, shuttleId);
+      await OfflineRequestStore.instance.updateStatus(bookingId, offStatus, shuttleId: shuttleId);
       showToast('📶 Offline Feedback sent to passenger via ASSA-AP WiFi!', 'success');
       return;
     }
