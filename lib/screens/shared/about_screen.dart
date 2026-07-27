@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
@@ -6,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:assa/core/constants/app_colors.dart';
+import 'package:assa/widgets/common/driver_of_the_week_banner.dart';
 
 // ════════════════════════════════════════════════════════════════════
 // ABOUT SCREEN — ASSA
@@ -183,37 +185,84 @@ class _AboutScreenState extends State<AboutScreen> {
 
   bool _isAdmin = false;
   Map<String, String> _teamPhotos = {};
+  StreamSubscription<DocumentSnapshot>? _aboutImagesSub;
+  StreamSubscription<QuerySnapshot>? _teamMembersSub;
+  String? _hodUrl;
+  String? _teamUrl;
 
   @override
   void initState() {
     super.initState();
     _checkAdminRole();
-    _loadTeamPhotos();
+    _listenToAboutImages();
+    _listenToTeamPhotos();
     _loadVersion();
   }
 
-  Future<void> _checkAdminRole() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (mounted && doc.exists && doc.data()?['role'] == 'admin') {
-        setState(() => _isAdmin = true);
-      }
-    } catch (_) {}
+  @override
+  void dispose() {
+    _aboutImagesSub?.cancel();
+    _teamMembersSub?.cancel();
+    super.dispose();
   }
 
-  Future<void> _loadTeamPhotos() async {
-    try {
-      final snap = await FirebaseFirestore.instance.collection('team_members').get();
+  void _listenToAboutImages() {
+    _aboutImagesSub = FirebaseFirestore.instance
+        .collection('settings')
+        .doc('about_images')
+        .snapshots()
+        .listen((snap) async {
+      String? hod;
+      String? team;
+      if (snap.exists && snap.data() != null) {
+        final data = snap.data()!;
+        hod = data['hod_url'] as String?;
+        team = data['team_url'] as String?;
+      }
+      final prefs = await SharedPreferences.getInstance();
+      hod ??= prefs.getString('local_about_image_hod_url');
+      team ??= prefs.getString('local_about_image_team_url');
+
+      if (mounted) {
+        setState(() {
+          _hodUrl = hod;
+          _teamUrl = team;
+        });
+      }
+    }, onError: (_) async {
+      final prefs = await SharedPreferences.getInstance();
+      if (mounted) {
+        setState(() {
+          _hodUrl = prefs.getString('local_about_image_hod_url');
+          _teamUrl = prefs.getString('local_about_image_team_url');
+        });
+      }
+    });
+  }
+
+  void _listenToTeamPhotos() {
+    _teamMembersSub = FirebaseFirestore.instance
+        .collection('team_members')
+        .snapshots()
+        .listen((snap) async {
       final map = <String, String>{};
       for (final d in snap.docs) {
         if (d.data().containsKey('photoUrl')) {
           map[d.id] = d.data()['photoUrl'].toString();
         }
       }
-      // Merge with local fallback overrides
       final prefs = await SharedPreferences.getInstance();
+      for (final member in _teamMembers) {
+        final id = member['id'] ?? '';
+        final localPhoto = prefs.getString('local_team_photo_$id');
+        if (localPhoto != null && localPhoto.isNotEmpty && !map.containsKey(id)) {
+          map[id] = localPhoto;
+        }
+      }
+      if (mounted) setState(() => _teamPhotos = map);
+    }, onError: (_) async {
+      final prefs = await SharedPreferences.getInstance();
+      final map = <String, String>{};
       for (final member in _teamMembers) {
         final id = member['id'] ?? '';
         final localPhoto = prefs.getString('local_team_photo_$id');
@@ -222,7 +271,7 @@ class _AboutScreenState extends State<AboutScreen> {
         }
       }
       if (mounted) setState(() => _teamPhotos = map);
-    } catch (_) {}
+    });
   }
 
   Future<void> _pickAndUploadPhoto(String memberId) async {
@@ -333,6 +382,8 @@ class _AboutScreenState extends State<AboutScreen> {
                           height: 1.6),
                     ),
                   ),
+                  const SizedBox(height: 14),
+                  const DriverOfTheWeekBanner(),
                   const SizedBox(height: 14),
                   _sectionCard(
                     title: 'Acknowledgements',

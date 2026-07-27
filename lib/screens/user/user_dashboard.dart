@@ -23,6 +23,7 @@ import 'package:assa/widgets/common/ad_overlay.dart';
 import 'package:assa/services/offline_request_store.dart';
 import 'package:assa/screens/shared/about_screen.dart';
 import 'package:assa/widgets/common/rating_dialog.dart';
+import 'package:assa/widgets/common/driver_of_the_week_banner.dart';
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -270,6 +271,7 @@ class _UserDashboardState extends State<UserDashboard> {
                       _buildHeader(name),
                       const SizedBox(height: 16),
                       _buildActiveBookingBanner(uid),
+                      const DriverOfTheWeekBanner(),
                       if (_availableCredits > 0) ...[
                         const SizedBox(height: 12),
                         _buildCreditsStrip(),

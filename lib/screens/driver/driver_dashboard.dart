@@ -16,6 +16,7 @@ import 'package:assa/screens/user/notifications_screen.dart';
 import 'package:assa/screens/shared/settings_screen.dart';
 import 'package:assa/screens/shared/about_screen.dart';
 import 'package:assa/services/offline_request_store.dart';
+import 'package:assa/widgets/common/driver_of_the_week_banner.dart';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Global key configuration mapping template tracking hooks
@@ -684,6 +685,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 padding: const EdgeInsets.all(16),
                 child: Column(children: [
                   _buildShuttleStatusCard(),
+                  const DriverOfTheWeekBanner(),
                   if (_groups.isNotEmpty) ...[
                     const Text('Pending Ride Groups', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
