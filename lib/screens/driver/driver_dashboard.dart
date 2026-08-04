@@ -39,11 +39,23 @@ void showLoading(BuildContext context, String msg) {
     context: context,
     barrierDismissible: false,
     builder: (ctx) => AlertDialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       content: Row(
         children: [
-          const CircularProgressIndicator(),
+          const CircularProgressIndicator(color: AppColors.driverColor),
           const SizedBox(width: 20),
-          Text(msg),
+          Expanded(
+            child: Text(
+              msg,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     ),
@@ -344,15 +356,59 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Accept Group Request'),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('$totalPax passenger${totalPax > 1 ? 's' : ''} · $pickup → $dest'),
-          const SizedBox(height: 8),
-          Text('Pickup IDs: $pickupIds', style: const TextStyle(fontSize: 12)),
-        ]),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Accept Group Request',
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$totalPax Passenger${totalPax > 1 ? 's' : ''} · $pickup → $dest',
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Pickup IDs: $pickupIds',
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.driverColor.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.driverColor.withOpacity(0.2)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 18, color: AppColors.driverColor),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Accepted rides move to "My Passengers" section below.',
+                      style: TextStyle(fontSize: 12, color: AppColors.driverColor, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Accept All')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.driverColor),
+            child: const Text('Accept All', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
@@ -378,8 +434,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
       }
       if (mounted) {
         hideLoading(context);
-        showToast('📶 Accepted ${group.length} offline request(s) via ASSA-AP WiFi!', 'success');
+        showToast('📶 Accepted ${group.length} offline request(s)! Added to My Passengers.', 'success');
         setState(() {
+          _statusFilter = 'Active';
           _allPending.removeWhere((r) => group.any((g) => g['id'] == r['id']));
           _groups = _groupPendingRequests(_allPending);
         });
@@ -433,7 +490,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
 
       if (mounted) {
         hideLoading(context);
-        showToast('Accepted ${group.length} passenger${group.length > 1 ? 's' : ''}!', 'success');
+        setState(() {
+          _statusFilter = 'Active';
+        });
+        showToast('Accepted $totalPax passenger${totalPax > 1 ? 's' : ''}! Added to My Passengers below.', 'success');
         await _loadDriverData();
       }
     } catch (e) {
@@ -452,11 +512,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Reject Group?'),
-        content: const Text('This will reject all passengers in this group.'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Reject Group?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18)),
+        content: const Text('This will reject all passengers in this group.', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Reject All', style: TextStyle(color: AppColors.error))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Reject All', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold))),
         ],
       ),
     );
@@ -751,7 +814,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
           if (hasOffline) const SizedBox(width: 6),
           if (hasOffline) _typeChip('Offline', AppColors.warning),
           const Spacer(),
-          Text('$totalPax pax', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.people_alt_rounded, size: 16, color: AppColors.primary),
+                const SizedBox(width: 5),
+                Text(
+                  '$totalPax Passenger${totalPax > 1 ? 's' : ''}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ]),
         const SizedBox(height: 12),
         Row(children: [
@@ -1002,6 +1087,8 @@ class _PassengerCard extends StatelessWidget {
     if (status == 3) actions.add({'label': '🏁 Complete', 'status': 4, 'color': AppColors.primary});
     if (status == 1 || status == 3) actions.add({'label': '❌ Cancel', 'status': 5, 'color': AppColors.error});
 
+    final passengerCount = data['passengerCount'] as int? ?? 1;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -1027,7 +1114,28 @@ class _PassengerCard extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(userName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-              if (pickupId.isNotEmpty) Text('ID: $pickupId', style: const TextStyle(fontSize: 18, color: AppColors.primary, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+              Row(children: [
+                if (pickupId.isNotEmpty) Text('ID: $pickupId ', style: const TextStyle(fontSize: 16, color: AppColors.primary, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.driverColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.driverColor.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.people_alt_rounded, size: 14, color: AppColors.driverColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$passengerCount Pax',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.driverColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ]),
             ])),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
