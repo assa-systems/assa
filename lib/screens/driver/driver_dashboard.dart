@@ -1289,6 +1289,10 @@ class _DriverSettingsSheetState extends State<_DriverSettingsSheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 20),
@@ -1313,12 +1317,18 @@ class _DriverSettingsSheetState extends State<_DriverSettingsSheet> {
             ]),
           ] else ...[
             const Divider(color: AppColors.divider),
-            ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.person_outline_rounded), title: const Text('Edit Profile'), trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textHint), onTap: () => setState(() => _editMode = true)),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.tune_rounded),
-              title: const Text('App Settings'),
-              subtitle: const Text('Theme & about ASSA', style: TextStyle(fontSize: 11)),
+              leading: const Icon(Icons.person_outline_rounded, color: AppColors.primary),
+              title: const Text('Edit Profile', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
+              onTap: () => setState(() => _editMode = true),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.tune_rounded, color: AppColors.primary),
+              title: const Text('App Settings', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+              subtitle: const Text('Theme & about ASSA', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
               trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
               onTap: () {
                 Navigator.pop(context);
@@ -1326,7 +1336,13 @@ class _DriverSettingsSheetState extends State<_DriverSettingsSheet> {
                     MaterialPageRoute(builder: (_) => const SettingsScreen()));
               },
             ),
-            ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.logout_rounded, color: AppColors.error), title: const Text('Logout', style: TextStyle(color: AppColors.error)), trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textHint), onTap: () { Navigator.pop(context); widget.onLogout(); }),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.logout_rounded, color: AppColors.error),
+              title: const Text('Logout', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600, fontSize: 14)),
+              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
+              onTap: () { Navigator.pop(context); widget.onLogout(); },
+            ),
           ],
           const SizedBox(height: 16),
         ]),

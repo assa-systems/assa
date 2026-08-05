@@ -493,41 +493,37 @@ class _UserDashboardState extends State<UserDashboard> {
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRequestsScreen())),
         child: Container(
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.4), width: 1.5),
+            border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withOpacity(0.5),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+                color: AppColors.shadow,
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               )
             ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header pills
+              // Header row
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0EA5E9).withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF0EA5E9)),
+                      color: const Color(0xFF0EA5E9).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF0EA5E9).withOpacity(0.3)),
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.wifi_rounded, color: Color(0xFF38BDF8), size: 14),
+                        Icon(Icons.wifi_rounded, color: Color(0xFF0284C7), size: 14),
                         SizedBox(width: 4),
-                        Text('📶 Offline AP Mode', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.w800)),
+                        Text('Offline AP Mode', style: TextStyle(color: Color(0xFF0284C7), fontSize: 11, fontWeight: FontWeight.w700)),
                       ],
                     ),
                   ),
@@ -535,19 +531,19 @@ class _UserDashboardState extends State<UserDashboard> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.primary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text('ID: ${r.pid}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                    child: Text('ID: ${r.pid}', style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                   ),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isAcceptedOrConfirmed ? AppColors.success.withOpacity(0.25) : AppColors.warning.withOpacity(0.25),
-                      borderRadius: BorderRadius.circular(12),
+                      color: isAcceptedOrConfirmed ? AppColors.success.withOpacity(0.12) : AppColors.warning.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(statusName, style: TextStyle(color: isAcceptedOrConfirmed ? AppColors.success : AppColors.warning, fontSize: 11, fontWeight: FontWeight.w800)),
+                    child: Text(statusName.toUpperCase(), style: TextStyle(color: isAcceptedOrConfirmed ? AppColors.success : AppColors.warning, fontSize: 11, fontWeight: FontWeight.w800)),
                   ),
                 ],
               ),
@@ -555,19 +551,19 @@ class _UserDashboardState extends State<UserDashboard> {
               // Route visualization
               Row(
                 children: [
-                  const Icon(Icons.location_on_rounded, color: Color(0xFF10B981), size: 18),
-                  const SizedBox(width: 6),
+                  const Icon(Icons.circle, color: Color(0xFF10B981), size: 12),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text(r.pickupLocation, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                    child: Text(r.pickupLocation, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
                   ),
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6),
-                    child: Icon(Icons.arrow_forward_rounded, color: Colors.white54, size: 16),
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(Icons.arrow_forward_rounded, color: AppColors.textSecondary, size: 16),
                   ),
-                  const Icon(Icons.flag_rounded, color: Color(0xFFEF4444), size: 18),
+                  const Icon(Icons.location_on_rounded, color: Color(0xFFEF4444), size: 16),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(r.destination, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                    child: Text(r.destination, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
                   ),
                 ],
               ),
@@ -576,21 +572,20 @@ class _UserDashboardState extends State<UserDashboard> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
+                    color: AppColors.primary.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.15)),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.15)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.directions_bus_rounded, color: Color(0xFF38BDF8), size: 18),
+                      const Icon(Icons.directions_bus_rounded, color: AppColors.primary, size: 18),
                       const SizedBox(width: 8),
-                      Text('Assigned Shuttle: $shuttleId', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
+                      Text('Assigned Shuttle: $shuttleId', style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w800)),
                     ],
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
-              // Interactive completion CTA or Cancel button
+              const SizedBox(height: 14),
               if (isAcceptedOrConfirmed)
                 SizedBox(
                   width: double.infinity,
@@ -603,7 +598,7 @@ class _UserDashboardState extends State<UserDashboard> {
                       if (rated == true) {
                         await _refreshOfflinePending();
                         if (context.mounted) {
-                          Helpers.showSuccessSnackBar(context, '🎉 Ride Completed & Rated! Thank you for using ASSA.');
+                          Helpers.showSuccessSnackBar(context, 'Ride Completed & Rated! Thank you for using ASSA.');
                         }
                       }
                     },
@@ -618,35 +613,66 @@ class _UserDashboardState extends State<UserDashboard> {
                   ),
                 )
               else
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Expanded(
-                      child: Text('Tap to view details or cancel', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                    ),
-                    OutlinedButton(
-                      onPressed: () async {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Cancel Offline Ride?'),
-                            content: const Text('Are you sure you want to cancel this request?'),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-                              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Cancel', style: TextStyle(color: AppColors.error))),
-                            ],
-                          ),
-                        );
-                        if (confirmed == true) {
-                          await OfflineRequestStore.instance.cancel(r.pid);
-                          await _refreshOfflinePending();
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.error),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.warning.withOpacity(0.2)),
                       ),
-                      child: const Text('Cancel', style: TextStyle(color: AppColors.error, fontSize: 11, fontWeight: FontWeight.w700)),
+                      child: const Row(
+                        children: [
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.warning),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Searching for available shuttle unit...',
+                              style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor: Colors.white,
+                              surfaceTintColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              title: const Text('Cancel Offline Ride?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                              content: const Text('Are you sure you want to cancel this request?', style: TextStyle(color: AppColors.textPrimary)),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No', style: TextStyle(color: AppColors.textSecondary))),
+                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Cancel', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold))),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) {
+                            await OfflineRequestStore.instance.cancel(r.pid);
+                            await _refreshOfflinePending();
+                          }
+                        },
+                        icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.error),
+                        label: const Text('Cancel Request', style: TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w700)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.error),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -694,41 +720,37 @@ class _UserDashboardState extends State<UserDashboard> {
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRequestsScreen())),
           child: Container(
             margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0F172A), Color(0xFF1E1B4B)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF818CF8).withOpacity(0.4), width: 1.5),
+              border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF1E1B4B).withOpacity(0.5),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
+                  color: AppColors.shadow,
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 )
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top row: Mode + PID + Status badge
+                // Header row: Mode + PID + Status badge
                 Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF6366F1).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF818CF8)),
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.cloud_done_rounded, color: Color(0xFF818CF8), size: 14),
+                          Icon(Icons.cloud_done_rounded, color: AppColors.primary, size: 14),
                           SizedBox(width: 4),
-                          Text('🌐 Online Mode', style: TextStyle(color: Color(0xFF818CF8), fontSize: 11, fontWeight: FontWeight.w800)),
+                          Text('Online Mode', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w700)),
                         ],
                       ),
                     ),
@@ -736,19 +758,19 @@ class _UserDashboardState extends State<UserDashboard> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text('ID: $userPid', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      child: Text('ID: $userPid', style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isDriverAssignedOrPickedUp ? AppColors.success.withOpacity(0.25) : AppColors.warning.withOpacity(0.25),
-                        borderRadius: BorderRadius.circular(12),
+                        color: isDriverAssignedOrPickedUp ? AppColors.success.withOpacity(0.12) : AppColors.warning.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(statusName, style: TextStyle(color: isDriverAssignedOrPickedUp ? AppColors.success : AppColors.warning, fontSize: 11, fontWeight: FontWeight.w800)),
+                      child: Text(statusName.toUpperCase(), style: TextStyle(color: isDriverAssignedOrPickedUp ? AppColors.success : AppColors.warning, fontSize: 11, fontWeight: FontWeight.w800)),
                     ),
                   ],
                 ),
@@ -756,19 +778,19 @@ class _UserDashboardState extends State<UserDashboard> {
                 // Route timeline
                 Row(
                   children: [
-                    const Icon(Icons.location_on_rounded, color: Color(0xFF10B981), size: 18),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.circle, color: Color(0xFF10B981), size: 12),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: Text(origin, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                      child: Text(origin, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
                     ),
                     const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 6),
-                      child: Icon(Icons.arrow_forward_rounded, color: Colors.white54, size: 16),
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(Icons.arrow_forward_rounded, color: AppColors.textSecondary, size: 16),
                     ),
-                    const Icon(Icons.flag_rounded, color: Color(0xFFEF4444), size: 18),
+                    const Icon(Icons.location_on_rounded, color: Color(0xFFEF4444), size: 16),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: Text(dest, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                      child: Text(dest, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
                     ),
                   ],
                 ),
@@ -777,19 +799,19 @@ class _UserDashboardState extends State<UserDashboard> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withOpacity(0.15)),
+                      color: AppColors.primary.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.15)),
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.3),
+                            color: AppColors.primary.withOpacity(0.15),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.directions_bus_rounded, color: Colors.white, size: 20),
+                          child: const Icon(Icons.directions_bus_rounded, color: AppColors.primary, size: 18),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -797,9 +819,9 @@ class _UserDashboardState extends State<UserDashboard> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (shuttleId.isNotEmpty)
-                                Text('Shuttle Unit: $shuttleId', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                Text('Shuttle Unit: $shuttleId', style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w800)),
                               if (driverName.isNotEmpty)
-                                Text('Driver: $driverName', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                                Text('Driver: $driverName', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
                             ],
                           ),
                         ),
@@ -807,8 +829,8 @@ class _UserDashboardState extends State<UserDashboard> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
-                // Action row: Acknowledge & Complete Ride or Cancel
+                const SizedBox(height: 14),
+                // Action row: Acknowledge & Complete Ride or Searching + Cancel
                 if (isDriverAssignedOrPickedUp)
                   SizedBox(
                     width: double.infinity,
@@ -819,7 +841,7 @@ class _UserDashboardState extends State<UserDashboard> {
                           builder: (_) => RatingDialog(shuttleId: shuttleId, requestId: docId, isOffline: false),
                         );
                         if (rated == true && context.mounted) {
-                          Helpers.showSuccessSnackBar(context, '🎉 Ride Completed & Rated! Thank you for using ASSA.');
+                          Helpers.showSuccessSnackBar(context, 'Ride Completed & Rated! Thank you for using ASSA.');
                         }
                       },
                       icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
@@ -828,45 +850,76 @@ class _UserDashboardState extends State<UserDashboard> {
                         backgroundColor: AppColors.success,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 3,
+                        elevation: 2,
                       ),
                     ),
                   )
                 else
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Expanded(
-                        child: Text('Waiting for driver assignment...', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                      ),
-                      OutlinedButton(
-                        onPressed: () async {
-                          final confirmed = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Cancel Ride?'),
-                              content: const Text('Are you sure you want to cancel this request?'),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Cancel', style: TextStyle(color: AppColors.error))),
-                              ],
-                            ),
-                          );
-                          if (confirmed == true) {
-                            await FirebaseFirestore.instance.collection('ride_requests').doc(docId).update({
-                              'status': 5,
-                              'statusName': 'Cancelled',
-                            });
-                            if (context.mounted) {
-                              Helpers.showSuccessSnackBar(context, 'Ride request cancelled.');
-                            }
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppColors.error),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.warning.withOpacity(0.2)),
                         ),
-                        child: const Text('Cancel', style: TextStyle(color: AppColors.error, fontSize: 11, fontWeight: FontWeight.w700)),
+                        child: const Row(
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.warning),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Searching for available shuttle assignment...',
+                                style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                backgroundColor: Colors.white,
+                                surfaceTintColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                title: const Text('Cancel Ride?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                                content: const Text('Are you sure you want to cancel this request?', style: TextStyle(color: AppColors.textPrimary)),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No', style: TextStyle(color: AppColors.textSecondary))),
+                                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Cancel', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold))),
+                                ],
+                              ),
+                            );
+                            if (confirmed == true) {
+                              await FirebaseFirestore.instance.collection('ride_requests').doc(docId).update({
+                                'status': 5,
+                                'statusName': 'Cancelled',
+                              });
+                              if (context.mounted) {
+                                Helpers.showSuccessSnackBar(context, 'Ride request cancelled.');
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.error),
+                          label: const Text('Cancel Request', style: TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w700)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.error),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
                       ),
                     ],
                   ),
