@@ -789,54 +789,68 @@ class _DriverDashboardState extends State<DriverDashboard> {
         boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Icon(Icons.radio_button_checked, size: 14, color: AppColors.success),
-          const SizedBox(width: 6),
-          Expanded(child: Text(pickup, style: const TextStyle(fontWeight: FontWeight.w600))),
-        ]),
-        const SizedBox(height: 4),
-        Row(children: [
-          const Icon(Icons.location_on, size: 14, color: AppColors.error),
-          const SizedBox(width: 6),
-          Expanded(child: Text(dest, style: const TextStyle(fontWeight: FontWeight.w600))),
-        ]),
-        const SizedBox(height: 8),
-        Wrap(spacing: 6, runSpacing: 4,
-          children: pickupIds.split(',').map((pid) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-            child: Text(pid.trim(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-          )).toList(),
+        // Main body row: Route on left, Passenger count badge on right
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.radio_button_checked, size: 14, color: AppColors.success),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(pickup, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary))),
+                  ]),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    const Icon(Icons.location_on, size: 14, color: AppColors.error),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(dest, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary))),
+                  ]),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Prominent Passenger Count Badge on the right of the main body
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.people_alt_rounded, size: 16, color: AppColors.primary),
+                  const SizedBox(width: 5),
+                  Text(
+                    '$totalPax Pax',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 10),
         Row(children: [
+          Wrap(spacing: 6, runSpacing: 4,
+            children: pickupIds.split(',').map((pid) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(6)),
+              child: Text(pid.trim(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            )).toList(),
+          ),
+          const Spacer(),
           if (hasOnline) _typeChip('Online', AppColors.success),
           if (hasOffline) const SizedBox(width: 6),
           if (hasOffline) _typeChip('Offline', AppColors.warning),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.people_alt_rounded, size: 16, color: AppColors.primary),
-                const SizedBox(width: 5),
-                Text(
-                  '$totalPax Passenger${totalPax > 1 ? 's' : ''}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ]),
         const SizedBox(height: 12),
         Row(children: [
