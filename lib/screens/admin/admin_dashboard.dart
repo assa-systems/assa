@@ -975,9 +975,9 @@ class _AdminSettingsSheetState extends State<_AdminSettingsSheet> {
   }
 
   Future<void> _changePasscode() async {
-    if (_newPincodeCtrl.text.length != 4 ||
-        _confirmPincodeCtrl.text.length != 4) {
-      Helpers.showErrorSnackBar(context, 'Passcode must be exactly 4 digits.');
+    if (_newPincodeCtrl.text.length < 4 || _newPincodeCtrl.text.length > 6 ||
+        _confirmPincodeCtrl.text.length < 4 || _confirmPincodeCtrl.text.length > 6) {
+      Helpers.showErrorSnackBar(context, 'Passcode must be between 4 and 6 digits.');
       return;
     }
     if (_newPincodeCtrl.text != _confirmPincodeCtrl.text) {

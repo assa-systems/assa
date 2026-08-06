@@ -69,7 +69,7 @@ class _RatingDialogState extends State<RatingDialog> {
       }
 
       // ── ONLINE COMPLETION & RATING (FIRESTORE) ─────────────────────────
-      // 1. Mark request doc as completed and rated
+      // 1. Mark request doc as completed and rated (Primary User Operation)
       await FirebaseFirestore.instance.collection('ride_requests').doc(widget.requestId).update({
         'status': 4,
         'statusName': 'Completed',
@@ -81,18 +81,22 @@ class _RatingDialogState extends State<RatingDialog> {
         'ratingTags': _selectedChips.toList(),
       });
 
-      // 2. Add to ride_ratings collection for admin analytics
-      await FirebaseFirestore.instance.collection('ride_ratings').add({
-        'requestId': widget.requestId,
-        'shuttleId': publicShuttle.isNotEmpty ? publicShuttle : widget.shuttleId,
-        'userId': uid,
-        'rating': _rating,
-        'tags': _selectedChips.toList(),
-        'comment': _commentController.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      // 2. Add to ride_ratings collection for admin analytics (Secondary Operation)
+      try {
+        await FirebaseFirestore.instance.collection('ride_ratings').add({
+          'requestId': widget.requestId,
+          'shuttleId': publicShuttle.isNotEmpty ? publicShuttle : widget.shuttleId,
+          'userId': uid,
+          'rating': _rating,
+          'tags': _selectedChips.toList(),
+          'comment': _commentController.text.trim(),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        debugPrint('Analytics rating collection write error (non-fatal): $e');
+      }
 
-      // 3. Update driver's total and average rating if driver document exists
+      // 3. Update driver's total and average rating if driver document exists (Secondary Operation)
       if (widget.shuttleId.isNotEmpty) {
         try {
           final q = await FirebaseFirestore.instance
@@ -120,7 +124,7 @@ class _RatingDialogState extends State<RatingDialog> {
             });
           }
         } catch (e) {
-          debugPrint('Driver rating aggregation error: $e');
+          debugPrint('Driver rating aggregation error (non-fatal): $e');
         }
       }
 

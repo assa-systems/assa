@@ -1,11 +1,11 @@
 {
-    "name": "assa",
-    "short_name": "assa",
+    "name": "ASSA - Campus Shuttle System",
+    "short_name": "ASSA",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0D47A1",
+    "theme_color": "#0D47A1",
+    "description": "Adaptive Shuttle System Application (ASSA) - Hybrid Offline-Online Campus Transport System",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
