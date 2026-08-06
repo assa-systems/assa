@@ -44,6 +44,10 @@
       {
         "source": "/app/**",
         "destination": "/app/index.html"
+      },
+      {
+        "source": "/flutter_app/**",
+        "destination": "/flutter_app/index.html"
       }
     ]
   }
