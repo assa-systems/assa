@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASSA - Campus Shuttle System | Adaptive LoRa & Wi-Fi Platform</title>
+  <meta name="description" content="Adaptive Shuttle System Application (ASSA) - Official Air Force Institute of Technology (AFIT) Hybrid LoRa & Wi-Fi Campus Transportation Platform.">
+  <meta name="theme-color" content="#0D47A1">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Background Decorative Glows -->
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+  <div class="bg-glow glow-3"></div>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="#" class="brand">
+        <div class="brand-logo">
+          <i class="fa-solid fa-bus-simple"></i>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">ASSA</span>
+          <span class="brand-sub">Campus Transport</span>
+        </div>
+      </a>
+
+      <nav class="nav-menu" id="navMenu">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#architecture" class="nav-link">LoRa & Wi-Fi AP</a>
+        <a href="#routes" class="nav-link">Shuttle Routes</a>
+        <a href="#download" class="nav-link">Downloads</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="/app/" class="btn btn-primary btn-glow">
+          <i class="fa-solid fa-globe"></i>
+          <span>Launch Web App</span>
+        </a>
+      </div>
+
+      <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle Menu">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container hero-container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="pulse-dot"></span>
+          <span>AFIT Hybrid LoRa-Wi-Fi Shuttle System</span>
+        </div>
+        <h1 class="hero-title">
+          Smart, Seamless Campus Transportation for <span class="gradient-text">AFIT Students & Staff</span>
+        </h1>
+        <p class="hero-description">
+          Request campus shuttles in real-time online or via offline campus hotspot AP nodes. Powered by intelligent LoRa mesh repeaters, adaptive routing, and dual-mode connectivity.
+        </p>
+
+        <!-- CTA Buttons -->
+        <div class="hero-cta-group">
+          <a href="/app/" class="btn btn-hero-primary btn-glow">
+            <i class="fa-solid fa-rocket"></i>
+            <div class="btn-text-group">
+              <span class="btn-main-text">Open Web PWA App</span>
+              <span class="btn-sub-text">Runs directly in your browser</span>
+            </div>
+          </a>
+
+          <a href="assa-app.apk" download="ASSA-Shuttle-App.apk" class="btn btn-hero-secondary">
+            <i class="fa-brands fa-android"></i>
+            <div class="btn-text-group">
+              <span class="btn-main-text">Download Android App</span>
+              <span class="btn-sub-text">Direct APK Installer (64 MB)</span>
+            </div>
+          </a>
+        </div>
+
+        <!-- Live Stats Strip -->
+        <div class="hero-stats">
+          <div class="stat-item">
+            <div class="stat-icon"><i class="fa-solid fa-bolt"></i></div>
+            <div class="stat-info">
+              <span class="stat-value">&lt; 0.2s</span>
+              <span class="stat-label">Instant Web Load</span>
+            </div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-icon"><i class="fa-solid fa-wifi"></i></div>
+            <div class="stat-info">
+              <span class="stat-value">Dual Mode</span>
+              <span class="stat-label">Online & Offline AP</span>
+            </div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-info">
+              <span class="stat-value">5,000+</span>
+              <span class="stat-label">Active Capacity</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- App Visual Mockup Card -->
+      <div class="hero-visual">
+        <div class="mockup-card glass-card">
+          <div class="card-header">
+            <div class="card-pill pill-online">
+              <i class="fa-solid fa-circle-check"></i>
+              <span>ASSA System Live</span>
+            </div>
+            <div class="card-pill pill-id">
+              <span>Pickup ID: R19</span>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="route-box">
+              <div class="route-point">
+                <i class="fa-solid fa-location-dot color-green"></i>
+                <div class="point-text">
+                  <span class="point-label">Pickup</span>
+                  <span class="point-name">Alfa Hall</span>
+                </div>
+              </div>
+              <div class="route-line">
+                <i class="fa-solid fa-arrow-right"></i>
+              </div>
+              <div class="route-point">
+                <i class="fa-solid fa-flag-checkered color-red"></i>
+                <div class="point-text">
+                  <span class="point-label">Destination</span>
+                  <span class="point-name">AFIT Mosque</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="shuttle-info-box">
+              <div class="shuttle-icon">
+                <i class="fa-solid fa-bus"></i>
+              </div>
+              <div class="shuttle-details">
+                <span class="shuttle-title">Shuttle AFIT-001</span>
+                <span class="shuttle-sub">Driver: Aminu (Shuttle Unit 1)</span>
+              </div>
+              <div class="pax-badge">
+                <i class="fa-solid fa-user-group"></i>
+                <span>1 Pax</span>
+              </div>
+            </div>
+
+            <div class="action-preview">
+              <a href="/app/" class="btn btn-card-action">
+                <span>Enter Live Dashboard</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Capabilities</span>
+        <h2 class="section-title">Designed for Modern Campus Mobility</h2>
+        <p class="section-desc">Experience intelligent shuttle tracking, group request batching, and continuous offline connectivity.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card glass-card">
+          <div class="feature-icon icon-blue">
+            <i class="fa-solid fa-cloud"></i>
+          </div>
+          <h3>Online Real-Time Dispatch</h3>
+          <p>Instant cloud request matching via Firebase Firestore, pushing push notifications directly to driver units.</p>
+        </div>
+
+        <div class="feature-card glass-card">
+          <div class="feature-icon icon-cyan">
+            <i class="fa-solid fa-wifi"></i>
+          </div>
+          <h3>Offline Hotspot AP Mode</h3>
+          <p>Connect directly to ESP32 campus access points when cellular internet is unavailable or signal is weak.</p>
+        </div>
+
+        <div class="feature-card glass-card">
+          <div class="feature-icon icon-green">
+            <i class="fa-solid fa-tower-broadcast"></i>
+          </div>
+          <h3>LoRa Mesh Repeaters</h3>
+          <p>Long-range 868MHz packet forwarding ensures shuttle arrival alerts reach every stop across campus grounds.</p>
+        </div>
+
+        <div class="feature-card glass-card">
+          <div class="feature-icon icon-purple">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <h3>Multi-Admin Security</h3>
+          <p>SHA-256 encrypted admin passcodes, role-based authorization, and isolated user settings security.</p>
+        </div>
+
+        <div class="feature-card glass-card">
+          <div class="feature-icon icon-amber">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+          </div>
+          <h3>Cross-Platform PWA</h3>
+          <p>Install on iOS, Android, Windows, or macOS directly from your web browser with zero app store delays.</p>
+        </div>
+
+        <div class="feature-card glass-card">
+          <div class="feature-icon icon-red">
+            <i class="fa-solid fa-gauge-high"></i>
+          </div>
+          <h3>5,000+ Scalable Capacity</h3>
+          <p>Optimized indexing, paginated streams, and memory disposal built to handle thousands of peak campus trips.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Access Portals / Download Section -->
+  <section class="section section-dark" id="download">
+    <div class="container">
+      <div class="download-box glass-card">
+        <div class="download-content">
+          <span class="section-tag">Access Anywhere</span>
+          <h2>Launch ASSA on Your Device Now</h2>
+          <p>Choose your preferred platform: run directly in your browser as a Web PWA or download the native Android APK package.</p>
+          
+          <div class="download-buttons">
+            <a href="/app/" class="btn btn-hero-primary btn-glow">
+              <i class="fa-solid fa-laptop-code"></i>
+              <span>Launch Web PWA Application</span>
+            </a>
+            
+            <a href="assa-app.apk" download="ASSA-Shuttle-App.apk" class="btn btn-hero-secondary">
+              <i class="fa-solid fa-download"></i>
+              <span>Download Android APK (64 MB)</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div class="footer-brand">
+        <div class="brand-logo">
+          <i class="fa-solid fa-bus-simple"></i>
+        </div>
+        <span class="brand-name">ASSA</span>
+        <span class="footer-copy">&copy; 2026 AFIT Telecommunication Engineering. All Rights Reserved.</span>
+      </div>
+
+      <div class="footer-links">
+        <a href="/app/">Web PWA App</a>
+        <a href="assa-app.apk">Android APK</a>
+        <a href="https://github.com/assa-systems/assa" target="_blank" rel="noopener">GitHub Repository</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
