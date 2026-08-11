@@ -122,49 +122,7 @@ bool _canReach(String from, String to) {
   return false;
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-// Grouping logic (client-side)
-// Groups requests that have same destination AND
-// pickups are directly connected OR reachable via road network.
-// Returns a map: groupKey -> list of requests, sorted by distance to destination.
-// ───────────────────────────────────────────────────────────────────────────
-Map<String, List<Map<String, dynamic>>> _groupPendingRequests(List<Map<String, dynamic>> requests) {
-  final Map<String, List<Map<String, dynamic>>> groups = {};
-  for (final req in requests) {
-    final dest = (req['destination'] as String?) ?? 'Unknown';
-    final pickup = (req['pickupLocation'] as String?) ?? 'Unknown';
-    bool added = false;
-    for (final key in groups.keys) {
-      final parts = key.split('_');
-      if (parts.length < 2) continue;
-      final groupDest = parts[1];
-      if (groupDest != dest) continue;
-      if (_canReach(pickup, groupDest)) {
-        groups[key]!.add(req);
-        added = true;
-        break;
-      }
-    }
-    if (!added) {
-      final groupKey = '${pickup}_$dest';
-      groups[groupKey] = [req];
-    }
-  }
-  final locs = Esp32Service.allLocations;
-  for (final key in groups.keys) {
-    final parts = key.split('_');
-    final dest = parts.length >= 2 ? parts[1] : '';
-    final destIndex = locs.indexOf(dest);
-    groups[key]!.sort((a, b) {
-      final aIndex = locs.indexOf(a['pickupLocation'] ?? '');
-      final bIndex = locs.indexOf(b['pickupLocation'] ?? '');
-      final aDist = destIndex >= 0 && aIndex >= 0 ? (destIndex - aIndex).abs() : 0;
-      final bDist = destIndex >= 0 && bIndex >= 0 ? (destIndex - bIndex).abs() : 0;
-      return aDist.compareTo(bDist);
-    });
-  }
-  return groups;
-}
+
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -179,7 +137,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
   int _unreadNotifs = 0;
   String _statusFilter = 'Active';
   List<Map<String, dynamic>> _allPending = [];
-  Map<String, List<Map<String, dynamic>>> _groups = {};
   bool _isShuttleOnline = false;
 
   StreamSubscription<QuerySnapshot>? _requestSub;
@@ -227,9 +184,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
 
         if (hasNew && mounted) {
           HapticFeedback.heavyImpact();
-          setState(() {
-            _groups = _groupPendingRequests(_allPending);
-          });
+          setState(() {});
           showToast('📶 New Offline Request received via ASSA-AP WiFi!', 'success');
         }
       } catch (e) {
@@ -248,7 +203,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
       final requests = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       setState(() {
         _allPending = requests;
-        _groups = _groupPendingRequests(requests);
       });
       if (requests.isNotEmpty) HapticFeedback.heavyImpact();
     }, onError: (e) => debugPrint('Request stream error: $e'));
@@ -311,7 +265,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
       final requests = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
       setState(() {
         _allPending = requests;
-        _groups = _groupPendingRequests(requests);
       });
     } catch (e) {
       debugPrint('Manual pending refresh error: $e');
@@ -338,14 +291,13 @@ class _DriverDashboardState extends State<DriverDashboard> {
   }
 
   // ════════════════════════════════════════════════════════════════
-  // Accept group with full error handling and UI refresh
+  // Accept request with full error handling and UI refresh
   // ════════════════════════════════════════════════════════════════
-  Future<void> _acceptGroup(List<Map<String, dynamic>> group, String groupKey) async {
-    final first = group.first;
-    final pickup = first['pickupLocation'];
-    final dest = first['destination'];
-    final totalPax = group.fold<int>(0, (sum, r) => sum + ((r['passengerCount'] as int?) ?? 1));
-    final pickupIds = group.map((r) => r['pickupId'] as String? ?? '???').join(', ');
+  Future<void> _acceptRequest(Map<String, dynamic> req) async {
+    final pickup = req['pickupLocation'];
+    final dest = req['destination'];
+    final totalPax = (req['passengerCount'] as int?) ?? 1;
+    final pickupId = req['pickupId'] as String? ?? '???';
 
     final shuttleId = _driverData?['shuttleId'] ?? '0';
     if (shuttleId == '0' || shuttleId == '---' || shuttleId.isEmpty) {
@@ -360,7 +312,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
-          'Accept Group Request',
+          'Accept Request',
           style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         content: Column(
@@ -373,7 +325,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Pickup IDs: $pickupIds',
+              'Pickup ID: $pickupId',
               style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
@@ -407,38 +359,35 @@ class _DriverDashboardState extends State<DriverDashboard> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.driverColor),
-            child: const Text('Accept All', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text('Accept', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
     if (confirmed != true) return;
 
-    if (mounted) showLoading(context, 'Accepting group...');
+    if (mounted) showLoading(context, 'Accepting request...');
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     final driverName = _driverData?['name'] ?? 'Driver';
 
-    final isOfflineGroup = group.any((r) => r['requestType'] == 'offline');
-    if (isOfflineGroup) {
+    final isOffline = req['requestType'] == 'offline';
+    if (isOffline) {
       final publicShuttleId = Esp32Service.getPublicShuttleId(shuttleId);
-      for (final req in group) {
-        final bookingId = req['id']?.toString() ?? req['pickupId']?.toString() ?? '';
-        if (bookingId.isNotEmpty) {
-          await Esp32Service.instance.sendOfflineStatusUpdateToEsp32(
-            bookingId: bookingId,
-            status: 2, // Accepted
-            shuttleId: publicShuttleId,
-          );
-          await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.accepted, shuttleId: publicShuttleId);
-        }
+      final bookingId = req['id']?.toString() ?? req['pickupId']?.toString() ?? '';
+      if (bookingId.isNotEmpty) {
+        await Esp32Service.instance.sendOfflineStatusUpdateToEsp32(
+          bookingId: bookingId,
+          status: 2, // Accepted
+          shuttleId: publicShuttleId,
+        );
+        await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.accepted, shuttleId: publicShuttleId);
       }
       if (mounted) {
         hideLoading(context);
-        showToast('📶 Accepted ${group.length} offline request(s)! Added to My Passengers.', 'success');
+        showToast('📶 Accepted offline request! Added to My Passengers.', 'success');
         setState(() {
           _statusFilter = 'Active';
-          _allPending.removeWhere((r) => group.any((g) => g['id'] == r['id']));
-          _groups = _groupPendingRequests(_allPending);
+          _allPending.removeWhere((r) => r['id'] == req['id']);
         });
         return;
       }
@@ -446,34 +395,30 @@ class _DriverDashboardState extends State<DriverDashboard> {
 
     try {
       final batch = FirebaseFirestore.instance.batch();
-      for (final req in group) {
-        final rid = req['id'];
-        batch.update(FirebaseFirestore.instance.collection('ride_requests').doc(rid), {
-          'status': 1,
-          'statusName': 'Assigned',
-          'driverId': uid,
-          'driverName': driverName,
-          'shuttleIdFeedback': shuttleId,
-          'assignedAt': FieldValue.serverTimestamp(),
+      final rid = req['id'];
+      batch.update(FirebaseFirestore.instance.collection('ride_requests').doc(rid), {
+        'status': 1,
+        'statusName': 'Assigned',
+        'driverId': uid,
+        'driverName': driverName,
+        'shuttleIdFeedback': shuttleId,
+        'assignedAt': FieldValue.serverTimestamp(),
+      });
+      final userId = req['userId'];
+      if (userId != null && userId.isNotEmpty) {
+        final notifRef = FirebaseFirestore.instance.collection('notifications').doc();
+        batch.set(notifRef, {
+          'userId': userId,
+          'title': '🚌 Driver Accepted!',
+          'body': 'Driver $driverName (Shuttle $shuttleId) accepted your request: $pickup → $dest',
+          'type': 'ride_assigned',
+          'read': false,
+          'createdAt': FieldValue.serverTimestamp(),
         });
-        final userId = req['userId'];
-        if (userId != null && userId.isNotEmpty) {
-          final notifRef = FirebaseFirestore.instance.collection('notifications').doc();
-          batch.set(notifRef, {
-            'userId': userId,
-            'title': '🚌 Driver Accepted!',
-            'body': 'Driver $driverName (Shuttle $shuttleId) accepted your request: $pickup → $dest',
-            'type': 'ride_assigned',
-            'read': false,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-        }
       }
       await batch.commit();
 
-      for (final req in group) {
-        final userId = req['userId'];
-        if (userId == null) continue;
+      if (userId != null) {
         try {
           final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
           final fcmToken = userDoc.data()?['fcmToken'] as String?;
@@ -506,64 +451,58 @@ class _DriverDashboardState extends State<DriverDashboard> {
   }
 
   // ════════════════════════════════════════════════════════════════
-  // Reject group with error handling and UI refresh
+  // Reject request with error handling and UI refresh
   // ════════════════════════════════════════════════════════════════
-  Future<void> _rejectGroup(List<Map<String, dynamic>> group) async {
+  Future<void> _rejectRequest(Map<String, dynamic> req) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Reject Group?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18)),
-        content: const Text('This will reject all passengers in this group.', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+        title: const Text('Reject Request?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18)),
+        content: const Text('This will reject the passenger request.', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Reject All', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Reject', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold))),
         ],
       ),
     );
     if (confirmed != true) return;
     if (mounted) showLoading(context, 'Rejecting...');
 
-    final isOfflineGroup = group.any((r) => r['requestType'] == 'offline');
-    if (isOfflineGroup) {
+    final isOffline = req['requestType'] == 'offline';
+    if (isOffline) {
       final publicShuttleId = Esp32Service.getPublicShuttleId(_driverData?['shuttleId'] ?? '');
-      for (final req in group) {
-        final bookingId = req['id']?.toString() ?? req['pickupId']?.toString() ?? '';
-        if (bookingId.isNotEmpty) {
-          await Esp32Service.instance.sendOfflineStatusUpdateToEsp32(
-            bookingId: bookingId,
-            status: 4, // Rejected
-            shuttleId: publicShuttleId,
-          );
-          await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.rejected, shuttleId: publicShuttleId);
-        }
+      final bookingId = req['id']?.toString() ?? req['pickupId']?.toString() ?? '';
+      if (bookingId.isNotEmpty) {
+        await Esp32Service.instance.sendOfflineStatusUpdateToEsp32(
+          bookingId: bookingId,
+          status: 4, // Rejected
+          shuttleId: publicShuttleId,
+        );
+        await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.rejected, shuttleId: publicShuttleId);
       }
       if (mounted) {
         hideLoading(context);
-        showToast('Rejected ${group.length} offline request(s)', 'error');
+        showToast('Rejected offline request', 'error');
         setState(() {
-          _allPending.removeWhere((r) => group.any((g) => g['id'] == r['id']));
-          _groups = _groupPendingRequests(_allPending);
+          _allPending.removeWhere((r) => r['id'] == req['id']);
         });
         return;
       }
     }
 
     try {
-      final batch = FirebaseFirestore.instance.batch();
-      for (final req in group) {
-        final rid = req['id'];
-        batch.update(FirebaseFirestore.instance.collection('ride_requests').doc(rid), {
-          'status': 4,
-          'statusName': 'Rejected',
-        });
-      }
-      await batch.commit();
+      final rid = req['id'];
+      await FirebaseFirestore.instance.collection('ride_requests').doc(rid).update({
+        'status': 4,
+        'statusName': 'Rejected',
+      });
+      
       if (mounted) {
         hideLoading(context);
-        showToast('Rejected ${group.length} passenger${group.length > 1 ? 's' : ''}', 'error');
+        showToast('Rejected request', 'error');
         await _loadDriverData();
       }
     } catch (e) {
@@ -749,10 +688,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 child: Column(children: [
                   _buildShuttleStatusCard(),
                   const DriverOfTheWeekBanner(),
-                  if (_groups.isNotEmpty) ...[
-                    const Text('Pending Ride Groups', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  if (_allPending.isNotEmpty) ...[
+                    const Text('Pending Ride Requests', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
-                    ..._groups.entries.map((entry) => _buildGroupCard(entry.key, entry.value)),
+                    ..._allPending.map((req) => _buildRequestCard(req)),
                     const SizedBox(height: 16),
                   ],
                   _buildQuickActions(),
@@ -768,16 +707,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
     );
   }
 
-  Widget _buildGroupCard(String groupKey, List<Map<String, dynamic>> group) {
-    if (group.isEmpty) return const SizedBox.shrink();
-    final first = group.first;
-    final pickup = (first['pickupLocation'] as String?) ?? 'Unknown Pickup';
-    final dest = (first['destination'] as String?) ?? 'Unknown Destination';
-    final totalPax = group.fold<int>(0, (sum, r) => sum + ((r['passengerCount'] as int?) ?? 1));
-    final pickupIds = group.map((r) => (r['pickupId'] as String?) ?? '???').join(', ');
-    final requestTypes = group.map((r) => (r['requestType'] as String?) ?? 'online').toSet();
-    final hasOnline = requestTypes.contains('online');
-    final hasOffline = requestTypes.contains('offline');
+  Widget _buildRequestCard(Map<String, dynamic> req) {
+    final pickup = (req['pickupLocation'] as String?) ?? 'Unknown Pickup';
+    final dest = (req['destination'] as String?) ?? 'Unknown Destination';
+    final totalPax = (req['passengerCount'] as int?) ?? 1;
+    final pickupId = (req['pickupId'] as String?) ?? '???';
+    final requestType = (req['requestType'] as String?) ?? 'online';
+    final isOnline = requestType == 'online';
+    final isOffline = requestType == 'offline';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -840,23 +777,21 @@ class _DriverDashboardState extends State<DriverDashboard> {
         ),
         const SizedBox(height: 10),
         Row(children: [
-          Wrap(spacing: 6, runSpacing: 4,
-            children: pickupIds.split(',').map((pid) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(6)),
-              child: Text(pid.trim(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-            )).toList(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(6)),
+            child: Text(pickupId, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
           ),
           const Spacer(),
-          if (hasOnline) _typeChip('Online', AppColors.success),
-          if (hasOffline) const SizedBox(width: 6),
-          if (hasOffline) _typeChip('Offline', AppColors.warning),
+          if (isOnline) _typeChip('Online', AppColors.success),
+          if (isOffline) const SizedBox(width: 6),
+          if (isOffline) _typeChip('Offline', AppColors.warning),
         ]),
         const SizedBox(height: 12),
         Row(children: [
           Expanded(
             child: OutlinedButton(
-              onPressed: () => _rejectGroup(group),
+              onPressed: () => _rejectRequest(req),
               style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.error)),
               child: const Text('Reject', style: TextStyle(color: AppColors.error)),
             ),
@@ -864,7 +799,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
           const SizedBox(width: 10),
           Expanded(
             child: ElevatedButton(
-              onPressed: () => _acceptGroup(group, groupKey),
+              onPressed: () => _acceptRequest(req),
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
               child: const Text('Accept', style: TextStyle(color: Colors.white)),
             ),
