@@ -179,6 +179,15 @@
     .modal-handle{width:36px;height:4px;background:#CBD5E1;border-radius:2px;margin:0 auto 1rem}
     .modal-title{font-size:1.2rem;font-weight:700;color:var(--primary-dark);margin-bottom:1.2rem}
 
+    /* CONFIRM OVERLAY */
+    .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:1.5rem}
+    .confirm-overlay.show{display:flex}
+    .confirm-box{background:white;border-radius:24px;padding:1.5rem;width:100%;max-width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideUp 0.25s cubic-bezier(0,0,0.2,1)}
+    .confirm-icon{font-size:2.5rem;margin-bottom:0.5rem}
+    .confirm-title{font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.4rem}
+    .confirm-msg{font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.2rem}
+    .confirm-btns{display:flex;gap:0.75rem}
+
     /* STAGE ROWS FOR FEEDBACK */
     .stage-row{display:flex;align-items:center;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid var(--border)}
     .stage-row:last-child{border-bottom:none}
@@ -761,7 +770,7 @@ window.addEventListener('online', ()=>{ isOnline=true; updateOnlineStatus(); sho
 window.addEventListener('offline', ()=>{ isOnline=false; updateOnlineStatus(); showToast('Offline — Campus WiFi Mode',''); });
 
 // AUTH
-const _splashTimeout = setTimeout(() => { if(document.getElementById('screen-splash')?.classList.contains('active')) showScreen('login'); }, 1200);
+const _splashTimeout = setTimeout(() => { if(document.getElementById('screen-splash')?.classList.contains('active')) showScreen('login'); }, 400);
 onAuthStateChanged(auth, async user => { clearTimeout(_splashTimeout); if(user){ currentUser=user; try{ await loadUserData(user.uid); }catch(_){ showScreen('dashboard'); } } else { currentUser=null; userData=null; showScreen('login'); } });
 async function loadUserData(uid) { try { const ref=doc(db,'users',uid); let snap; try { snap=await Promise.race([getDoc(ref),new Promise((_,rej)=>setTimeout(()=>rej('timeout'),1500))]); } catch { snap=null; } let data=snap?.data?.()??snap?.data??null; if(data&&(!data.pickupId||data.pickupId==='')){ data.pickupId=generatePickupId(uid); try{ await updateDoc(ref,{pickupId:data.pickupId}); }catch{} } if(!data){ data={name:currentUser.email?.split('@')[0]||'User',email:currentUser.email,role:'user',pickupId:generatePickupId(uid),platform:'pwa',createdAt:new Date().toISOString()}; try{ await setDoc(ref,{...data,createdAt:serverTimestamp(),platform:'pwa'}); }catch{} } userData=data; updateOnlineStatus(); routeByRole(data.role); startNotifListener(uid); } catch(e){ showScreen('login'); } }
 function routeByRole(role) { if(role==='admin'){ document.getElementById('admin-avatar').textContent=getInitials(userData.name); document.getElementById('admin-name').textContent=userData.name||'Admin'; showScreen('admin'); } else if(role==='driver'){ document.getElementById('driver-name').textContent=userData.name||'Driver'; document.getElementById('driver-avatar').textContent=getInitials(userData.name); showScreen('driver'); loadDriverRequests(); startIntentListener(currentUser.uid); } else { showScreen('dashboard'); loadDashboard(); } }
