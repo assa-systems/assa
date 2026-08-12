@@ -372,25 +372,30 @@ class _DriverDashboardState extends State<DriverDashboard> {
 
     final isOffline = req['requestType'] == 'offline';
     if (isOffline) {
-      final publicShuttleId = Esp32Service.getPublicShuttleId(shuttleId);
-      final bookingId = req['id']?.toString() ?? req['pickupId']?.toString() ?? '';
-      if (bookingId.isNotEmpty) {
-        await Esp32Service.instance.sendOfflineStatusUpdateToEsp32(
-          bookingId: bookingId,
-          status: 2, // Accepted
-          shuttleId: publicShuttleId,
-        );
-        await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.accepted, shuttleId: publicShuttleId);
+      try {
+        final publicShuttleId = Esp32Service.getPublicShuttleId(shuttleId);
+        final bookingId = req['id']?.toString() ?? req['pickupId']?.toString() ?? '';
+        if (bookingId.isNotEmpty) {
+          await Esp32Service.instance.sendOfflineStatusUpdateToEsp32(
+            bookingId: bookingId,
+            status: 2, // Accepted
+            shuttleId: publicShuttleId,
+          ).timeout(const Duration(seconds: 3), onTimeout: () => false);
+          await OfflineRequestStore.instance.updateStatus(bookingId, OfflineStatus.accepted, shuttleId: publicShuttleId);
+        }
+      } catch (e) {
+        debugPrint('Offline accept error: $e');
+      } finally {
+        if (mounted) {
+          hideLoading(context);
+          showToast('📶 Accepted offline request! Added to My Passengers.', 'success');
+          setState(() {
+            _statusFilter = 'Active';
+            _allPending.removeWhere((r) => r['id'] == req['id']);
+          });
+        }
       }
-      if (mounted) {
-        hideLoading(context);
-        showToast('📶 Accepted offline request! Added to My Passengers.', 'success');
-        setState(() {
-          _statusFilter = 'Active';
-          _allPending.removeWhere((r) => r['id'] == req['id']);
-        });
-        return;
-      }
+      return;
     }
 
     try {
@@ -405,7 +410,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
         'assignedAt': FieldValue.serverTimestamp(),
       });
       final userId = req['userId'];
-      if (userId != null && userId.isNotEmpty) {
+      if (userId != null && userId.toString().isNotEmpty) {
         final notifRef = FirebaseFirestore.instance.collection('notifications').doc();
         batch.set(notifRef, {
           'userId': userId,
@@ -416,37 +421,40 @@ class _DriverDashboardState extends State<DriverDashboard> {
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
-      await batch.commit();
+      await batch.commit().timeout(const Duration(seconds: 5));
 
+      // Push notification sent asynchronously without blocking UI
       if (userId != null) {
-        try {
-          final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        FirebaseFirestore.instance.collection('users').doc(userId).get().then((userDoc) {
           final fcmToken = userDoc.data()?['fcmToken'] as String?;
           if (fcmToken != null && fcmToken.isNotEmpty) {
-            await NotificationService.instance.sendPushNotification(
+            NotificationService.instance.sendPushNotification(
               token: fcmToken,
               title: '🚌 Driver Accepted!',
               body: 'Driver $driverName (Shuttle $shuttleId) is coming: $pickup → $dest',
               data: {'type': 'ride_assigned', 'userId': userId},
-            );
+            ).catchError((_) {});
           }
-        } catch (_) {}
+        }).catchError((_) {});
       }
 
       if (mounted) {
-        hideLoading(context);
         setState(() {
           _statusFilter = 'Active';
+          _allPending.removeWhere((r) => r['id'] == req['id']);
         });
-        showToast('Accepted $totalPax passenger${totalPax > 1 ? 's' : ''}! Added to My Passengers below.', 'success');
-        await _loadDriverData();
+        showToast('Accepted request! Added to My Passengers.', 'success');
+        _loadDriverData();
       }
     } catch (e) {
       if (mounted) {
-        hideLoading(context);
         showToast('Failed to accept: $e', 'error');
       }
       debugPrint('Accept error: $e');
+    } finally {
+      if (mounted) {
+        hideLoading(context);
+      }
     }
   }
 
