@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -15,6 +15,18 @@
       navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(reg){reg.unregister();});});
       if (caches) caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});});
     }
+    // Instant safety fallback: dismiss splash after 350ms max if still active
+    window.__hasNavigated = false;
+    setTimeout(function() {
+      if (!window.__hasNavigated) {
+        var splash = document.getElementById('screen-splash');
+        var login = document.getElementById('screen-login');
+        if (splash && login && splash.classList.contains('active')) {
+          splash.classList.remove('active');
+          login.classList.add('active');
+        }
+      }
+    }, 350);
   </script>
   <style>
     :root {
@@ -855,6 +867,7 @@ window.toggleEye = function(inputId, btn) {
 
 // --- SCREEN MANAGEMENT ---
 window.showScreen = function(name) {
+  window.__hasNavigated = true;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('screen-' + name);
   if (el) el.classList.add('active');
@@ -948,6 +961,7 @@ window.doForgotPassword = async function() {
 };
 
 window.doLogout = async function() {
+  localStorage.removeItem('assa-user-profile');
   await signOut(auth);
 };
 
@@ -969,32 +983,58 @@ window.doChangePassword = async function() {
   }
 };
 
-// AUTH STATE
-const splashTimeout = setTimeout(() => {
-  if (!currentUser) showScreen('login');
-}, 1200);
-
-onAuthStateChanged(auth, async function(user) {
-  clearTimeout(splashTimeout);
-  if (!user) { currentUser = null; currentUserData = null; showScreen('login'); return; }
+// AUTH STATE - Instantaneous Non-Blocking Navigation
+onAuthStateChanged(auth, function(user) {
+  if (!user) {
+    currentUser = null;
+    currentUserData = null;
+    localStorage.removeItem('assa-user-profile');
+    showScreen('login');
+    return;
+  }
   currentUser = user;
+
+  // 1. Instant screen transition using cached profile if available
+  let cached = null;
   try {
-    const snap = await getDoc(doc(db,'users',user.uid));
+    const raw = localStorage.getItem('assa-user-profile');
+    if (raw) cached = JSON.parse(raw);
+  } catch(e) {}
+
+  if (cached) {
+    currentUserData = cached;
+    if (cached.role === 'admin') {
+      showScreen('admin');
+    } else {
+      setupDashboard();
+      showScreen('dashboard');
+    }
+  } else {
+    // Default immediate user presentation so splash is gone in 0ms
+    currentUserData = {
+      name: user.displayName || (user.email ? user.email.split('@')[0] : 'User'),
+      email: user.email || '',
+      role: 'user',
+      pickupId: '---'
+    };
+    setupDashboard();
+    showScreen('dashboard');
+  }
+
+  // 2. Fetch latest Firestore profile non-blockingly in background
+  getDoc(doc(db, 'users', user.uid)).then(snap => {
     if (snap.exists()) {
       currentUserData = snap.data();
+      try { localStorage.setItem('assa-user-profile', JSON.stringify(currentUserData)); } catch(e) {}
       if (currentUserData.role === 'admin') {
         showScreen('admin');
       } else {
         setupDashboard();
-        showScreen('dashboard');
       }
-    } else {
-      showScreen('dashboard');
     }
-  } catch(e) {
-    console.error('Auth load error', e);
-    showScreen('dashboard');
-  }
+  }).catch(e => {
+    console.warn('Background profile fetch notice:', e);
+  });
 });
 
 // --- DASHBOARD ---
