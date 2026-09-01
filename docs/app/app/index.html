@@ -1096,15 +1096,15 @@ function makeRequestCard(r, id, compact) {
   const badgeMap = {0:'badge-pending', 1:'badge-assigned', 4:'badge-completed', 5:'badge-cancelled'};
   const st = statusMap[r.status] || 'Unknown';
   const bd = badgeMap[r.status] || 'badge-pending';
-  return <div class="request-item">
-    <div class="request-route"> &rarr; </div>
-    <div class="request-meta">
-      <span class="badge "></span>
-      
-      
-    </div>
-    
-  </div>;
+  return '<div class="request-item">' +
+    '<div class="request-route">' + (r.pickupLocation||'?') + ' &rarr; ' + (r.destination||'?') + '</div>' +
+    '<div class="request-meta">' +
+      '<span class="badge ' + bd + '">' + st + '</span>' +
+      (r.shuttleId ? '<span>Shuttle: ' + r.shuttleId + '</span>' : '') +
+      (r.rideType ? '<span>' + r.rideType + '</span>' : '') +
+    '</div>' +
+    (r.status === 1 && r.shuttleId ? '<div style="font-size:0.82rem;color:var(--success);font-weight:600">&#128652; Shuttle ' + r.shuttleId + ' is on the way!</div>' : '') +
+  '</div>';
 }
 
 async function loadUnreadNotifCount() {
