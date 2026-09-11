@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <title>ASSA — AFIT Shuttle Service</title>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -4005,32 +4008,49 @@ window.savePinFromMap = async function(key, newName, lat, lng) {
   newName = (newName || '').trim();
   if (!newName) { alert('Please enter a location name.'); return; }
 
+  // 1. Immediately update in-memory tables and localStorage (Instant UI feedback!)
   customLocationNames[key] = newName;
   if (AFIT_LOCATIONS[key]) {
     AFIT_LOCATIONS[key].defaultName = newName;
   }
   localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
 
+  // 2. Immediately refresh all views
+  if (adminLiveMap) adminLiveMap.closePopup();
+  renderAdminMapPins();
+  renderAdminQuickChips();
+  if (typeof renderCampusPins === 'function') renderCampusPins();
+  if (typeof updateDropdownNames === 'function') updateDropdownNames();
+  if (typeof renderLocationChips === 'function') {
+    renderLocationChips('req-pickup-grid', 'pickup');
+    renderLocationChips('req-dest-grid', 'dest');
+  }
+
+  // 3. Resilient Firebase Sync
+  let syncErrors = [];
   try {
-    // 1. Save to settings/location_names
-    await setDoc(doc(db, 'settings', 'location_names'), { [key]: newName }, { merge: true });
-
-    // 2. Save full array to settings/locations (list array) for Flutter app compatibility
-    const onlineList = Object.keys(AFIT_LOCATIONS).filter(k => !deletedLocationKeys.has(k)).map(k => customLocationNames[k] || AFIT_LOCATIONS[k].defaultName || k);
-    await setDoc(doc(db, 'settings', 'locations'), { list: onlineList }, { merge: true });
-
-    // 3. Immediately update all views across the PWA
-    renderAdminMapPins();
-    renderAdminQuickChips();
-    if (typeof renderCampusPins === 'function') renderCampusPins();
-    if (typeof updateDropdownNames === 'function') updateDropdownNames();
-    if (typeof renderLocationChips === 'function') {
-      renderLocationChips('req-pickup-grid', 'pickup');
-      renderLocationChips('req-dest-grid', 'dest');
-    }
-    alert('📍 Location "' + newName + '" saved to Firebase! User and Driver sides are now updated.');
+    const safeFieldKey = key.replace(/[./]/g, '_');
+    await setDoc(doc(db, 'settings', 'location_names'), { [safeFieldKey]: newName }, { merge: true }).catch(err => {
+      syncErrors.push('location_names: ' + err.message);
+    });
   } catch(e) {
-    alert('Error saving location: ' + e.message);
+    syncErrors.push(e.message);
+  }
+
+  try {
+    const onlineList = Object.keys(AFIT_LOCATIONS).filter(k => !deletedLocationKeys.has(k)).map(k => customLocationNames[k] || AFIT_LOCATIONS[k].defaultName || k);
+    await setDoc(doc(db, 'settings', 'locations'), { list: onlineList }, { merge: true }).catch(err => {
+      syncErrors.push('locations list: ' + err.message);
+    });
+  } catch(e) {
+    syncErrors.push(e.message);
+  }
+
+  if (syncErrors.length === 0) {
+    alert('📍 Location "' + newName + '" saved and synced to Firebase in real-time!');
+  } else {
+    console.warn('Cloud sync notices:', syncErrors);
+    alert('📍 Location "' + newName + '" saved locally and pinned to map! (Cloud note: ' + syncErrors.join(', ') + ')');
   }
 };
 
@@ -4038,50 +4058,67 @@ window.saveNewPinFromMap = async function(name, lat, lng) {
   name = (name || '').trim();
   if (!name) { alert('Please enter a location name.'); return; }
 
+  // 1. Immediately register new pin in memory and local storage
+  const newCode = 100 + Object.keys(AFIT_LOCATIONS).length;
+  AFIT_LOCATIONS[name] = {
+    code: newCode,
+    lat: Number(lat),
+    lng: Number(lng),
+    category: 'Campus Spot',
+    defaultName: name
+  };
+  customLocationNames[name] = name;
+  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+
+  // 2. Immediately close popups and update map pins and dropdowns
+  if (adminLiveMap) adminLiveMap.closePopup();
+  if (adminTempClickMarker && adminLiveMap) {
+    adminLiveMap.removeLayer(adminTempClickMarker);
+    adminTempClickMarker = null;
+  }
+
+  renderAdminMapPins();
+  renderAdminQuickChips();
+  if (typeof renderCampusPins === 'function') renderCampusPins();
+  if (typeof updateDropdownNames === 'function') updateDropdownNames();
+  if (typeof renderLocationChips === 'function') {
+    renderLocationChips('req-pickup-grid', 'pickup');
+    renderLocationChips('req-dest-grid', 'dest');
+  }
+
+  // 3. Resilient Firebase Sync
+  let syncErrors = [];
   try {
-    const newCode = 100 + Object.keys(AFIT_LOCATIONS).length;
-    AFIT_LOCATIONS[name] = {
-      code: newCode,
-      lat: lat,
-      lng: lng,
-      category: 'Campus Spot',
-      defaultName: name
-    };
-    customLocationNames[name] = name;
-    localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+    const safeFieldKey = name.replace(/[./]/g, '_');
+    await setDoc(doc(db, 'settings', 'location_names'), { [safeFieldKey]: name }, { merge: true }).catch(err => {
+      syncErrors.push('location_names: ' + err.message);
+    });
+  } catch(e) {
+    syncErrors.push(e.message);
+  }
 
-    // 1. Save to settings/location_names
-    await setDoc(doc(db, 'settings', 'location_names'), { [name]: name }, { merge: true });
-
-    // 2. Save to settings/locations list
+  try {
     const locDocRef = doc(db, 'settings', 'locations');
-    const snap = await getDoc(locDocRef);
+    const snap = await getDoc(locDocRef).catch(() => null);
     let curList = [];
-    if (snap.exists() && Array.isArray(snap.data()?.list)) {
+    if (snap && snap.exists() && Array.isArray(snap.data()?.list)) {
       curList = snap.data().list;
     }
     if (!curList.includes(name)) {
       curList.push(name);
-      await setDoc(locDocRef, { list: curList }, { merge: true });
+      await setDoc(locDocRef, { list: curList }, { merge: true }).catch(err => {
+        syncErrors.push('locations list: ' + err.message);
+      });
     }
-
-    if (adminLiveMap) adminLiveMap.closePopup();
-    if (adminTempClickMarker && adminLiveMap) {
-      adminLiveMap.removeLayer(adminTempClickMarker);
-      adminTempClickMarker = null;
-    }
-
-    renderAdminMapPins();
-    renderAdminQuickChips();
-    if (typeof renderCampusPins === 'function') renderCampusPins();
-    if (typeof updateDropdownNames === 'function') updateDropdownNames();
-    if (typeof renderLocationChips === 'function') {
-      renderLocationChips('req-pickup-grid', 'pickup');
-      renderLocationChips('req-dest-grid', 'dest');
-    }
-    alert('📍 New location "' + name + '" tagged! It is now live on User & Driver sides.');
   } catch(e) {
-    alert('Error saving location: ' + e.message);
+    syncErrors.push(e.message);
+  }
+
+  if (syncErrors.length === 0) {
+    alert('📍 New location "' + name + '" tagged & synced to Firebase! User and Driver sides are now updated.');
+  } else {
+    console.warn('Cloud sync notices:', syncErrors);
+    alert('📍 New location "' + name + '" tagged & pinned to map! (Cloud note: ' + syncErrors.join(', ') + ')');
   }
 };
 
@@ -4201,14 +4238,21 @@ function openTagModalWithCoords(lat, lng) {
 
 window.saveTaggedSpot = async function() {
   const nameInp = document.getElementById('tag-spot-name');
-  const catSel = document.getElementById('tag-spot-category');
   const name = nameInp ? nameInp.value.trim() : '';
-  const category = catSel ? catSel.value : 'Campus Spot';
-
   if (!name) { alert('Please enter a location name.'); return; }
-  if (!adminPendingTagCoords) { alert('No coordinates selected.'); return; }
 
-  await saveNewPinFromMap(name, adminPendingTagCoords[0], adminPendingTagCoords[1]);
+  let coords = adminPendingTagCoords || adminGpsCoords;
+  if (!coords && adminLiveMap) {
+    const c = adminLiveMap.getCenter();
+    coords = [c.lat, c.lng];
+  }
+
+  if (!coords) {
+    alert('Could not determine coordinates. Please tap anywhere on the map directly.');
+    return;
+  }
+
+  await saveNewPinFromMap(name, coords[0], coords[1]);
   closeModal('modal-tag-spot');
 };
 
