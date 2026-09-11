@@ -1601,6 +1601,26 @@ const auth = getAuth(FB);
 const db = getFirestore(FB);
 const rtdb = getDatabase(FB);
 
+// Global String & HTML Attribute Utilities
+function escapeAttr(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+window.escapeAttr = escapeAttr;
+
+function escape(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+window.escape = escape;
+
 // 12 Campus Locations with Verified Kawo, Kaduna Coordinates
 const AFIT_LOCATIONS = {
   'AFIT Gates':                 { code: 1,  lat: 10.6068, lng: 7.4370, category: 'Main Entrance', defaultName: 'AFIT Main Gate' },
@@ -1791,8 +1811,20 @@ window.showScreen = function(name) {
   }
 };
 
-// --- MODALS ---
-window.closeModal = function(id) { document.getElementById(id).classList.remove('show'); };
+// --- MODALS & SCREENS ---
+window.openModal = function(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('show');
+};
+window.closeModal = function(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('show');
+};
+window.switchScreen = function(name) {
+  if (typeof showScreen === 'function') {
+    showScreen(name.replace(/^screen-/, ''));
+  }
+};
 window.showForgotPassword = function() {
   document.getElementById('forgot-error').classList.remove('show');
   document.getElementById('forgot-success').style.display = 'none';
@@ -3729,7 +3761,9 @@ window.showDriverAcceptedModal = function(ride) {
 
 window.trackFromAcceptedModal = function() {
   closeModal('modal-driver-accepted');
-  switchScreen('screen-tracking');
+  if (typeof showScreen === 'function') {
+    showScreen('tracking');
+  }
 };
 
 // --- ADMIN LIVE GPS & CAMPUS MAP ---
@@ -4355,10 +4389,6 @@ function formatTime(ts) {
   if (!ts) return '';
   const d = ts.toDate ? ts.toDate() : new Date(ts.seconds ? ts.seconds * 1000 : ts);
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function escape(s) {
-  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 window.loadLeaderboard = window.loadLeaderboard;
