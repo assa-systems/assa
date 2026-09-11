@@ -304,17 +304,20 @@
     .campus-pin-inner {
       background: #0D47A1;
       color: white;
-      padding: 3px 8px;
-      border-radius: 8px;
-      font-size: 10px;
-      font-weight: 800;
+      padding: 1.5px 5px;
+      border-radius: 5px;
+      font-size: 8px;
+      font-weight: 700;
       white-space: nowrap;
-      border: 1.5px solid white;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+      border: 1px solid white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
       transition: transform 0.15s;
     }
     .campus-pin-inner:hover {
@@ -3945,35 +3948,35 @@ window.trackFromAcceptedModal = function() {
 };
 
 // --- ADMIN LIVE GPS & CAMPUS MAP ---
+let adminPopupPhotoData = '';
+
 function initAdminLiveMap() {
   setTimeout(() => {
     const el = document.getElementById('admin-live-map');
     if (!el) return;
 
     if (!adminLiveMap) {
-      // Initialize with tap: false for smooth mobile touch support
       adminLiveMap = L.map('admin-live-map', { 
         zoomControl: false, 
         tap: false 
-      }).setView([10.6110, 7.4450], 15);
+      }).setView([10.61205, 7.44520], 15);
 
       L.control.zoom({ position: 'topright' }).addTo(adminLiveMap);
 
-      // Google Roadmap tiles
       L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
         maxZoom: 20,
         attribution: 'Google Maps'
       }).addTo(adminLiveMap);
 
-      // Map click / tap handler: Add Pin at clicked location
+      // Direct map tap to add spot & photo right in the popup!
       adminLiveMap.on('click', (e) => {
-        handleAdminMapClick(e.latlng.lat, e.latlng.lng);
+        openInMapPhotoPrompt(e.latlng.lat, e.latlng.lng, null);
       });
     }
 
     renderAdminMapPins();
     renderAdminQuickChips();
-    startAdminGpsWatch(true); // Auto center on live GPS
+    startAdminGpsWatch(true);
     adminLiveMap.invalidateSize();
   }, 200);
 }
@@ -3994,48 +3997,137 @@ window.toggleAdminPinMode = function() {
 window.pinCenterOfMap = function() {
   if (!adminLiveMap) return;
   const center = adminLiveMap.getCenter();
-  handleAdminMapClick(center.lat, center.lng);
+  openInMapPhotoPrompt(center.lat, center.lng, null);
 };
 
-let adminEditingSpotKey = null;
+// Open In-Map Popup with Name & Photo Uploader
+function openInMapPhotoPrompt(lat, lng, existingKey = null) {
+  if (!adminLiveMap) return;
 
-function handleAdminMapClick(lat, lng) {
-  openTagModalWithCoords(lat, lng, null);
+  const loc = existingKey ? AFIT_LOCATIONS[existingKey] : null;
+  const currentName = loc ? (customLocationNames[existingKey] || loc.defaultName || existingKey) : '';
+  const existingPhoto = (existingKey && customLocationImages[existingKey]) ? customLocationImages[existingKey] : '';
+  adminPopupPhotoData = existingPhoto;
+
+  const popupContent = '<div style="min-width:215px;max-width:245px;padding:3px">' +
+    '<div style="font-weight:800;font-size:11px;color:#1E3A8A;display:flex;align-items:center;gap:4px;margin-bottom:2px">' +
+      '<span>' + (existingKey ? '✏️' : '➕') + '</span> ' +
+      '<span>' + (existingKey ? ('Edit Spot #' + loc.code) : 'Label New Campus Spot') + '</span>' +
+    '</div>' +
+    '<div style="font-size:9px;color:#666;margin-bottom:5px">' + Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5) + '</div>' +
+    
+    '<label style="font-size:9.5px;font-weight:700;color:#333;display:block;margin-bottom:2px">Spot Name for Students &amp; Drivers:</label>' +
+    '<input id="pop-new-loc-name" value="' + escapeAttr(currentName) + '" placeholder="e.g. Bukka, Library, PT Gate..." style="width:100%;padding:5px 7px;border:1.5px solid #2563EB;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:5px;box-sizing:border-box" autofocus />' +
+
+    // Picture of Location / Building
+    '<label style="font-size:9.5px;font-weight:700;color:#1E3A8A;display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">' +
+      '<span>📷 Add Building Picture:</span>' +
+      '<span style="font-size:8.5px;color:#10B981;font-weight:800">Visible to users</span>' +
+    '</label>' +
+    
+    // File Input button
+    '<input type="file" id="pop-photo-input-file" accept="image/*" capture="environment" style="display:none" onchange="handlePopupPhotoFile(this)"/>' +
+    '<div style="display:flex;gap:4px;margin-bottom:3px">' +
+      '<button type="button" onclick="triggerPhotoPick()" style="flex:1;background:#2563EB;color:#fff;border:none;padding:4px 6px;border-radius:5px;font-size:9.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px">' +
+        '<span>📁</span> Choose / Take Photo' +
+      '</button>' +
+    '</div>' +
+
+    // Paste Image Link / URL input
+    '<input id="pop-photo-url-inp" value="' + (existingPhoto.startsWith('http') ? escapeAttr(existingPhoto) : '') + '" placeholder="Or paste image web link / URL..." style="width:100%;padding:4px 6px;border:1px solid #ccc;border-radius:5px;font-size:9px;box-sizing:border-box;margin-bottom:4px" oninput="handlePopupPhotoUrl(this.value)"/>' +
+
+    // Live Thumbnail Preview
+    '<div id="pop-preview-wrap" style="' + (existingPhoto ? 'display:block;' : 'display:none;') + 'position:relative;width:100%;height:85px;border-radius:6px;overflow:hidden;border:1px solid #10B981;margin-bottom:5px">' +
+      '<img id="pop-preview-img" src="' + existingPhoto + '" style="width:100%;height:100%;object-fit:cover" alt="Preview"/>' +
+      '<button type="button" onclick="clearPopupPhoto()" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.75);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:900;cursor:pointer">&times;</button>' +
+    '</div>' +
+
+    // Action Buttons
+    '<div style="display:flex;gap:4px">' +
+      '<button data-lat="' + lat + '" data-lng="' + lng + '" data-key="' + escapeAttr(existingKey || '') + '" onclick="submitPopupPin(Number(this.dataset.lat), Number(this.dataset.lng), this.dataset.key)" style="flex:1;background:#16a34a;color:#fff;border:none;padding:6px;border-radius:6px;font-weight:800;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px">' +
+        '<span>💾</span> Save &amp; Sync' +
+      '</button>' +
+      (existingKey ? ('<button data-key="' + escapeAttr(existingKey) + '" onclick="deletePinFromMap(this.dataset.key)" style="background:#dc2626;color:#fff;border:none;padding:6px 8px;border-radius:6px;font-weight:800;font-size:10px;cursor:pointer" title="Erase Pin">&#128465;</button>') : '') +
+      '<button onclick="adminLiveMap.closePopup()" style="background:#e5e7eb;color:#374151;border:none;padding:6px 8px;border-radius:6px;font-weight:700;font-size:10px;cursor:pointer">' +
+        'Cancel' +
+      '</button>' +
+    '</div>' +
+  '</div>';
+
+  L.popup({ closeButton: true, autoPan: true })
+    .setLatLng([lat, lng])
+    .setContent(popupContent)
+    .openOn(adminLiveMap);
 }
 
-window.handlePhotoUrlInput = function(url) {
+window.handlePopupPhotoFile = async function(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    const base64 = await compressImageFile(file, 640, 0.7);
+    adminPopupPhotoData = base64;
+    const wrap = document.getElementById('pop-preview-wrap');
+    const img = document.getElementById('pop-preview-img');
+    if (img) img.src = base64;
+    if (wrap) wrap.style.display = 'block';
+  } catch(e) {
+    alert('Error loading image: ' + e.message);
+  }
+};
+
+window.handlePopupPhotoUrl = function(url) {
   url = (url || '').trim();
   if (url) {
-    pendingSpotPhotoBase64 = url;
-    const previewWrap = document.getElementById('tag-spot-preview-wrap');
-    const previewImg = document.getElementById('tag-spot-preview-img');
-    if (previewImg) previewImg.src = url;
-    if (previewWrap) previewWrap.style.display = 'block';
+    adminPopupPhotoData = url;
+    const wrap = document.getElementById('pop-preview-wrap');
+    const img = document.getElementById('pop-preview-img');
+    if (img) img.src = url;
+    if (wrap) wrap.style.display = 'block';
   }
 };
 
-window.openEditModalForPin = function(key) {
-  const loc = AFIT_LOCATIONS[key];
-  if (!loc) return;
-  if (adminLiveMap) adminLiveMap.closePopup();
-  openTagModalWithCoords(loc.lat, loc.lng, key);
+window.clearPopupPhoto = function() {
+  adminPopupPhotoData = '';
+  const wrap = document.getElementById('pop-preview-wrap');
+  const img = document.getElementById('pop-preview-img');
+  if (img) img.src = '';
+  if (wrap) wrap.style.display = 'none';
+  const urlInp = document.getElementById('pop-photo-url-inp');
+  if (urlInp) urlInp.value = '';
 };
 
-window.deleteEditingSpot = function() {
-  if (adminEditingSpotKey) {
-    deletePinFromMap(adminEditingSpotKey);
-    closeModal('modal-tag-spot');
-  }
-};
-
-window.submitNewPinClick = function(lat, lng) {
+window.submitPopupPin = async function(lat, lng, existingKey) {
   const inp = document.getElementById('pop-new-loc-name');
-  if (inp) saveNewPinFromMap(inp.value, lat, lng);
-};
+  const name = inp ? inp.value.trim() : '';
+  if (!name) { alert('Please enter a location name.'); return; }
 
-window.submitPinEdit = function(code, key, lat, lng) {
-  const inp = document.getElementById('admin-pin-name-' + code);
-  if (inp) savePinFromMap(key, inp.value, lat, lng);
+  if (existingKey) {
+    // Update existing pin & photo
+    customLocationNames[existingKey] = name;
+    if (AFIT_LOCATIONS[existingKey]) {
+      AFIT_LOCATIONS[existingKey].defaultName = name;
+    }
+    localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+
+    if (adminPopupPhotoData) {
+      customLocationImages[existingKey] = adminPopupPhotoData;
+      localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
+      const safeKey = existingKey.replace(/[./]/g, '_');
+      setDoc(doc(db, 'settings', 'location_images'), { [safeKey]: adminPopupPhotoData }, { merge: true }).catch(() => {});
+    }
+
+    if (adminLiveMap) adminLiveMap.closePopup();
+    renderAdminMapPins();
+    renderAdminQuickChips();
+    if (typeof renderLocationChips === 'function') {
+      renderLocationChips('req-pickup-grid', 'pickup');
+      renderLocationChips('req-dest-grid', 'dest');
+    }
+    alert('📷 Location "' + name + '" and picture updated! Users will now see this building.');
+  } else {
+    // New pin
+    await saveNewPinFromMap(name, lat, lng, adminPopupPhotoData);
+  }
 };
 
 function renderAdminMapPins() {
@@ -4054,40 +4146,17 @@ function renderAdminMapPins() {
     const dName = getLocDisplayName(key);
     const photo = customLocationImages[key] || '';
 
-    // Compact font & badge to avoid cluttering the map
-    const iconHtml = '<div style="background:#1E3A8A;color:#fff;padding:2px 5px;border-radius:6px;font-size:9px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.35);cursor:pointer;border:1px solid #fff;max-width:95px;overflow:hidden;text-overflow:ellipsis">' +
-      (photo ? '📷 ' : '') + loc.code + '. ' + escape(dName) + '</div>';
-    const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [95, 18], iconAnchor: [47, 9] });
+    // Sleek, compact 8px pin badge (takes minimal map space)
+    const iconHtml = '<div style="background:#0D47A1;color:#fff;padding:1.5px 5px;border-radius:5px;font-size:8px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.35);cursor:pointer;border:1px solid #fff;max-width:85px;overflow:hidden;text-overflow:ellipsis">' +
+      (photo ? '📷 ' : '📍 ') + loc.code + '. ' + escape(dName) + '</div>';
+    const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [85, 16], iconAnchor: [42, 8] });
     const m = L.marker([loc.lat, loc.lng], { icon: cIcon }).addTo(window.__adminPinsLayer);
 
-    const popupHtml = '<div style="min-width:200px;max-width:230px;padding:4px">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
-        '<span style="font-weight:800;font-size:11px;color:#1E3A8A">📍 Pin #' + loc.code + '</span>' +
-        '<span style="font-size:9px;background:#E0E7FF;color:#3730A3;padding:1px 5px;border-radius:4px;font-weight:700">' + escape(loc.category) + '</span>' +
-      '</div>' +
-      '<div style="font-size:9px;color:#666;margin-bottom:4px">' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + '</div>' +
-      
-      (photo ? (
-        '<div style="position:relative;margin-bottom:5px;border-radius:8px;overflow:hidden;cursor:pointer;border:1px solid #CBD5E1" data-img="' + encodeURI(photo) + '" onclick="viewFullImage(decodeURI(this.dataset.img))">' +
-          '<img src="' + photo + '" style="width:100%;height:90px;object-fit:cover;display:block" alt="Building photo"/>' +
-          '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.65);color:#fff;font-size:9px;font-weight:700;padding:2px 4px;text-align:center">' +
-            '🔍 Tap photo to view full screen' +
-          '</div>' +
-        '</div>'
-      ) : '') +
-
-      '<div style="font-size:11px;font-weight:800;color:#1E3A8A;margin-bottom:4px">' + escape(dName) + '</div>' +
-
-      '<div style="display:flex;gap:4px">' +
-        '<button data-key="' + escapeAttr(key) + '" onclick="openEditModalForPin(this.dataset.key)" style="flex:1;background:#2563EB;color:#fff;border:none;padding:5px 8px;border-radius:6px;font-weight:800;font-size:10px;cursor:pointer">' +
-          '📷 Edit &amp; Photo' +
-        '</button>' +
-        '<button data-key="' + escapeAttr(key) + '" onclick="deletePinFromMap(this.dataset.key)" style="background:#DC2626;color:#fff;border:none;padding:5px 7px;border-radius:6px;font-weight:800;font-size:10px;cursor:pointer" title="Remove pin">' +
-          '&#128465;' +
-        '</button>' +
-      '</div>' +
-    '</div>';
-    m.bindPopup(popupHtml);
+    // Clicking pin opens in-map popup allowing direct photo edit & name edit
+    m.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      openInMapPhotoPrompt(loc.lat, loc.lng, key);
+    });
   });
 }
 
@@ -4103,212 +4172,26 @@ function renderAdminQuickChips() {
   keys.forEach(key => {
     const loc = AFIT_LOCATIONS[key];
     const dName = getLocDisplayName(key);
+    const hasPhoto = !!customLocationImages[key];
 
     const chip = document.createElement('div');
     chip.className = 'pin-chip-item';
+    chip.style.fontSize = '0.68rem';
+    chip.style.padding = '2px 6px';
     chip.innerHTML = '<span style="color:var(--primary);font-weight:800;cursor:pointer">#' + loc.code + '</span>' +
-      '<span style="cursor:pointer">' + escape(dName) + '</span>' +
-      '<button class="pin-chip-del" data-key="' + escapeAttr(key) + '" onclick="event.stopPropagation(); deletePinFromMap(this.dataset.key);" title="Remove pin">&#10005;</button>';
+      '<span style="cursor:pointer">' + (hasPhoto ? '📷 ' : '') + escape(dName) + '</span>' +
+      '<button class="pin-chip-del" data-key="' + escapeAttr(key) + '" onclick="event.stopPropagation(); deletePinFromMap(this.dataset.key);" title="Remove pin" style="width:15px;height:15px;font-size:9px">&#10005;</button>';
 
-    // Clicking chip centers map and opens pin popup
     chip.onclick = () => {
       if (adminLiveMap) {
         adminLiveMap.setView([loc.lat, loc.lng], 18);
-        if (window.__adminPinsLayer) {
-          window.__adminPinsLayer.eachLayer(layer => {
-            const ll = layer.getLatLng();
-            if (Math.abs(ll.lat - loc.lat) < 0.0001 && Math.abs(ll.lng - loc.lng) < 0.0001) {
-              layer.openPopup();
-            }
-          });
-        }
+        openInMapPhotoPrompt(loc.lat, loc.lng, key);
       }
     };
 
     container.appendChild(chip);
   });
 }
-
-window.deletePinFromMap = async function(key) {
-  const dName = getLocDisplayName(key);
-  if (!confirm('Are you sure you want to remove "' + dName + '" from the campus map and ride requests?')) {
-    return;
-  }
-
-  // 1. Mark as deleted locally
-  deletedLocationKeys.add(key);
-  delete AFIT_LOCATIONS[key];
-  delete customLocationNames[key];
-  localStorage.setItem('assa-deleted-locs', JSON.stringify(Array.from(deletedLocationKeys)));
-  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
-
-  // 2. Immediately update UI
-  if (adminLiveMap) adminLiveMap.closePopup();
-  renderAdminMapPins();
-  renderAdminQuickChips();
-  if (typeof renderCampusPins === 'function') renderCampusPins();
-  if (typeof updateDropdownNames === 'function') updateDropdownNames();
-  if (typeof renderLocationChips === 'function') {
-    renderLocationChips('req-pickup-grid', 'pickup');
-    renderLocationChips('req-dest-grid', 'dest');
-  }
-
-  try {
-    // 3. Save to Firestore settings/deleted_locations
-    const delDocRef = doc(db, 'settings', 'deleted_locations');
-    const delSnap = await getDoc(delDocRef);
-    let delList = [];
-    if (delSnap.exists() && Array.isArray(delSnap.data()?.list)) {
-      delList = delSnap.data().list;
-    }
-    if (!delList.includes(key)) {
-      delList.push(key);
-      await setDoc(delDocRef, { list: delList, updatedAt: Date.now() }, { merge: true });
-    }
-
-    // 4. Remove from settings/locations (list array)
-    const locDocRef = doc(db, 'settings', 'locations');
-    const locSnap = await getDoc(locDocRef);
-    if (locSnap.exists() && Array.isArray(locSnap.data()?.list)) {
-      const updatedList = locSnap.data().list.filter(item => item !== key && item !== dName);
-      await setDoc(locDocRef, { list: updatedList }, { merge: true });
-    }
-
-    // 5. Delete field from settings/location_names
-    await updateDoc(doc(db, 'settings', 'location_names'), {
-      [key]: deleteField()
-    }).catch(() => {});
-
-    alert('&#128465; Location "' + dName + '" removed from map and synced across all devices!');
-  } catch(e) {
-    console.error('Error syncing pin deletion:', e);
-  }
-};
-
-window.savePinFromMap = async function(key, newName, lat, lng) {
-  newName = (newName || '').trim();
-  if (!newName) { alert('Please enter a location name.'); return; }
-
-  // 1. Immediately update in-memory tables and localStorage (Instant UI feedback!)
-  customLocationNames[key] = newName;
-  if (AFIT_LOCATIONS[key]) {
-    AFIT_LOCATIONS[key].defaultName = newName;
-  }
-  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
-
-  // 2. Immediately refresh all views
-  if (adminLiveMap) adminLiveMap.closePopup();
-  renderAdminMapPins();
-  renderAdminQuickChips();
-  if (typeof renderCampusPins === 'function') renderCampusPins();
-  if (typeof updateDropdownNames === 'function') updateDropdownNames();
-  if (typeof renderLocationChips === 'function') {
-    renderLocationChips('req-pickup-grid', 'pickup');
-    renderLocationChips('req-dest-grid', 'dest');
-  }
-
-  // 3. Resilient Firebase Sync
-  let syncErrors = [];
-  try {
-    const safeFieldKey = key.replace(/[./]/g, '_');
-    await setDoc(doc(db, 'settings', 'location_names'), { [safeFieldKey]: newName }, { merge: true }).catch(err => {
-      syncErrors.push('location_names: ' + err.message);
-    });
-  } catch(e) {
-    syncErrors.push(e.message);
-  }
-
-  try {
-    const onlineList = Object.keys(AFIT_LOCATIONS).filter(k => !deletedLocationKeys.has(k)).map(k => customLocationNames[k] || AFIT_LOCATIONS[k].defaultName || k);
-    await setDoc(doc(db, 'settings', 'locations'), { list: onlineList }, { merge: true }).catch(err => {
-      syncErrors.push('locations list: ' + err.message);
-    });
-  } catch(e) {
-    syncErrors.push(e.message);
-  }
-
-  if (syncErrors.length === 0) {
-    alert('📍 Location "' + newName + '" saved and synced to Firebase in real-time!');
-  } else {
-    console.warn('Cloud sync notices:', syncErrors);
-    alert('📍 Location "' + newName + '" saved locally and pinned to map! (Cloud note: ' + syncErrors.join(', ') + ')');
-  }
-};
-
-window.saveNewPinFromMap = async function(name, lat, lng, photoBase64 = '') {
-  name = (name || '').trim();
-  if (!name) { alert('Please enter a location name.'); return; }
-
-  // 1. Immediately register new pin in memory and local storage
-  const newCode = 100 + Object.keys(AFIT_LOCATIONS).length;
-  AFIT_LOCATIONS[name] = {
-    code: newCode,
-    lat: Number(lat),
-    lng: Number(lng),
-    category: 'Campus Spot',
-    defaultName: name
-  };
-  customLocationNames[name] = name;
-  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
-
-  if (photoBase64) {
-    customLocationImages[name] = photoBase64;
-    localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
-    const safeKey = name.replace(/[./]/g, '_');
-    setDoc(doc(db, 'settings', 'location_images'), { [safeKey]: photoBase64 }, { merge: true }).catch(err => console.warn('Photo sync notice:', err));
-  }
-
-  // 2. Immediately close popups and update map pins and dropdowns
-  if (adminLiveMap) adminLiveMap.closePopup();
-  if (adminTempClickMarker && adminLiveMap) {
-    adminLiveMap.removeLayer(adminTempClickMarker);
-    adminTempClickMarker = null;
-  }
-
-  renderAdminMapPins();
-  renderAdminQuickChips();
-  if (typeof renderCampusPins === 'function') renderCampusPins();
-  if (typeof updateDropdownNames === 'function') updateDropdownNames();
-  if (typeof renderLocationChips === 'function') {
-    renderLocationChips('req-pickup-grid', 'pickup');
-    renderLocationChips('req-dest-grid', 'dest');
-  }
-
-  // 3. Resilient Firebase Sync
-  let syncErrors = [];
-  try {
-    const safeFieldKey = name.replace(/[./]/g, '_');
-    await setDoc(doc(db, 'settings', 'location_names'), { [safeFieldKey]: name }, { merge: true }).catch(err => {
-      syncErrors.push('location_names: ' + err.message);
-    });
-  } catch(e) {
-    syncErrors.push(e.message);
-  }
-
-  try {
-    const locDocRef = doc(db, 'settings', 'locations');
-    const snap = await getDoc(locDocRef).catch(() => null);
-    let curList = [];
-    if (snap && snap.exists() && Array.isArray(snap.data()?.list)) {
-      curList = snap.data().list;
-    }
-    if (!curList.includes(name)) {
-      curList.push(name);
-      await setDoc(locDocRef, { list: curList }, { merge: true }).catch(err => {
-        syncErrors.push('locations list: ' + err.message);
-      });
-    }
-  } catch(e) {
-    syncErrors.push(e.message);
-  }
-
-  if (syncErrors.length === 0) {
-    alert('📍 New location "' + name + '" tagged & synced to Firebase! User and Driver sides are now updated.');
-  } else {
-    console.warn('Cloud sync notices:', syncErrors);
-    alert('📍 New location "' + name + '" tagged & pinned to map! (Cloud note: ' + syncErrors.join(', ') + ')');
-  }
-};
 
 function startAdminGpsWatch(autoCenter = false) {
   const updateGpsView = (lat, lng, acc, label = 'Live GPS (Kaduna)') => {
@@ -4462,6 +4345,145 @@ function openTagModalWithCoords(lat, lng, existingKey = null) {
 
   openModal('modal-tag-spot');
 }
+
+
+window.triggerPhotoPick = function() {
+  const el = document.getElementById('pop-photo-input-file');
+  if (el) el.click();
+};
+
+window.deletePinFromMap = async function(key) {
+  const dName = getLocDisplayName(key);
+  if (!confirm('Are you sure you want to remove "' + dName + '" from the campus map and ride requests?')) {
+    return;
+  }
+
+  // 1. Mark as deleted locally
+  deletedLocationKeys.add(key);
+  delete AFIT_LOCATIONS[key];
+  delete customLocationNames[key];
+  delete customLocationImages[key];
+  localStorage.setItem('assa-deleted-locs', JSON.stringify(Array.from(deletedLocationKeys)));
+  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+  localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
+
+  // 2. Immediately update UI
+  if (adminLiveMap) adminLiveMap.closePopup();
+  renderAdminMapPins();
+  renderAdminQuickChips();
+  if (typeof renderCampusPins === 'function') renderCampusPins();
+  if (typeof updateDropdownNames === 'function') updateDropdownNames();
+  if (typeof renderLocationChips === 'function') {
+    renderLocationChips('req-pickup-grid', 'pickup');
+    renderLocationChips('req-dest-grid', 'dest');
+  }
+
+  try {
+    // 3. Save to Firestore settings/deleted_locations
+    const delDocRef = doc(db, 'settings', 'deleted_locations');
+    const delSnap = await getDoc(delDocRef);
+    let delList = [];
+    if (delSnap.exists() && Array.isArray(delSnap.data()?.list)) {
+      delList = delSnap.data().list;
+    }
+    if (!delList.includes(key)) {
+      delList.push(key);
+      await setDoc(delDocRef, { list: delList, updatedAt: Date.now() }, { merge: true });
+    }
+
+    // 4. Remove from settings/locations (list array)
+    const locDocRef = doc(db, 'settings', 'locations');
+    const locSnap = await getDoc(locDocRef);
+    if (locSnap.exists() && Array.isArray(locSnap.data()?.list)) {
+      const updatedList = locSnap.data().list.filter(item => item !== key && item !== dName);
+      await setDoc(locDocRef, { list: updatedList }, { merge: true });
+    }
+
+    // 5. Delete field from settings/location_names
+    await updateDoc(doc(db, 'settings', 'location_names'), {
+      [key]: deleteField()
+    }).catch(() => {});
+
+    alert('🗑️ Location "' + dName + '" removed from map and synced across all devices!');
+  } catch(e) {
+    console.error('Error syncing pin deletion:', e);
+  }
+};
+
+window.saveNewPinFromMap = async function(name, lat, lng, photoData = '', category = 'Campus Spot') {
+  name = (name || '').trim();
+  if (!name) { alert('Please enter a location name.'); return; }
+
+  // 1. Immediately register new pin in memory and local storage
+  const newCode = 100 + Object.keys(AFIT_LOCATIONS).length;
+  AFIT_LOCATIONS[name] = {
+    code: newCode,
+    lat: Number(lat),
+    lng: Number(lng),
+    category: category || 'Campus Spot',
+    defaultName: name
+  };
+  customLocationNames[name] = name;
+  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+
+  if (photoData) {
+    customLocationImages[name] = photoData;
+    localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
+    const safeKey = name.replace(/[./]/g, '_');
+    setDoc(doc(db, 'settings', 'location_images'), { [safeKey]: photoData }, { merge: true }).catch(() => {});
+  }
+
+  // 2. Immediately close popups and update map pins and dropdowns
+  if (adminLiveMap) adminLiveMap.closePopup();
+  if (typeof adminTempClickMarker !== 'undefined' && adminTempClickMarker && adminLiveMap) {
+    adminLiveMap.removeLayer(adminTempClickMarker);
+    adminTempClickMarker = null;
+  }
+
+  renderAdminMapPins();
+  renderAdminQuickChips();
+  if (typeof renderCampusPins === 'function') renderCampusPins();
+  if (typeof updateDropdownNames === 'function') updateDropdownNames();
+  if (typeof renderLocationChips === 'function') {
+    renderLocationChips('req-pickup-grid', 'pickup');
+    renderLocationChips('req-dest-grid', 'dest');
+  }
+
+  // 3. Resilient Firebase Sync
+  let syncErrors = [];
+  try {
+    const safeFieldKey = name.replace(/[./]/g, '_');
+    await setDoc(doc(db, 'settings', 'location_names'), { [safeFieldKey]: name }, { merge: true }).catch(err => {
+      syncErrors.push('location_names: ' + err.message);
+    });
+  } catch(e) {
+    syncErrors.push(e.message);
+  }
+
+  try {
+    const locDocRef = doc(db, 'settings', 'locations');
+    const snap = await getDoc(locDocRef).catch(() => null);
+    let curList = [];
+    if (snap && snap.exists() && Array.isArray(snap.data()?.list)) {
+      curList = snap.data().list;
+    }
+    if (!curList.includes(name)) {
+      curList.push(name);
+      await setDoc(locDocRef, { list: curList }, { merge: true }).catch(err => {
+        syncErrors.push('locations list: ' + err.message);
+      });
+    }
+  } catch(e) {
+    syncErrors.push(e.message);
+  }
+
+  if (syncErrors.length === 0) {
+    alert('📍 New location "' + name + '"' + (photoData ? ' with building photo' : '') + ' tagged & synced to Firebase! User and Driver sides are now updated.');
+  } else {
+    console.warn('Cloud sync notices:', syncErrors);
+    alert('📍 New location "' + name + '" tagged & pinned to map! (Cloud note: ' + syncErrors.join(', ') + ')');
+  }
+};
 
 window.saveTaggedSpot = async function() {
   const nameInp = document.getElementById('tag-spot-name');
