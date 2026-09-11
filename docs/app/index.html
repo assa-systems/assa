@@ -426,6 +426,125 @@
     .settings-icon { font-size: 1.35rem; }
     .settings-label { flex: 1; font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
     .settings-arrow { color: var(--text-muted); font-size: 1.2rem; }
+  
+    /* Live Admin GPS Radar Pulse */
+    @keyframes gpsRadarPulse {
+      0% { transform: scale(0.6); opacity: 1; }
+      70% { transform: scale(2.6); opacity: 0; }
+      100% { transform: scale(2.8); opacity: 0; }
+    }
+    .gps-pulse-outer {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .gps-pulse-ring {
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      background: rgba(37, 99, 235, 0.45);
+      animation: gpsRadarPulse 2s infinite ease-out;
+      pointer-events: none;
+    }
+    .gps-pulse-core {
+      position: relative;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #2563EB;
+      border: 3px solid #ffffff;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    /* Driver Acceptance Advert-Style Pop-up */
+    @keyframes modalPopIn {
+      0% { transform: scale(0.7) translateY(20px); opacity: 0; }
+      70% { transform: scale(1.04) translateY(-4px); }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes driverGlowPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+      50% { box-shadow: 0 0 0 16px rgba(16, 185, 129, 0); }
+    }
+    .modal-overlay.center-modal {
+      align-items: center;
+      padding: 1.25rem;
+    }
+    .driver-popup-card {
+      background: var(--card, #ffffff);
+      border-radius: 28px;
+      padding: 1.75rem 1.35rem 1.5rem;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+      border: 2.5px solid #10B981;
+      animation: modalPopIn 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .driver-large-avatar-wrap {
+      position: relative;
+      width: 94px;
+      height: 94px;
+      margin: 0 auto 1.1rem;
+      border-radius: 50%;
+      animation: driverGlowPulse 2.2s infinite;
+    }
+    .driver-large-avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3.5px solid #10B981;
+      background: #E5E7EB;
+      display: block;
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+    }
+    .pin-chip-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 4px 8px 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .pin-chip-item:hover {
+      border-color: var(--primary);
+    }
+    .pin-chip-del {
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+      border: none;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+    }
+    .pin-chip-del:hover {
+      background: #ef4444;
+      color: #ffffff;
+    }
   </style>
 </head>
 <body>
@@ -1118,38 +1237,54 @@
       <button class="admin-tab" onclick="switchAdminTab('ads',this)">&#128226; Ads</button>
     </div>
     
-    <!-- ADMIN LIVE GPS MAP & PIN TAGGER -->
+    <!-- ADMIN LIVE GPS MAP & PIN MANAGER -->
     <div class="admin-section active" id="admin-map">
+      <!-- Header with Live GPS indicator -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
         <div>
-          <div style="font-weight:900;font-size:1.05rem;color:var(--text-primary)">🗺️ Interactive Campus Map &amp; Labeler</div>
-          <div style="font-size:0.75rem;color:var(--text-secondary)" id="admin-gps-status">Tap any pin or anywhere on the map to label it.</div>
+          <div style="font-weight:900;font-size:1.05rem;color:var(--text-primary);display:flex;align-items:center;gap:6px">
+            <span>🗺️ Campus Map &amp; Pin Manager</span>
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px" id="admin-gps-status">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3B82F6"></span>
+            <span>Locating your GPS...</span>
+          </div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="adminCenterOnGps()" style="font-weight:700">&#128205; My GPS</button>
-      </div>
-
-      <!-- Action Bar -->
-      <div style="display:flex;gap:8px;margin-bottom:0.75rem">
-        <button class="btn btn-success btn-sm" style="flex:1;font-weight:800;font-size:0.8rem;padding:0.5rem" onclick="openTagCurrentLocationModal()">
-          &#128205; Label My Current GPS Spot
-        </button>
-        <button class="btn btn-primary btn-sm" style="flex:1;font-weight:800;font-size:0.8rem;padding:0.5rem" onclick="alert('Click anywhere on the map below to drop and label a new location!')">
-          &#128070; Click Map to Add Pin
+        <button class="btn btn-primary btn-sm" onclick="adminCenterOnGps(true)" style="font-weight:800;display:flex;align-items:center;gap:4px">
+          &#127919; My Live GPS
         </button>
       </div>
 
-      <!-- Map Container (420px height for clear editing) -->
-      <div style="position:relative;height:420px;border-radius:18px;overflow:hidden;border:1.5px solid var(--border);box-shadow:0 6px 20px var(--shadow)">
+      <!-- Multi-Action Toolbar -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0.75rem">
+        <button class="btn btn-success btn-sm" style="font-weight:800;font-size:0.78rem;padding:0.55rem 0.6rem;display:flex;align-items:center;justify-content:center;gap:5px" onclick="openTagCurrentLocationModal()">
+          <span>&#128205;</span> Pin My GPS Spot
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-admin-pin-mode" style="font-weight:800;font-size:0.78rem;padding:0.55rem 0.6rem;display:flex;align-items:center;justify-content:center;gap:5px" onclick="pinCenterOfMap()">
+          <span>&#127919;</span> Pin Center of Map
+        </button>
+      </div>
+
+      <!-- Instruction Tip Bar -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px 10px;margin-bottom:0.65rem;display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;color:var(--text-secondary)">
+        <span>&#128070; <strong>Tap anywhere</strong> on the map to add a pin, or tap a pin to <strong>edit or delete</strong>.</span>
+        <button onclick="toggleAdminPinMode()" id="btn-pin-toggle" style="background:none;border:none;color:var(--primary);font-weight:800;cursor:pointer;text-decoration:underline">Tap Mode</button>
+      </div>
+
+      <!-- Map Container (440px height for clear touch interaction) -->
+      <div style="position:relative;height:440px;border-radius:18px;overflow:hidden;border:1.5px solid var(--border);box-shadow:0 6px 20px var(--shadow)">
         <div id="admin-live-map" style="width:100%;height:100%"></div>
       </div>
 
-      <!-- Quick Jump & Label Chips Bar -->
+      <!-- Quick Jump, Edit & Pin Deletion List -->
       <div style="margin-top:1rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
-          <div style="font-size:0.85rem;font-weight:800;color:var(--text-primary)">Campus Pins (Tap to jump &amp; label)</div>
-          <span style="font-size:0.72rem;color:var(--text-secondary)">Syncs to User &amp; Driver side</span>
+          <div style="font-size:0.85rem;font-weight:800;color:var(--text-primary)">
+            Campus Pins (<span id="admin-pin-count">0</span> Active)
+          </div>
+          <span style="font-size:0.72rem;color:var(--text-secondary)">Tap pin to jump &bull; Tap &#128465; to erase</span>
         </div>
-        <div id="admin-map-quick-chips" style="display:flex;flex-wrap:wrap;gap:6px;max-height:140px;overflow-y:auto;padding:2px"></div>
+        <div id="admin-map-quick-chips" style="display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow-y:auto;padding:2px"></div>
       </div>
     </div>
 
@@ -1265,6 +1400,59 @@
     </div>
     <button class="btn btn-success" style="width:100%;font-weight:800;padding:0.75rem" onclick="saveTaggedSpot()">&#128190; Save &amp; Sync to All Devices</button>
     <button class="btn btn-secondary" style="width:100%;margin-top:0.5rem" onclick="closeModal('modal-tag-spot')">Cancel</button>
+  </div>
+</div>
+
+<!-- DRIVER ACCEPTED ADVERT-STYLE MODAL WITH LARGE PERSON AVATAR -->
+<div class="modal-overlay center-modal" id="modal-driver-accepted" style="z-index:2500">
+  <div class="driver-popup-card">
+    <!-- Close button -->
+    <button onclick="closeModal('modal-driver-accepted')" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:22px;color:var(--text-secondary);cursor:pointer;line-height:1">&times;</button>
+    
+    <!-- Large Driver Person Avatar Circle -->
+    <div class="driver-large-avatar-wrap">
+      <img id="modal-driver-img" class="driver-large-avatar-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240&auto=format&fit=crop&q=80" alt="Assigned Driver"/>
+      <div style="position:absolute;bottom:2px;right:2px;background:#10B981;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.25)">&#10003;</div>
+    </div>
+
+    <!-- Status pill -->
+    <div style="display:inline-flex;align-items:center;gap:5px;background:#D1FAE5;color:#065F46;font-size:0.75rem;font-weight:800;padding:4px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem">
+      <span style="width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block"></span>
+      <span>Driver Assigned &bull; Shuttle Coming</span>
+    </div>
+
+    <!-- Headline -->
+    <div id="modal-driver-headline" style="font-size:1.25rem;font-weight:900;color:var(--text-primary);margin-bottom:0.35rem">
+      Driver Mohammed is Coming!
+    </div>
+
+    <!-- Speech bubble -->
+    <div style="background:var(--bg, #F3F4F6);border:1.5px solid var(--border);border-radius:14px;padding:0.75rem 0.9rem;margin:0.75rem 0 1rem;font-size:0.83rem;color:var(--text-primary);line-height:1.45;text-align:left">
+      &#128172; <em>"Hello! I am piloting <strong id="modal-driver-shuttle-name">Shuttle 2</strong> and heading towards your pickup location now. You can track my live shuttle position on the map!"</em>
+    </div>
+
+    <!-- Route summary -->
+    <div style="background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:0.6rem 0.8rem;margin-bottom:1.15rem;display:flex;justify-content:space-between;align-items:center;font-size:0.78rem">
+      <div style="text-align:left">
+        <span style="color:var(--text-muted);font-size:0.7rem;display:block">PICKUP</span>
+        <strong id="modal-driver-pickup" style="color:var(--text-primary)">...</strong>
+      </div>
+      <div style="color:var(--primary);font-weight:800;font-size:1.1rem">&rarr;</div>
+      <div style="text-align:right">
+        <span style="color:var(--text-muted);font-size:0.7rem;display:block">DESTINATION</span>
+        <strong id="modal-driver-dest" style="color:var(--text-primary)">...</strong>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-primary" onclick="trackFromAcceptedModal()" style="font-weight:800;font-size:0.95rem;padding:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg, #10B981, #059669);border:none;box-shadow:0 6px 18px rgba(16,185,129,0.35)">
+        <span>&#128205;</span> Track Shuttle Live Now
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-driver-accepted')" style="font-size:0.8rem;color:var(--text-secondary)">
+        Dismiss &amp; View Dashboard
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1429,12 +1617,25 @@ const AFIT_LOCATIONS = {
   'Hall A':                     { code: 12, lat: 10.6090, lng: 7.4380, category: 'Faculty', defaultName: 'AMAO Hall / Auditorium' }
 };
 
+// Deleted Locations Tracking (Removes Pins from Map, Dropdowns & Firebase)
+let deletedLocationKeys = new Set();
+try {
+  const savedDel = JSON.parse(localStorage.getItem('assa-deleted-locs') || '[]');
+  if (Array.isArray(savedDel)) savedDel.forEach(k => deletedLocationKeys.add(k));
+} catch(e) {}
+
 // Dynamic Location Customization Map
 // Loaded from Firestore (settings/location_names), localStorage used as offline fallback
 let customLocationNames = {};
 try {
   customLocationNames = JSON.parse(localStorage.getItem('assa-custom-locs') || '{}');
 } catch(e) {}
+
+// Apply initial deletions
+deletedLocationKeys.forEach(k => {
+  delete AFIT_LOCATIONS[k];
+  delete customLocationNames[k];
+});
 
 async function loadLocationNamesFromFirestore() {
   try {
@@ -1832,6 +2033,17 @@ function startActiveRideListener() {
     const active = list.find(r => r.status === 0 || r.status === 1 || r.status === 2 || r.status === 3);
     activeRideData = active || null;
     renderActiveRideBanner(activeRideData);
+
+    // Auto-trigger Driver Acceptance Advert-Style Pop-up when assigned
+    if (activeRideData && (activeRideData.status === 1 || activeRideData.status === 2)) {
+      const rideKey = (activeRideData.bookingId || activeRideData.id) + '_' + activeRideData.status + '_' + (activeRideData.driverName || activeRideData.driverId || '');
+      if (window.__lastSeenAcceptedRideKey !== rideKey) {
+        window.__lastSeenAcceptedRideKey = rideKey;
+        setTimeout(() => {
+          showDriverAcceptedModal(activeRideData);
+        }, 300);
+      }
+    }
 
     if (trackMap && typeof updateTrackingMap === 'function') {
       updateTrackingMap();
@@ -3459,19 +3671,80 @@ window.saveAllLocationNames = async function() {
 // ADMIN LIVE GPS MAP & DIRECT PIN LABELER (Fully Synced with User & Driver Side)
 // =============================================================================
 let adminLiveMap = null;
-let adminGpsMarker = null;
 let adminGpsCoords = null;
-let adminDropPinActive = false;
-let adminDropMarker = null;
+let adminGpsMarker = null;
+let adminPinMode = false;
+let adminGpsAccuracyCircle = null;
+let adminGpsWatchId = null;
 let adminPendingTagCoords = null;
+let adminTempClickMarker = null;
+window.__lastSeenAcceptedRideKey = null;
 
+// --- DRIVER ACCEPTANCE POP-UP CONTROLLERS ---
+window.showDriverAcceptedModal = function(ride) {
+  if (!ride) {
+    ride = {
+      driverName: 'Mohammed',
+      shuttleIdFeedback: '2',
+      pickupLocation: 'AFIT Gates',
+      destination: 'Centre of Entrepreneurship'
+    };
+  }
+  const rawShuttle = ride.shuttleIdFeedback || ride.shuttleId || ride.shuttle_id || '2';
+  const shuttleDisplay = formatShuttleName(rawShuttle);
+  const driverName = ride.driverName || 'Mohammed';
+  const pName = getLocDisplayName(ride.pickupLocation || 'AFIT Main Gate');
+  const dName = getLocDisplayName(ride.destination || 'Campus Spot');
+
+  const headlineEl = document.getElementById('modal-driver-headline');
+  if (headlineEl) headlineEl.textContent = 'Driver ' + driverName + ' is Coming!';
+
+  const shuttleNameEl = document.getElementById('modal-driver-shuttle-name');
+  if (shuttleNameEl) shuttleNameEl.textContent = shuttleDisplay;
+
+  const pickupEl = document.getElementById('modal-driver-pickup');
+  if (pickupEl) pickupEl.textContent = pName;
+
+  const destEl = document.getElementById('modal-driver-dest');
+  if (destEl) destEl.textContent = dName;
+
+  // Sound and vibration feedback
+  try {
+    if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
+    gain.gain.setValueAtTime(0.22, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch(e) {}
+
+  openModal('modal-driver-accepted');
+};
+
+window.trackFromAcceptedModal = function() {
+  closeModal('modal-driver-accepted');
+  switchScreen('screen-tracking');
+};
+
+// --- ADMIN LIVE GPS & CAMPUS MAP ---
 function initAdminLiveMap() {
   setTimeout(() => {
     const el = document.getElementById('admin-live-map');
     if (!el) return;
 
     if (!adminLiveMap) {
-      adminLiveMap = L.map('admin-live-map', { zoomControl: false }).setView([10.6110, 7.4450], 15);
+      // Initialize with tap: false for smooth mobile touch support
+      adminLiveMap = L.map('admin-live-map', { 
+        zoomControl: false, 
+        tap: false 
+      }).setView([10.6110, 7.4450], 15);
+
       L.control.zoom({ position: 'topright' }).addTo(adminLiveMap);
 
       // Google Roadmap tiles
@@ -3480,33 +3753,72 @@ function initAdminLiveMap() {
         attribution: 'Google Maps'
       }).addTo(adminLiveMap);
 
-      // Map click handler: Click anywhere on map to label that location!
+      // Map click / tap handler: Add Pin at clicked location
       adminLiveMap.on('click', (e) => {
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
-        
-        const popupContent = '<div style="min-width:210px;padding:4px">' +
-          '<div style="font-weight:900;font-size:13px;color:#1E3A8A;margin-bottom:3px">➕ Label New Campus Spot</div>' +
-          '<div style="font-size:11px;color:#666;margin-bottom:8px">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</div>' +
-          '<label style="font-size:11px;font-weight:700;color:#333">Location Name for Students &amp; Drivers:</label>' +
-          '<input id="pop-new-loc-name" placeholder="e.g. Bukka Pot, Library..." style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-weight:600;margin:4px 0 8px;box-sizing:border-box" />' +
-          '<button onclick="submitNewPinClick(' + lat + ',' + lng + ')" style="width:100%;background:#16a34a;color:#fff;border:none;padding:7px 10px;border-radius:6px;font-weight:800;font-size:12px;cursor:pointer">' +
-            '💾 Save &amp; Sync to PWA' +
-          '</button>' +
-        '</div>';
-
-        L.popup()
-          .setLatLng([lat, lng])
-          .setContent(popupContent)
-          .openOn(adminLiveMap);
+        handleAdminMapClick(e.latlng.lat, e.latlng.lng);
       });
     }
 
     renderAdminMapPins();
     renderAdminQuickChips();
-    startAdminGpsWatch();
+    startAdminGpsWatch(true); // Auto center on live GPS
     adminLiveMap.invalidateSize();
   }, 200);
+}
+
+window.toggleAdminPinMode = function() {
+  adminPinMode = !adminPinMode;
+  const btn = document.getElementById('btn-pin-toggle');
+  const mapEl = document.getElementById('admin-live-map');
+  if (btn) {
+    btn.textContent = adminPinMode ? 'Active (Tap Map)' : 'Tap Mode';
+    btn.style.color = adminPinMode ? '#10B981' : 'var(--primary)';
+  }
+  if (mapEl) {
+    mapEl.style.cursor = adminPinMode ? 'crosshair' : '';
+  }
+};
+
+window.pinCenterOfMap = function() {
+  if (!adminLiveMap) return;
+  const center = adminLiveMap.getCenter();
+  handleAdminMapClick(center.lat, center.lng);
+};
+
+function handleAdminMapClick(lat, lng) {
+  if (!adminLiveMap) return;
+
+  if (adminTempClickMarker) {
+    adminLiveMap.removeLayer(adminTempClickMarker);
+  }
+
+  const tempIcon = L.divIcon({
+    html: '<div style="background:#10B981;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,0.4);border:2px solid #fff">&#10133;</div>',
+    className: '',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+  adminTempClickMarker = L.marker([lat, lng], { icon: tempIcon }).addTo(adminLiveMap);
+
+  const popupContent = '<div style="min-width:230px;padding:6px">' +
+    '<div style="font-weight:900;font-size:13px;color:#1E3A8A;margin-bottom:3px">&#10133; Label New Campus Spot</div>' +
+    '<div style="font-size:11px;color:#666;margin-bottom:8px">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</div>' +
+    '<label style="font-size:11px;font-weight:700;color:#333;display:block;margin-bottom:2px">Spot Name for Students &amp; Drivers:</label>' +
+    '<input id="pop-new-loc-name" placeholder="e.g. Bukka, Library, PT Gate..." style="width:100%;padding:7px;border:1.5px solid #2563EB;border-radius:6px;font-size:12px;font-weight:700;margin-bottom:8px;box-sizing:border-box" autofocus />' +
+    '<div style="display:flex;gap:6px">' +
+      '<button onclick="submitNewPinClick(' + lat + ',' + lng + ')" style="flex:1;background:#16a34a;color:#fff;border:none;padding:7px 10px;border-radius:6px;font-weight:800;font-size:11px;cursor:pointer">' +
+        '&#128190; Save &amp; Sync' +
+      '</button>' +
+      '<button onclick="adminLiveMap.closePopup()" style="background:#e5e7eb;color:#374151;border:none;padding:7px 10px;border-radius:6px;font-weight:700;font-size:11px;cursor:pointer">' +
+        'Cancel' +
+      '</button>' +
+    '</div>' +
+  '</div>';
+
+  L.popup()
+    .setLatLng([lat, lng])
+    .setContent(popupContent)
+    .openOn(adminLiveMap);
 }
 
 window.submitNewPinClick = function(lat, lng) {
@@ -3526,23 +3838,35 @@ function renderAdminMapPins() {
   }
   window.__adminPinsLayer = L.layerGroup().addTo(adminLiveMap);
 
-  Object.keys(AFIT_LOCATIONS).forEach(key => {
+  const keys = Object.keys(AFIT_LOCATIONS).filter(k => !deletedLocationKeys.has(k));
+  const countEl = document.getElementById('admin-pin-count');
+  if (countEl) countEl.textContent = keys.length;
+
+  keys.forEach(key => {
     const loc = AFIT_LOCATIONS[key];
     const dName = getLocDisplayName(key);
 
     const iconHtml = '<div style="background:#1E3A8A;color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,0.35);cursor:pointer;border:1.5px solid #fff">' +
-      '📍 ' + loc.code + '. ' + escape(dName) + '</div>';
+      '&#128205; ' + loc.code + '. ' + escape(dName) + '</div>';
     const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [120, 22], iconAnchor: [60, 11] });
     const m = L.marker([loc.lat, loc.lng], { icon: cIcon }).addTo(window.__adminPinsLayer);
 
-    const popupHtml = '<div style="min-width:220px;padding:4px">' +
-      '<div style="font-weight:900;font-size:13px;color:#1E3A8A;margin-bottom:2px">📍 Pin #' + loc.code + '</div>' +
-      '<div style="font-size:11px;color:#666;margin-bottom:6px">Default: ' + escape(key) + ' (' + loc.category + ')</div>' +
-      '<label style="font-size:11px;font-weight:700;color:#333">Label for Students &amp; Drivers:</label>' +
-      '<input id="admin-pin-name-' + loc.code + '" value="' + escapeAttr(dName) + '" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-weight:600;margin:4px 0 8px;box-sizing:border-box" />' +
-      '<button data-code="' + loc.code + '" data-key="' + escapeAttr(key) + '" data-lat="' + loc.lat + '" data-lng="' + loc.lng + '" onclick="submitPinEdit(this.dataset.code, this.dataset.key, Number(this.dataset.lat), Number(this.dataset.lng))" style="width:100%;background:#16a34a;color:#fff;border:none;padding:7px 10px;border-radius:6px;font-weight:800;font-size:12px;cursor:pointer">' +
-        '💾 Save &amp; Sync Label' +
-      '</button>' +
+    const popupHtml = '<div style="min-width:230px;padding:6px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
+        '<span style="font-weight:900;font-size:13px;color:#1E3A8A">&#128205; Pin #' + loc.code + '</span>' +
+        '<span style="font-size:10px;background:#E0E7FF;color:#3730A3;padding:2px 6px;border-radius:6px;font-weight:700">' + escape(loc.category) + '</span>' +
+      '</div>' +
+      '<div style="font-size:11px;color:#666;margin-bottom:6px">' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + '</div>' +
+      '<label style="font-size:11px;font-weight:700;color:#333;display:block;margin-bottom:2px">Label for Students &amp; Drivers:</label>' +
+      '<input id="admin-pin-name-' + loc.code + '" value="' + escapeAttr(dName) + '" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:12px;font-weight:600;margin-bottom:8px;box-sizing:border-box" />' +
+      '<div style="display:flex;gap:6px">' +
+        '<button data-code="' + loc.code + '" data-key="' + escapeAttr(key) + '" data-lat="' + loc.lat + '" data-lng="' + loc.lng + '" onclick="submitPinEdit(this.dataset.code, this.dataset.key, Number(this.dataset.lat), Number(this.dataset.lng))" style="flex:1;background:#16a34a;color:#fff;border:none;padding:7px;border-radius:6px;font-weight:800;font-size:11px;cursor:pointer">' +
+          '&#128190; Update' +
+        '</button>' +
+        '<button data-key="' + escapeAttr(key) + '" onclick="deletePinFromMap(this.dataset.key)" style="background:#dc2626;color:#fff;border:none;padding:7px 10px;border-radius:6px;font-weight:800;font-size:11px;cursor:pointer" title="Remove pin from map">' +
+          '&#128465; Erase' +
+        '</button>' +
+      '</div>' +
     '</div>';
 
     m.bindPopup(popupHtml);
@@ -3554,17 +3878,24 @@ function renderAdminQuickChips() {
   if (!container) return;
   container.innerHTML = '';
 
-  Object.keys(AFIT_LOCATIONS).forEach(key => {
+  const keys = Object.keys(AFIT_LOCATIONS).filter(k => !deletedLocationKeys.has(k));
+  const countEl = document.getElementById('admin-pin-count');
+  if (countEl) countEl.textContent = keys.length;
+
+  keys.forEach(key => {
     const loc = AFIT_LOCATIONS[key];
     const dName = getLocDisplayName(key);
 
-    const chip = document.createElement('button');
-    chip.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:4px 10px;font-size:0.75rem;font-weight:600;color:var(--text-primary);cursor:pointer;display:inline-flex;align-items:center;gap:4px';
-    chip.innerHTML = '<span style="color:var(--primary);font-weight:800">#' + loc.code + '</span> ' + escape(dName);
+    const chip = document.createElement('div');
+    chip.className = 'pin-chip-item';
+    chip.innerHTML = '<span style="color:var(--primary);font-weight:800;cursor:pointer">#' + loc.code + '</span>' +
+      '<span style="cursor:pointer">' + escape(dName) + '</span>' +
+      '<button class="pin-chip-del" data-key="' + escapeAttr(key) + '" onclick="event.stopPropagation(); deletePinFromMap(this.dataset.key);" title="Remove pin">&#10005;</button>';
+
+    // Clicking chip centers map and opens pin popup
     chip.onclick = () => {
       if (adminLiveMap) {
         adminLiveMap.setView([loc.lat, loc.lng], 18);
-        // Find marker and open popup
         if (window.__adminPinsLayer) {
           window.__adminPinsLayer.eachLayer(layer => {
             const ll = layer.getLatLng();
@@ -3575,9 +3906,66 @@ function renderAdminQuickChips() {
         }
       }
     };
+
     container.appendChild(chip);
   });
 }
+
+window.deletePinFromMap = async function(key) {
+  const dName = getLocDisplayName(key);
+  if (!confirm('Are you sure you want to remove "' + dName + '" from the campus map and ride requests?')) {
+    return;
+  }
+
+  // 1. Mark as deleted locally
+  deletedLocationKeys.add(key);
+  delete AFIT_LOCATIONS[key];
+  delete customLocationNames[key];
+  localStorage.setItem('assa-deleted-locs', JSON.stringify(Array.from(deletedLocationKeys)));
+  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+
+  // 2. Immediately update UI
+  if (adminLiveMap) adminLiveMap.closePopup();
+  renderAdminMapPins();
+  renderAdminQuickChips();
+  if (typeof renderCampusPins === 'function') renderCampusPins();
+  if (typeof updateDropdownNames === 'function') updateDropdownNames();
+  if (typeof renderLocationChips === 'function') {
+    renderLocationChips('req-pickup-grid', 'pickup');
+    renderLocationChips('req-dest-grid', 'dest');
+  }
+
+  try {
+    // 3. Save to Firestore settings/deleted_locations
+    const delDocRef = doc(db, 'settings', 'deleted_locations');
+    const delSnap = await getDoc(delDocRef);
+    let delList = [];
+    if (delSnap.exists() && Array.isArray(delSnap.data()?.list)) {
+      delList = delSnap.data().list;
+    }
+    if (!delList.includes(key)) {
+      delList.push(key);
+      await setDoc(delDocRef, { list: delList, updatedAt: Date.now() }, { merge: true });
+    }
+
+    // 4. Remove from settings/locations (list array)
+    const locDocRef = doc(db, 'settings', 'locations');
+    const locSnap = await getDoc(locDocRef);
+    if (locSnap.exists() && Array.isArray(locSnap.data()?.list)) {
+      const updatedList = locSnap.data().list.filter(item => item !== key && item !== dName);
+      await setDoc(locDocRef, { list: updatedList }, { merge: true });
+    }
+
+    // 5. Delete field from settings/location_names
+    await updateDoc(doc(db, 'settings', 'location_names'), {
+      [key]: deleteField()
+    }).catch(() => {});
+
+    alert('&#128465; Location "' + dName + '" removed from map and synced across all devices!');
+  } catch(e) {
+    console.error('Error syncing pin deletion:', e);
+  }
+};
 
 window.savePinFromMap = async function(key, newName, lat, lng) {
   newName = (newName || '').trim();
@@ -3594,7 +3982,7 @@ window.savePinFromMap = async function(key, newName, lat, lng) {
     await setDoc(doc(db, 'settings', 'location_names'), { [key]: newName }, { merge: true });
 
     // 2. Save full array to settings/locations (list array) for Flutter app compatibility
-    const onlineList = Object.keys(AFIT_LOCATIONS).map(k => customLocationNames[k] || AFIT_LOCATIONS[k].defaultName || k);
+    const onlineList = Object.keys(AFIT_LOCATIONS).filter(k => !deletedLocationKeys.has(k)).map(k => customLocationNames[k] || AFIT_LOCATIONS[k].defaultName || k);
     await setDoc(doc(db, 'settings', 'locations'), { list: onlineList }, { merge: true });
 
     // 3. Immediately update all views across the PWA
@@ -3644,6 +4032,11 @@ window.saveNewPinFromMap = async function(name, lat, lng) {
     }
 
     if (adminLiveMap) adminLiveMap.closePopup();
+    if (adminTempClickMarker && adminLiveMap) {
+      adminLiveMap.removeLayer(adminTempClickMarker);
+      adminTempClickMarker = null;
+    }
+
     renderAdminMapPins();
     renderAdminQuickChips();
     if (typeof renderCampusPins === 'function') renderCampusPins();
@@ -3658,57 +4051,106 @@ window.saveNewPinFromMap = async function(name, lat, lng) {
   }
 };
 
-function startAdminGpsWatch() {
+function startAdminGpsWatch(autoCenter = false) {
   if (!navigator.geolocation) {
     const st = document.getElementById('admin-gps-status');
-    if (st) st.textContent = 'Geolocation not supported by this browser.';
+    if (st) st.innerHTML = '<span style="color:#ef4444">&#9888; Geolocation not supported by this browser</span>';
     return;
   }
 
-  navigator.geolocation.watchPosition((pos) => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-    const acc = Math.round(pos.coords.accuracy);
+  const updateGpsView = (lat, lng, acc) => {
     adminGpsCoords = [lat, lng];
-
     const st = document.getElementById('admin-gps-status');
-    if (st) st.textContent = 'Live GPS: ' + lat.toFixed(5) + ', ' + lng.toFixed(5) + ' (±' + acc + 'm)';
+    if (st) {
+      st.innerHTML = '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#10B981;box-shadow:0 0 6px #10B981"></span>' +
+        '<span style="font-weight:800;color:var(--text-primary)">Live GPS:</span> ' +
+        lat.toFixed(5) + ', ' + lng.toFixed(5) + ' (±' + acc + 'm)';
+    }
 
     if (adminLiveMap) {
       if (!adminGpsMarker) {
         const gpsIcon = L.divIcon({
-          html: '<div class="gps-pulse-marker"></div>',
+          html: '<div class="gps-pulse-outer"><div class="gps-pulse-ring"></div><div class="gps-pulse-core">&#128100;</div></div>',
           className: '',
-          iconSize: [18, 18],
-          iconAnchor: [9, 9]
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
         });
-        adminGpsMarker = L.marker([lat, lng], { icon: gpsIcon }).addTo(adminLiveMap);
-        adminGpsMarker.bindPopup('<b>You are here (Live GPS)</b>');
+        adminGpsMarker = L.marker([lat, lng], { icon: gpsIcon, zIndexOffset: 1000 }).addTo(adminLiveMap);
+        adminGpsMarker.bindPopup('<div style="text-align:center;font-weight:800;color:#1E3A8A;padding:4px">&#128100; <strong>Your Live Location (Admin)</strong><br/><span style="font-size:11px;color:#555">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</span><br/><button onclick="openTagCurrentLocationModal()" style="margin-top:6px;background:#2563eb;color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">&#128205; Label This Spot</button></div>');
       } else {
         adminGpsMarker.setLatLng([lat, lng]);
       }
+
+      if (!adminGpsAccuracyCircle) {
+        adminGpsAccuracyCircle = L.circle([lat, lng], {
+          radius: Math.max(acc, 15),
+          color: '#2563EB',
+          fillColor: '#3B82F6',
+          fillOpacity: 0.12,
+          weight: 1.5
+        }).addTo(adminLiveMap);
+      } else {
+        adminGpsAccuracyCircle.setLatLng([lat, lng]);
+        adminGpsAccuracyCircle.setRadius(Math.max(acc, 15));
+      }
+
+      if (autoCenter) {
+        adminLiveMap.setView([lat, lng], 17);
+      }
     }
+  };
+
+  // 1. Immediate single high-accuracy fix
+  navigator.geolocation.getCurrentPosition((pos) => {
+    updateGpsView(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy));
   }, (err) => {
     const st = document.getElementById('admin-gps-status');
-    if (st) st.textContent = 'GPS note: ' + err.message + ' (Click map to drop pins)';
+    if (st) {
+      st.innerHTML = '<span style="color:#f59e0b">&#9888; GPS note:</span> <span style="font-size:11px">' + err.message + '</span> ' +
+        '<button onclick="adminCenterOnGps(true)" style="background:none;border:none;color:#2563eb;font-size:11px;font-weight:800;cursor:pointer;text-decoration:underline">Retry</button>';
+    }
   }, {
     enableHighAccuracy: true,
-    maximumAge: 10000,
+    maximumAge: 0,
+    timeout: 20000
+  });
+
+  // 2. Continuous watch position
+  if (adminGpsWatchId) navigator.geolocation.clearWatch(adminGpsWatchId);
+  adminGpsWatchId = navigator.geolocation.watchPosition((pos) => {
+    updateGpsView(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy));
+  }, null, {
+    enableHighAccuracy: true,
+    maximumAge: 5000,
     timeout: 15000
   });
 }
 
-window.adminCenterOnGps = function() {
+window.adminCenterOnGps = function(showFeedback = true) {
   if (adminGpsCoords && adminLiveMap) {
     adminLiveMap.setView(adminGpsCoords, 17);
+    if (adminGpsMarker) adminGpsMarker.openPopup();
   } else {
-    alert('Acquiring GPS position. Make sure location permissions are allowed.');
+    if (showFeedback) {
+      const st = document.getElementById('admin-gps-status');
+      if (st) st.innerHTML = '<span style="color:#2563eb">&#9203; Acquiring GPS position...</span>';
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        adminGpsCoords = [lat, lng];
+        if (adminLiveMap) adminLiveMap.setView([lat, lng], 17);
+        startAdminGpsWatch(true);
+      }, (err) => {
+        alert('Could not acquire GPS position: ' + err.message + '. Please ensure location permission is allowed.');
+      }, { enableHighAccuracy: true, timeout: 15000 });
+    }
   }
 };
 
 window.openTagCurrentLocationModal = function() {
   if (!adminGpsCoords) {
-    alert('GPS location not ready yet. You can click anywhere on the map to label any spot.');
+    alert('Acquiring GPS location... Please wait a moment or click anywhere on the map to pin any spot.');
+    adminCenterOnGps(true);
     return;
   }
   openTagModalWithCoords(adminGpsCoords[0], adminGpsCoords[1]);
