@@ -559,75 +559,109 @@
 
   <!-- REQUEST RIDE -->
   <div class="screen" id="screen-request">
-    <div class="topbar">
-      <div class="topbar-row">
-        <button class="topbar-icon" onclick="showScreen('dashboard')">&#8592;</button>
-        <div class="topbar-name" style="flex:1;text-align:center">Request a Ride</div>
-        <div style="width:38px"></div>
+    <!-- Header gradient matching Flutter -->
+    <div style="background:linear-gradient(135deg,#0F172A 0%,#1E3A8A 100%);border-radius:0 0 24px 24px;padding:14px 16px 22px;box-shadow:0 4px 12px rgba(15,23,42,0.3)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="topbar-icon" style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.2)" onclick="showScreen('dashboard')">&#8592;</button>
+        <div style="flex:1">
+          <div style="color:#fff;font-size:1.05rem;font-weight:700">Book a Ride</div>
+          <div style="color:rgba(255,255,255,0.65);font-size:0.7rem">Instant campus shuttle dispatch</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:5px 12px;display:flex;align-items:center;gap:5px">
+          <span style="font-size:12px" id="req-wifi-icon">📶</span>
+          <span style="color:#fff;font-size:0.68rem;font-weight:700" id="req-mode-label">Online</span>
+        </div>
       </div>
     </div>
-    <div class="screen-content">
-      <div class="card">
-        <div class="card-title">&#x1F68C; Ride Details</div>
-        <div class="error-msg" id="req-error"></div>
-        <div class="form-group">
-          <label class="form-label">Pickup Location</label>
-          <select class="form-input" id="req-pickup">
-            <option value="">Select pickup point...</option>
-            <option>AFIT Gates</option>
-            <option>45x1 Hostel</option>
-            <option>Old Girls Hostel</option>
-            <option>TETFUND Hostel</option>
-            <option>BK</option>
-            <option>Boys Hostel</option>
-            <option>Alfa Hall</option>
-            <option>EED</option>
-            <option>AFIT Mosque</option>
-            <option>New Mechanical</option>
-            <option>Centre of Entrepreneurship</option>
-            <option>Hall A</option>
-          </select>
+    <div class="screen-content" style="padding-top:0.75rem">
+      <!-- Mode Indicator -->
+      <div id="req-mode-banner" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem">✅</div>
+        <div>
+          <div style="font-size:0.85rem;font-weight:700;color:#16a34a" id="req-mode-title">Online Mode</div>
+          <div style="font-size:0.72rem;color:var(--text-secondary)" id="req-mode-desc">All campus locations available.</div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Destination</label>
-          <select class="form-input" id="req-dest">
-            <option value="">Select destination...</option>
-            <option>AFIT Gates</option>
-            <option>45x1 Hostel</option>
-            <option>Old Girls Hostel</option>
-            <option>TETFUND Hostel</option>
-            <option>BK</option>
-            <option>Boys Hostel</option>
-            <option>Alfa Hall</option>
-            <option>EED</option>
-            <option>AFIT Mosque</option>
-            <option>New Mechanical</option>
-            <option>Centre of Entrepreneurship</option>
-            <option>Hall A</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Ride Type</label>
-          <select class="form-input" id="req-type">
-            <option value="Shared">Shared Shuttle (Solo Passenger)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Additional Instructions (Optional)</label>
-          <input class="form-input" type="text" id="req-notes" placeholder="e.g. In front of entrance gate"/>
-        </div>
-        <button class="btn btn-primary" onclick="doRequest()" id="req-btn">&#x1F68C; Request Shuttle</button>
       </div>
-      <div id="req-success" style="display:none" class="card">
-        <div style="text-align:center;padding:1.2rem">
-          <div style="font-size:2.8rem;margin-bottom:0.5rem">&#9989;</div>
-          <div style="font-size:1.15rem;font-weight:800;color:var(--success)">Request Dispatched!</div>
-          <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.4rem" id="req-shuttle-info">Waiting for available campus shuttle...</div>
-          <div style="display:flex;gap:0.6rem;margin-top:1.2rem">
-            <button class="btn btn-primary btn-sm" style="flex:1" onclick="openLiveTracking()">&#128506;&#65039; Track Live Map</button>
-            <button class="btn btn-secondary btn-sm" style="flex:1" onclick="showScreen('myrequests')">View My Rides</button>
-          </div>
+
+      <div class="error-msg" id="req-error"></div>
+
+      <!-- Pickup Location Chip Grid -->
+      <div style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin-bottom:10px">Pickup Location</div>
+      <div id="req-pickup-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1.5rem"></div>
+      <!-- Hidden select for form submission compatibility -->
+      <select id="req-pickup" style="display:none"></select>
+
+      <!-- Destination Chip Grid -->
+      <div style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin-bottom:10px">Destination</div>
+      <div id="req-dest-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0.75rem"></div>
+      <select id="req-dest" style="display:none"></select>
+
+      <!-- Destination hint -->
+      <div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:8px;margin-bottom:1.5rem">
+        <span style="font-size:0.85rem;color:var(--primary)">ℹ️</span>
+        <span style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5">Select the point closest to your destination. You can negotiate your exact drop-off with the driver on arrival.</span>
+      </div>
+
+      <!-- Ride Options -->
+      <div style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin-bottom:10px">Ride Options</div>
+      <div style="display:flex;gap:10px;margin-bottom:1rem">
+        <div id="ride-card-shared" onclick="selectRideType('Shared')" style="flex:1;border:2px solid var(--primary);border-radius:16px;padding:14px 10px;cursor:pointer;text-align:center;background:var(--primary)">
+          <div style="font-size:1.4rem">🚌</div>
+          <div style="font-size:0.82rem;font-weight:700;color:#fff;margin-top:4px">Shared Ride</div>
+          <div style="font-size:0.68rem;color:rgba(255,255,255,0.75)">1–4 passengers</div>
         </div>
+        <div id="ride-card-chartered" onclick="selectRideType('Chartered')" style="flex:1;border:2px solid var(--card-border);border-radius:16px;padding:14px 10px;cursor:pointer;text-align:center;background:var(--surface)">
+          <div style="font-size:1.4rem">🪑</div>
+          <div style="font-size:0.82rem;font-weight:700;color:var(--text-primary);margin-top:4px">Chartered</div>
+          <div style="font-size:0.68rem;color:var(--text-secondary)">Private AFIT KEKE</div>
+        </div>
+      </div>
+      <select id="req-type" style="display:none"><option value="Shared">Shared</option><option value="Chartered">Chartered</option></select>
+
+      <!-- Passenger Count (only shown for Shared) -->
+      <div id="req-pax-section" style="margin-bottom:1.5rem">
+        <div style="font-size:0.82rem;font-weight:600;color:var(--text-primary);margin-bottom:10px">Number of Passengers</div>
+        <div style="display:flex;gap:10px;justify-content:space-between;margin-bottom:6px">
+          <div class="pax-circle" id="pax-1" onclick="selectPax(1)" style="width:56px;height:56px;border-radius:50%;border:2px solid var(--primary);background:var(--primary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;font-weight:800;color:#fff;box-shadow:0 2px 6px rgba(59,130,246,0.3)">1</div>
+          <div class="pax-circle" id="pax-2" onclick="selectPax(2)" style="width:56px;height:56px;border-radius:50%;border:1px solid var(--input-border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;font-weight:800;color:var(--text-primary)">2</div>
+          <div class="pax-circle" id="pax-3" onclick="selectPax(3)" style="width:56px;height:56px;border-radius:50%;border:1px solid var(--input-border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;font-weight:800;color:var(--text-primary)">3</div>
+          <div class="pax-circle" id="pax-4" onclick="selectPax(4)" style="width:56px;height:56px;border-radius:50%;border:1px solid var(--input-border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;font-weight:800;color:var(--text-primary)">4</div>
+        </div>
+        <div style="font-size:0.7rem;color:var(--text-secondary)" id="pax-label">Just me</div>
+        <div style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:8px;margin-top:12px">
+          <span style="font-size:0.85rem">👥</span>
+          <span style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5">Are others at your bus stop? Select the number of passengers with you — one AFIT KEKE picks you all up together.</span>
+        </div>
+      </div>
+
+      <!-- Summary Card (shown when both locations selected) -->
+      <div id="req-summary" style="display:none;background:var(--surface);border:1px solid var(--card-border);border-radius:16px;padding:16px;margin-bottom:1.25rem;box-shadow:0 2px 6px var(--shadow)">
+        <div style="font-size:1rem;font-weight:800;color:var(--text-primary);margin-bottom:14px">Request Summary</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="color:#16a34a;font-size:1rem">🟢</span>
+          <div><div style="font-size:0.7rem;color:var(--text-secondary)">FROM</div><div style="font-weight:700;font-size:0.9rem" id="sum-from">—</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="color:#ef4444;font-size:1rem">📍</span>
+          <div><div style="font-size:0.7rem;color:var(--text-secondary)">TO</div><div style="font-weight:700;font-size:0.9rem" id="sum-to">—</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="color:var(--primary);font-size:1rem">🚌</span>
+          <div><div style="font-size:0.7rem;color:var(--text-secondary)">TYPE</div><div style="font-weight:700;font-size:0.9rem" id="sum-type">—</div></div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="doRequest()" id="req-btn" style="width:100%;font-size:1rem;padding:0.85rem">&#x1F68C; Send Request</button>
+      <div style="height:1.5rem"></div>
+    </div>
+    <!-- Success panel -->
+    <div id="req-success" style="display:none;position:absolute;inset:0;background:var(--bg);z-index:10;display:none;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center">
+      <div style="font-size:3rem;margin-bottom:0.75rem">✅</div>
+      <div style="font-size:1.2rem;font-weight:800;color:var(--success)">Request Dispatched!</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.4rem" id="req-shuttle-info">Waiting for available campus shuttle...</div>
+      <div style="display:flex;gap:0.6rem;margin-top:1.5rem;width:100%;max-width:320px">
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="openLiveTracking()">&#128506;&#65039; Track Live</button>
+        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="showScreen('myrequests')">My Rides</button>
       </div>
     </div>
   </div>
@@ -1272,6 +1306,7 @@ window.showScreen = function(name) {
   if (el) el.classList.add('active');
   
   if (name === 'dashboard') { setupDashboard(); loadRecentRequests(); checkActiveRide(); }
+  if (name === 'request') { setTimeout(initRequestScreen, 50); }
   if (name === 'myrequests') loadMyRequests();
   if (name === 'notifications') loadNotifications();
   if (name === 'lostfound') loadLostFound();
@@ -1602,11 +1637,135 @@ async function loadUnreadNotifCount() {
   } catch(e) {}
 }
 
+// --- REQUEST SCREEN CHIP UI ---
+let reqSelectedPickup = '';
+let reqSelectedDest = '';
+let reqRideType = 'Shared';
+let reqPaxCount = 1;
+
+function initRequestScreen() {
+  reqSelectedPickup = '';
+  reqSelectedDest = '';
+  reqRideType = 'Shared';
+  reqPaxCount = 1;
+  renderLocationChips('req-pickup-grid', 'pickup');
+  renderLocationChips('req-dest-grid', 'dest');
+  selectRideType('Shared');
+  selectPax(1);
+  updateRequestSummary();
+  const errEl = document.getElementById('req-error');
+  if (errEl) { errEl.textContent = ''; errEl.classList.remove('show'); }
+  const sucEl = document.getElementById('req-success');
+  if (sucEl) sucEl.style.display = 'none';
+  const btn = document.getElementById('req-btn');
+  if (btn) { btn.textContent = '🚌 Send Request'; btn.disabled = false; }
+}
+
+function renderLocationChips(gridId, type) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.innerHTML = '';
+  Object.keys(AFIT_LOCATIONS).forEach(key => {
+    const dName = getLocDisplayName(key);
+    const chip = document.createElement('div');
+    chip.className = 'loc-chip';
+    chip.id = 'chip-' + type + '-' + key.replace(/s+/g,'-');
+    chip.textContent = dName;
+    chip.style.cssText = 'display:inline-flex;align-items:center;padding:8px 14px;border-radius:20px;border:1px solid var(--input-border);background:var(--surface);font-size:0.85rem;font-weight:600;color:var(--text-primary);cursor:pointer;transition:all 0.15s;white-space:nowrap';
+    chip.onclick = () => type === 'pickup' ? selectPickupChip(key) : selectDestChip(key);
+    grid.appendChild(chip);
+  });
+}
+
+function selectPickupChip(key) {
+  reqSelectedPickup = key;
+  document.querySelectorAll('#req-pickup-grid .loc-chip').forEach(c => {
+    const isSelected = c.id === 'chip-pickup-' + key.replace(/s+/g,'-');
+    const isDisabled = key !== reqSelectedDest && c.id === 'chip-pickup-' + reqSelectedDest.replace(/s+/g,'-');
+    c.style.background = isSelected ? 'var(--primary)' : (isDisabled ? 'var(--bg)' : 'var(--surface)');
+    c.style.border = isSelected ? '1px solid var(--primary)' : (isDisabled ? '1px solid var(--divider)' : '1px solid var(--input-border)');
+    c.style.color = isSelected ? '#fff' : (isDisabled ? 'var(--text-hint)' : 'var(--text-primary)');
+    c.style.boxShadow = isSelected ? '0 2px 6px rgba(59,130,246,0.25)' : 'none';
+  });
+  const sel = document.getElementById('req-pickup');
+  if (sel) sel.value = key;
+  updateRequestSummary();
+}
+
+function selectDestChip(key) {
+  reqSelectedDest = key;
+  document.querySelectorAll('#req-dest-grid .loc-chip').forEach(c => {
+    const isSelected = c.id === 'chip-dest-' + key.replace(/s+/g,'-');
+    const isDisabled = c.id === 'chip-dest-' + reqSelectedPickup.replace(/s+/g,'-');
+    c.style.background = isSelected ? 'var(--primary)' : (isDisabled ? 'var(--bg)' : 'var(--surface)');
+    c.style.border = isSelected ? '1px solid var(--primary)' : (isDisabled ? '1px solid var(--divider)' : '1px solid var(--input-border)');
+    c.style.color = isSelected ? '#fff' : (isDisabled ? 'var(--text-hint)' : 'var(--text-primary)');
+    c.style.boxShadow = isSelected ? '0 2px 6px rgba(59,130,246,0.25)' : 'none';
+  });
+  const sel = document.getElementById('req-dest');
+  if (sel) sel.value = key;
+  updateRequestSummary();
+}
+
+window.selectRideType = function(type) {
+  reqRideType = type;
+  const sharedCard = document.getElementById('ride-card-shared');
+  const charteredCard = document.getElementById('ride-card-chartered');
+  const paxSection = document.getElementById('req-pax-section');
+  const sel = document.getElementById('req-type');
+  if (sel) sel.value = type;
+  if (type === 'Shared') {
+    if (sharedCard) { sharedCard.style.background = 'var(--primary)'; sharedCard.style.border = '2px solid var(--primary)'; sharedCard.querySelector('div:nth-child(2)').style.color = '#fff'; sharedCard.querySelector('div:nth-child(3)').style.color = 'rgba(255,255,255,0.75)'; }
+    if (charteredCard) { charteredCard.style.background = 'var(--surface)'; charteredCard.style.border = '2px solid var(--card-border)'; charteredCard.querySelector('div:nth-child(2)').style.color = 'var(--text-primary)'; charteredCard.querySelector('div:nth-child(3)').style.color = 'var(--text-secondary)'; }
+    if (paxSection) paxSection.style.display = 'block';
+  } else {
+    if (charteredCard) { charteredCard.style.background = 'var(--primary)'; charteredCard.style.border = '2px solid var(--primary)'; charteredCard.querySelector('div:nth-child(2)').style.color = '#fff'; charteredCard.querySelector('div:nth-child(3)').style.color = 'rgba(255,255,255,0.75)'; }
+    if (sharedCard) { sharedCard.style.background = 'var(--surface)'; sharedCard.style.border = '2px solid var(--card-border)'; sharedCard.querySelector('div:nth-child(2)').style.color = 'var(--text-primary)'; sharedCard.querySelector('div:nth-child(3)').style.color = 'var(--text-secondary)'; }
+    if (paxSection) paxSection.style.display = 'none';
+  }
+  updateRequestSummary();
+};
+
+window.selectPax = function(n) {
+  reqPaxCount = n;
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('pax-' + i);
+    if (!el) continue;
+    if (i === n) {
+      el.style.background = 'var(--primary)'; el.style.border = '2px solid var(--primary)';
+      el.style.color = '#fff'; el.style.boxShadow = '0 2px 6px rgba(59,130,246,0.3)';
+    } else {
+      el.style.background = 'var(--surface)'; el.style.border = '1px solid var(--input-border)';
+      el.style.color = 'var(--text-primary)'; el.style.boxShadow = 'none';
+    }
+  }
+  const lbl = document.getElementById('pax-label');
+  if (lbl) lbl.textContent = n === 1 ? 'Just me' : n + ' passengers';
+  updateRequestSummary();
+};
+
+function updateRequestSummary() {
+  const sumDiv = document.getElementById('req-summary');
+  const sumFrom = document.getElementById('sum-from');
+  const sumTo = document.getElementById('sum-to');
+  const sumType = document.getElementById('sum-type');
+  if (!sumDiv) return;
+  if (reqSelectedPickup && reqSelectedDest) {
+    sumDiv.style.display = 'block';
+    if (sumFrom) sumFrom.textContent = getLocDisplayName(reqSelectedPickup);
+    if (sumTo) sumTo.textContent = getLocDisplayName(reqSelectedDest);
+    if (sumType) sumType.textContent = reqRideType === 'Chartered' ? 'Chartered (private)' : 'Shared · ' + reqPaxCount + ' passenger' + (reqPaxCount > 1 ? 's' : '');
+  } else {
+    sumDiv.style.display = 'none';
+  }
+}
+
 // --- RIDE REQUEST SUBMIT ---
 window.doRequest = async function() {
-  const pickup = document.getElementById('req-pickup').value;
-  const dest = document.getElementById('req-dest').value;
-  const notes = document.getElementById('req-notes').value.trim();
+  const pickup = reqSelectedPickup || document.getElementById('req-pickup').value;
+  const dest = reqSelectedDest || document.getElementById('req-dest').value;
+  const notesEl = document.getElementById('req-notes');
+  const notes = notesEl ? notesEl.value.trim() : '';
   const errEl = document.getElementById('req-error');
   errEl.classList.remove('show');
 
@@ -1646,11 +1805,11 @@ window.doRequest = async function() {
       pickup_lng: pickupInfo.lng,
       dest_lat: destInfo.lat,
       dest_lng: destInfo.lng,
-      rideType: 'Shared',
-      rideTypeName: 'Shared',
-      ride_type: 0,
-      passengerCount: 1,
-      pax: 1,
+      rideType: reqRideType,
+      rideTypeName: reqRideType,
+      ride_type: reqRideType === 'Chartered' ? 1 : 0,
+      passengerCount: reqRideType === 'Chartered' ? 1 : reqPaxCount,
+      pax: reqRideType === 'Chartered' ? 1 : reqPaxCount,
       notes: notes,
       status: 0,
       statusName: 'Pending',
@@ -1680,10 +1839,13 @@ window.doRequest = async function() {
       }
     } catch(e) {}
 
-    document.getElementById('req-success').style.display = 'block';
-    btn.textContent = 'Request Shuttle';
+    const sucEl = document.getElementById('req-success');
+    if (sucEl) { sucEl.style.display = 'flex'; }
+    btn.textContent = '🚌 Send Request';
     btn.disabled = false;
-    document.getElementById('req-notes').value = '';
+    if (notesEl) notesEl.value = '';
+    reqSelectedPickup = '';
+    reqSelectedDest = '';
 
     listenForAcceptance(bookingId);
     loadRecentRequests();
@@ -1691,7 +1853,7 @@ window.doRequest = async function() {
   } catch(e) {
     errEl.textContent = 'Error submitting request: ' + e.message;
     errEl.classList.add('show');
-    btn.textContent = 'Request Shuttle';
+    btn.textContent = '🚌 Send Request';
     btn.disabled = false;
   }
 };
