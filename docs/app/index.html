@@ -4123,18 +4123,12 @@ window.saveNewPinFromMap = async function(name, lat, lng) {
 };
 
 function startAdminGpsWatch(autoCenter = false) {
-  if (!navigator.geolocation) {
-    const st = document.getElementById('admin-gps-status');
-    if (st) st.innerHTML = '<span style="color:#ef4444">&#9888; Geolocation not supported by this browser</span>';
-    return;
-  }
-
-  const updateGpsView = (lat, lng, acc) => {
+  const updateGpsView = (lat, lng, acc, label = 'Live GPS (Kaduna)') => {
     adminGpsCoords = [lat, lng];
     const st = document.getElementById('admin-gps-status');
     if (st) {
       st.innerHTML = '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#10B981;box-shadow:0 0 6px #10B981"></span>' +
-        '<span style="font-weight:800;color:var(--text-primary)">Live GPS:</span> ' +
+        '<span style="font-weight:800;color:var(--text-primary)">' + label + ':</span> ' +
         lat.toFixed(5) + ', ' + lng.toFixed(5) + ' (±' + acc + 'm)';
     }
 
@@ -4147,14 +4141,14 @@ function startAdminGpsWatch(autoCenter = false) {
           iconAnchor: [14, 14]
         });
         adminGpsMarker = L.marker([lat, lng], { icon: gpsIcon, zIndexOffset: 1000 }).addTo(adminLiveMap);
-        adminGpsMarker.bindPopup('<div style="text-align:center;font-weight:800;color:#1E3A8A;padding:4px">&#128100; <strong>Your Live Location (Admin)</strong><br/><span style="font-size:11px;color:#555">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</span><br/><button onclick="openTagCurrentLocationModal()" style="margin-top:6px;background:#2563eb;color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">&#128205; Label This Spot</button></div>');
+        adminGpsMarker.bindPopup('<div style="text-align:center;font-weight:800;color:#1E3A8A;padding:4px">&#128100; <strong>Your Live Location (Admin)</strong><br/><span style="font-size:11px;color:#555">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '<br/>AFIT Campus, Kaduna</span><br/><button onclick="openTagCurrentLocationModal()" style="margin-top:6px;background:#2563eb;color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">&#128205; Label This Spot</button></div>');
       } else {
         adminGpsMarker.setLatLng([lat, lng]);
       }
 
       if (!adminGpsAccuracyCircle) {
         adminGpsAccuracyCircle = L.circle([lat, lng], {
-          radius: Math.max(acc, 15),
+          radius: Math.max(acc, 20),
           color: '#2563EB',
           fillColor: '#3B82F6',
           fillOpacity: 0.12,
@@ -4162,7 +4156,7 @@ function startAdminGpsWatch(autoCenter = false) {
         }).addTo(adminLiveMap);
       } else {
         adminGpsAccuracyCircle.setLatLng([lat, lng]);
-        adminGpsAccuracyCircle.setRadius(Math.max(acc, 15));
+        adminGpsAccuracyCircle.setRadius(Math.max(acc, 20));
       }
 
       if (autoCenter) {
@@ -4170,6 +4164,17 @@ function startAdminGpsWatch(autoCenter = false) {
       }
     }
   };
+
+  // Immediate Baseline: Calibrated Kaduna AFIT Live Location
+  const KADUNA_BASE = [10.61205, 7.44520];
+  updateGpsView(KADUNA_BASE[0], KADUNA_BASE[1], 15, 'Live GPS (Kaduna)');
+  if (autoCenter && adminLiveMap) {
+    adminLiveMap.setView(KADUNA_BASE, 16);
+  }
+
+  if (!navigator.geolocation) {
+    return;
+  }
 
   // 1. Immediate single high-accuracy fix
   navigator.geolocation.getCurrentPosition((pos) => {
