@@ -474,24 +474,38 @@
       
       <!-- ACTIVE RIDE BANNER (Visible whenever a ride is active) -->
       <div id="dash-active-ride" style="display:none">
-        <div class="active-ride-card">
+        <div class="active-ride-card" id="active-ride-card">
           <div class="active-ride-header">
-            <div class="active-pulse-badge">
-              <span class="pulse-dot"></span>
-              <span id="active-ride-status-text">ACTIVE RIDE</span>
+            <div class="active-pulse-badge" id="active-pulse-badge">
+              <span class="pulse-dot" id="active-pulse-dot"></span>
+              <span id="active-ride-status-text">WAITING FOR SHUTTLE</span>
             </div>
-            <span id="active-ride-time" style="font-size:0.75rem;color:rgba(255,255,255,0.85)">Live</span>
+            <span id="active-ride-mode-pill" style="font-size:0.75rem;background:rgba(255,255,255,0.18);padding:3px 10px;border-radius:12px;font-weight:700">Online Mode</span>
           </div>
+
+          <!-- PROMINENT SHUTTLE ARRIVAL ALERT (e.g. "Shuttle 2 is coming!") -->
+          <div id="active-ride-alert" style="display:none;background:rgba(34,197,94,0.22);border:1.5px solid rgba(74,222,128,0.6);border-radius:14px;padding:10px 14px;margin-bottom:0.85rem;display:flex;align-items:center;gap:10px;animation:pulseAnim 2s infinite">
+            <div style="font-size:1.6rem;line-height:1">&#128652;</div>
+            <div style="flex:1">
+              <div id="active-ride-alert-title" style="font-weight:900;font-size:1.05rem;color:#fff;letter-spacing:-0.01em">Shuttle 2 is coming!</div>
+              <div id="active-ride-alert-desc" style="font-size:0.75rem;color:rgba(255,255,255,0.85);margin-top:2px">Driver is on the way. Be ready at your pickup point.</div>
+            </div>
+          </div>
+
           <div class="active-ride-route" id="active-ride-route">Pickup &rarr; Destination</div>
+          
           <div class="active-ride-details">
             <div id="active-ride-shuttle">&#128652; Shuttle: Awaiting assignment</div>
             <div id="active-ride-pid-box">Pickup ID: <strong id="active-ride-pid" style="font-family:'JetBrains Mono',monospace">---</strong></div>
           </div>
+
+          <div id="active-ride-subtext" style="font-size:0.76rem;color:rgba(255,255,255,0.8);margin-bottom:0.85rem;display:none"></div>
+
           <div class="active-ride-actions">
-            <button class="btn btn-primary btn-sm" onclick="openLiveTracking()" style="flex:1;background:white;color:var(--primary-dark)">
-              &#128506;&#65039; Track on Live Map
+            <button class="btn btn-primary btn-sm" onclick="openLiveTracking()" style="flex:1.4;background:#fff;color:var(--primary-dark);font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.15)">
+              &#128506;&#65039; Track Live Map
             </button>
-            <button class="btn btn-danger btn-sm" id="active-ride-cancel-btn" onclick="cancelActiveRide()" style="width:auto">
+            <button class="btn btn-danger btn-sm" id="active-ride-cancel-btn" onclick="cancelActiveRide()" style="flex:0.8;background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.5);color:#fff">
               Cancel
             </button>
           </div>
@@ -661,6 +675,7 @@
       <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.4rem" id="req-shuttle-info">Waiting for available campus shuttle...</div>
       <div style="display:flex;gap:0.6rem;margin-top:1.5rem;width:100%;max-width:320px">
         <button class="btn btn-primary btn-sm" style="flex:1" onclick="openLiveTracking()">&#128506;&#65039; Track Live</button>
+        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="showScreen('dashboard')">&#127968; Dashboard</button>
         <button class="btn btn-secondary btn-sm" style="flex:1" onclick="showScreen('myrequests')">My Rides</button>
       </div>
     </div>
@@ -1017,16 +1032,30 @@
       <div id="admin-ads-list"><div class="empty-state"><div class="empty-icon">&#128226;</div><div class="empty-title">No ads posted yet</div></div></div>
     </div>
     <div class="admin-section" id="admin-locations">
-      <div class="section-title">&#128205; Campus Location Names</div>
+      <div class="section-title">&#128205; Manage Campus Locations (Synced with App &amp; Firebase)</div>
       <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.75rem">
-        Edit the display names shown to all users on the map and booking dropdowns.
-        Changes are saved to the server instantly and apply to all devices.
+        Custom names and dynamic online locations are synced directly with the Firebase <code style="font-family:monospace;background:rgba(0,0,0,0.05);padding:1px 4px;border-radius:4px">settings/locations</code> and <code style="font-family:monospace;background:rgba(0,0,0,0.05);padding:1px 4px;border-radius:4px">settings/location_names</code> documents. All changes apply in real-time across both this website and the mobile app.
       </p>
+
+      <!-- Add New Online Location Card (matches Flutter manage_locations_screen.dart) -->
+      <div class="card" style="margin-bottom:1rem;background:var(--surface);border:1.5px dashed var(--primary)">
+        <div style="font-weight:800;font-size:0.9rem;color:var(--primary);margin-bottom:6px">&#65291; Add Dynamic Online Location</div>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="admin-new-loc-input" placeholder="e.g. AFIT Parade Ground" style="flex:1"/>
+          <button class="btn btn-primary btn-sm" onclick="adminAddOnlineLocation()">Add Spot</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+        <div style="font-size:0.85rem;font-weight:800;color:var(--text-primary)">Campus Stops &amp; Real Names</div>
+        <span style="font-size:0.75rem;color:var(--text-secondary)" id="admin-loc-count">12 locations</span>
+      </div>
+
       <div id="admin-locations-list"><div class="empty-state"><div class="empty-icon">&#128205;</div><div class="empty-title">Loading locations...</div></div></div>
-      <button class="btn btn-success" style="margin-top:1rem;width:100%" onclick="saveAllLocationNames()">&#128190; Save All Names to Server</button>
+      
+      <button class="btn btn-success" style="margin-top:1rem;width:100%;font-weight:800;padding:0.75rem" onclick="saveAllLocationNames()">&#128190; Save All Names to Firebase</button>
     </div>
   </div>
-
 </div><!-- /#app -->
 
 <!-- FULL IMAGE LIGHTBOX MODAL -->
@@ -1182,20 +1211,20 @@ const auth = getAuth(FB);
 const db = getFirestore(FB);
 const rtdb = getDatabase(FB);
 
-// 12 Campus Locations with Geographic Coordinates (AFIT Kaduna Campus — verified from campus map)
+// 12 Campus Locations with Verified Kawo, Kaduna Coordinates
 const AFIT_LOCATIONS = {
-  'AFIT Gates':                 { code: 1,  lat: 10.4972, lng: 7.4169, category: 'Main Entrance', defaultName: 'AFIT Main Gate' },
-  '45x1 Hostel':                { code: 2,  lat: 10.5098, lng: 7.4193, category: 'Hostel', defaultName: 'AFIT Boys Hostel (45x1)' },
-  'Old Girls Hostel':           { code: 3,  lat: 10.5055, lng: 7.4250, category: 'Hostel', defaultName: 'AFIT Girls Hostel' },
-  'TETFUND Hostel':             { code: 4,  lat: 10.5080, lng: 7.4295, category: 'Hostel', defaultName: 'Princess Gimbiya / TETFUND Hostel' },
-  'BK':                         { code: 5,  lat: 10.5018, lng: 7.4205, category: 'Academic', defaultName: 'School of Basic & Remedial Studies (BK)' },
-  'Boys Hostel':                { code: 6,  lat: 10.5078, lng: 7.4218, category: 'Hostel', defaultName: 'Boys Hostel' },
-  'Alfa Hall':                  { code: 7,  lat: 10.5030, lng: 7.4225, category: 'Lecture Hall', defaultName: 'Ibrahim Alfa Auditorium' },
-  'EED':                        { code: 8,  lat: 10.5045, lng: 7.4195, category: 'Engineering', defaultName: 'Armament Engineering / EED' },
-  'AFIT Mosque':                { code: 9,  lat: 10.5060, lng: 7.4215, category: 'Worship', defaultName: 'AFIT Central Masjid' },
-  'New Mechanical':             { code: 10, lat: 10.5025, lng: 7.4175, category: 'Engineering', defaultName: 'Mechanical & Aerospace / Bush Canteen' },
-  'Centre of Entrepreneurship': { code: 11, lat: 10.5015, lng: 7.4240, category: 'Faculty', defaultName: 'Faculty of Science & Computing' },
-  'Hall A':                     { code: 12, lat: 10.5038, lng: 7.4210, category: 'Faculty', defaultName: 'Social & Management Science / Bukka Pot' }
+  'AFIT Gates':                 { code: 1,  lat: 10.6068, lng: 7.4370, category: 'Main Entrance', defaultName: 'AFIT Main Gate' },
+  '45x1 Hostel':                { code: 2,  lat: 10.6185, lng: 7.4455, category: 'Hostel', defaultName: 'AFIT Boys Hostel (45x1)' },
+  'Old Girls Hostel':           { code: 3,  lat: 10.6134, lng: 7.4475, category: 'Hostel', defaultName: 'AFIT Girls Hostel' },
+  'TETFUND Hostel':             { code: 4,  lat: 10.6120, lng: 7.4560, category: 'Hostel', defaultName: 'Princess Gimbiya / TETFUND' },
+  'BK':                         { code: 5,  lat: 10.6083, lng: 7.4415, category: 'Academic', defaultName: 'School of Basic Studies (BK)' },
+  'Boys Hostel':                { code: 6,  lat: 10.6150, lng: 7.4520, category: 'Hostel', defaultName: 'Boys Hostel (Barakallahu)' },
+  'Alfa Hall':                  { code: 7,  lat: 10.6090, lng: 7.4439, category: 'Lecture Hall', defaultName: 'Ibrahim Alfa Auditorium' },
+  'EED':                        { code: 8,  lat: 10.6092, lng: 7.4385, category: 'Engineering', defaultName: 'Armament Engineering / EED' },
+  'AFIT Mosque':                { code: 9,  lat: 10.6088, lng: 7.4402, category: 'Worship', defaultName: 'AFIT Central Masjid' },
+  'New Mechanical':             { code: 10, lat: 10.6078, lng: 7.4395, category: 'Engineering', defaultName: 'Mechanical & Aerospace / Bush Canteen' },
+  'Centre of Entrepreneurship': { code: 11, lat: 10.6085, lng: 7.4465, category: 'Faculty', defaultName: 'Faculty of Science & Computing / Bukka Pot' },
+  'Hall A':                     { code: 12, lat: 10.6090, lng: 7.4380, category: 'Faculty', defaultName: 'AMAO Hall / Auditorium' }
 };
 
 // Dynamic Location Customization Map
@@ -1207,16 +1236,49 @@ try {
 
 async function loadLocationNamesFromFirestore() {
   try {
-    const snap = await getDoc(doc(db, 'settings', 'location_names'));
-    if (snap.exists()) {
-      const data = snap.data();
-      // Merge Firestore names (Firestore wins over localStorage)
-      customLocationNames = Object.assign({}, customLocationNames, data);
-      localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
-      renderCampusPins();
-      updateDropdownNames();
-    }
-  } catch(e) { /* offline — use localStorage fallback */ }
+    // 1. Listen to settings/location_names doc for display name overrides
+    onSnapshot(doc(db, 'settings', 'location_names'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() || {};
+        customLocationNames = Object.assign({}, customLocationNames, data);
+        localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+        if (typeof renderCampusPins === 'function') renderCampusPins();
+        if (typeof updateDropdownNames === 'function') updateDropdownNames();
+        if (typeof renderLocationChips === 'function') {
+          renderLocationChips('req-pickup-grid', 'pickup');
+          renderLocationChips('req-dest-grid', 'dest');
+        }
+      }
+    });
+
+    // 2. Listen to settings/locations doc (matching Flutter firestore_service.dart getLocationsStream())
+    onSnapshot(doc(db, 'settings', 'locations'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() || {};
+        const list = data.list;
+        if (Array.isArray(list)) {
+          // Merge newly added dynamic online locations into AFIT_LOCATIONS table
+          list.forEach((locName, idx) => {
+            if (!AFIT_LOCATIONS[locName]) {
+              AFIT_LOCATIONS[locName] = {
+                code: 100 + idx,
+                lat: 10.6090 + (idx * 0.0008),
+                lng: 7.4420 + (idx * 0.0008),
+                category: 'Online Location',
+                defaultName: locName
+              };
+            }
+          });
+          if (typeof renderCampusPins === 'function') renderCampusPins();
+          if (typeof updateDropdownNames === 'function') updateDropdownNames();
+          if (typeof renderLocationChips === 'function') {
+            renderLocationChips('req-pickup-grid', 'pickup');
+            renderLocationChips('req-dest-grid', 'dest');
+          }
+        }
+      }
+    });
+  } catch(e) { /* offline — fallback to existing */ }
 }
 
 function getLocDisplayName(locKey) {
@@ -1305,7 +1367,7 @@ window.showScreen = function(name) {
   const el = document.getElementById('screen-' + name);
   if (el) el.classList.add('active');
   
-  if (name === 'dashboard') { setupDashboard(); loadRecentRequests(); checkActiveRide(); }
+  if (name === 'dashboard') { setupDashboard(); loadRecentRequests(); startActiveRideListener(); }
   if (name === 'request') { setTimeout(initRequestScreen, 50); }
   if (name === 'myrequests') loadMyRequests();
   if (name === 'notifications') loadNotifications();
@@ -1510,36 +1572,160 @@ function setupDashboard() {
 }
 
 // CHECK ACTIVE RIDE FOR DASHBOARD BANNER
-async function checkActiveRide() {
+// --- HELPER: SHUTTLE NAME FORMATTER ---
+function formatShuttleName(raw) {
+  if (!raw) return 'Shuttle';
+  const str = String(raw).trim();
+  const match = str.match(/(?:SH|AFIT-)?0*(d+)/i);
+  if (match) {
+    return 'Shuttle ' + match[1];
+  }
+  return str.startsWith('Shuttle') ? str : 'Shuttle ' + str;
+}
+
+// --- REAL-TIME ACTIVE RIDE LISTENER & DASHBOARD BANNER ---
+let activeRideListenerUnsub = null;
+
+function startActiveRideListener() {
   if (!currentUser) return;
-  try {
-    const snap = await getDocs(query(collection(db, 'ride_requests'), where('userId', '==', currentUser.uid)));
+  if (activeRideListenerUnsub) {
+    activeRideListenerUnsub();
+    activeRideListenerUnsub = null;
+  }
+
+  const q = query(
+    collection(db, 'ride_requests'),
+    where('userId', '==', currentUser.uid)
+  );
+
+  activeRideListenerUnsub = onSnapshot(q, (snapshot) => {
     const list = [];
-    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
-    // Filter for active rides: status 0 (Pending), 1 (Assigned), 2 (Accepted)
-    const active = list.find(r => r.status === 0 || r.status === 1 || r.status === 2);
-    const banner = document.getElementById('dash-active-ride');
-    if (active) {
-      activeRideData = active;
-      banner.style.display = 'block';
-      const statusMap = { 0: '🟡 WAITING FOR SHUTTLE', 1: '🟢 SHUTTLE ON THE WAY', 2: '🟢 SHUTTLE ARRIVED' };
-      document.getElementById('active-ride-status-text').textContent = statusMap[active.status] || 'ACTIVE RIDE';
-      document.getElementById('active-ride-route').innerHTML = (active.pickupLocation || '?') + ' &rarr; ' + (active.destination || '?');
-      const shuttle = active.shuttleId || active.shuttleIdFeedback || active.shuttle_id || '';
-      document.getElementById('active-ride-shuttle').textContent = shuttle ? ('🛺 Shuttle: ' + shuttle) : '🛺 Shuttle: Finding driver...';
-      document.getElementById('active-ride-pid').textContent = active.pickupId || currentUserData?.pickupId || '---';
-    } else {
-      activeRideData = null;
-      banner.style.display = 'none';
+    snapshot.forEach(d => list.push({ id: d.id, ...d.data() }));
+
+    // Sort newest first
+    list.sort((a, b) => {
+      const at = a.timestamp?.seconds || a.bookedAt?.seconds || 0;
+      const bt = b.timestamp?.seconds || b.bookedAt?.seconds || 0;
+      return bt - at;
+    });
+
+    // Find first active ride: status 0 (Pending), 1 (Accepted), 2 (In Transit), 3 (Arrived)
+    const active = list.find(r => r.status === 0 || r.status === 1 || r.status === 2 || r.status === 3);
+    activeRideData = active || null;
+    renderActiveRideBanner(activeRideData);
+
+    if (trackMap && typeof updateTrackingMap === 'function') {
+      updateTrackingMap();
     }
-  } catch(e) {}
+  }, (err) => {
+    console.error('Active ride snapshot error:', err);
+  });
+}
+
+function renderActiveRideBanner(active) {
+  const banner = document.getElementById('dash-active-ride');
+  if (!banner) return;
+
+  if (!active) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  banner.style.display = 'block';
+  const card = document.getElementById('active-ride-card');
+  const alertBox = document.getElementById('active-ride-alert');
+  const alertTitle = document.getElementById('active-ride-alert-title');
+  const alertDesc = document.getElementById('active-ride-alert-desc');
+  const statusText = document.getElementById('active-ride-status-text');
+  const pulseDot = document.getElementById('active-pulse-dot');
+  const routeEl = document.getElementById('active-ride-route');
+  const shuttleEl = document.getElementById('active-ride-shuttle');
+  const pidEl = document.getElementById('active-ride-pid');
+  const subtextEl = document.getElementById('active-ride-subtext');
+  const cancelBtn = document.getElementById('active-ride-cancel-btn');
+
+  const pName = getLocDisplayName(active.pickupLocation || '?');
+  const dName = getLocDisplayName(active.destination || '?');
+  const rawShuttle = active.shuttleIdFeedback || active.shuttleId || active.shuttle_id || '';
+  const shuttleDisplay = formatShuttleName(rawShuttle);
+  const driverName = active.driverName || '';
+  const pid = active.pickupId || currentUserData?.pickupId || generatePickupId(currentUser.uid);
+
+  if (routeEl) routeEl.innerHTML = escape(pName) + ' &rarr; ' + escape(dName);
+  if (pidEl) pidEl.textContent = pid;
+
+  const isAcceptedOrArrived = active.status === 1 || active.status === 2 || active.status === 3;
+
+  if (isAcceptedOrArrived) {
+    // GREEN GLOW / SHUTTLE IS COMING STATE
+    if (card) {
+      card.style.background = 'linear-gradient(135deg, #064E3B 0%, #059669 50%, #047857 100%)';
+      card.style.boxShadow = '0 8px 24px rgba(5,150,105,0.4)';
+    }
+    if (statusText) statusText.textContent = active.status === 3 ? 'SHUTTLE ARRIVED' : 'SHUTTLE ON THE WAY';
+    if (pulseDot) { pulseDot.style.background = '#34D399'; }
+
+    if (alertBox) {
+      alertBox.style.display = 'flex';
+      alertBox.style.background = 'rgba(255,255,255,0.18)';
+      alertBox.style.borderColor = 'rgba(255,255,255,0.45)';
+    }
+    if (alertTitle) {
+      alertTitle.textContent = shuttleDisplay + ' is coming!';
+    }
+    if (alertDesc) {
+      alertDesc.textContent = (driverName ? ('Driver ' + driverName + ' has') : 'Driver has') +
+        ' accepted your request. Be ready at ' + pName + '!';
+    }
+
+    if (shuttleEl) {
+      shuttleEl.innerHTML = '&#128652; <strong>' + escape(shuttleDisplay) + '</strong>' +
+        (driverName ? (' &bull; ' + escape(driverName)) : '');
+    }
+    if (subtextEl) {
+      subtextEl.style.display = 'block';
+      subtextEl.textContent = 'Track this shuttle in real-time on the campus map below.';
+    }
+    if (cancelBtn) {
+      cancelBtn.textContent = 'Cancel';
+    }
+  } else {
+    // PENDING / SEARCHING FOR SHUTTLE STATE
+    if (card) {
+      card.style.background = 'linear-gradient(135deg, #0A2E6E 0%, #1565C0 100%)';
+      card.style.boxShadow = '0 8px 24px rgba(10,46,110,0.3)';
+    }
+    if (statusText) statusText.textContent = 'SEARCHING FOR SHUTTLE';
+    if (pulseDot) { pulseDot.style.background = '#FBBF24'; }
+
+    if (alertBox) {
+      alertBox.style.display = 'flex';
+      alertBox.style.background = 'rgba(245,158,11,0.18)';
+      alertBox.style.borderColor = 'rgba(245,158,11,0.4)';
+    }
+    if (alertTitle) {
+      alertTitle.textContent = 'Searching for available shuttle...';
+    }
+    if (alertDesc) {
+      alertDesc.textContent = 'Request dispatched to active AFIT drivers. Stand by for driver acceptance.';
+    }
+
+    if (shuttleEl) shuttleEl.textContent = '🛺 Shuttle: Awaiting assignment';
+    if (subtextEl) subtextEl.style.display = 'none';
+    if (cancelBtn) cancelBtn.textContent = 'Cancel';
+  }
+}
+
+async function checkActiveRide() {
+  startActiveRideListener();
 }
 
 window.cancelActiveRide = async function() {
   if (!activeRideData) return;
   await cancelRequest(activeRideData.bookingId || activeRideData.id);
-  checkActiveRide();
+  startActiveRideListener();
 };
+
 
 async function loadAds() {
   try {
@@ -1945,7 +2131,7 @@ window.openLiveTrackingWithRide = async function(rideId) {
 
 window.refreshTrackingMap = function() {
   if (trackMap) {
-    trackMap.setView([10.5105, 7.4165], 16);
+    trackMap.setView([10.6110, 7.4450], 15);
     updateTrackingMap();
   }
 };
@@ -2051,7 +2237,7 @@ function initTrackingMap() {
   setTimeout(() => {
     if (!trackMap) {
       // Centered on AFIT Kaduna campus landmarks
-      trackMap = L.map('tracking-map', { zoomControl: false }).setView([10.5045, 7.4215], 15);
+      trackMap = L.map('tracking-map', { zoomControl: false }).setView([10.6110, 7.4450], 15);
       L.control.zoom({ position: 'topright' }).addTo(trackMap);
 
       // Default to Google Maps Roadmap
@@ -2918,61 +3104,123 @@ window.deleteAd = async function(id) {
   } catch(e) {}
 };
 
-// --- ADMIN LOCATIONS ---
+// --- ADMIN LOCATIONS (Synced with Flutter & Firebase) ---
 function loadAdminLocations() {
   const el = document.getElementById('admin-locations-list');
+  const countEl = document.getElementById('admin-loc-count');
   if (!el) return;
   el.innerHTML = '';
-  Object.keys(AFIT_LOCATIONS).forEach(key => {
+
+  const keys = Object.keys(AFIT_LOCATIONS);
+  if (countEl) countEl.textContent = keys.length + ' locations';
+
+  keys.forEach((key, idx) => {
     const loc = AFIT_LOCATIONS[key];
     const current = customLocationNames[key] || loc.defaultName || key;
-    el.innerHTML += '<div class="card" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;padding:0.6rem 0.75rem">' +
-      '<div style="flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem">' + loc.code + '</div>' +
+    const isDynamic = loc.category === 'Online Location' || loc.code >= 100;
+
+    el.innerHTML += '<div class="card" style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;padding:0.65rem 0.8rem;background:var(--surface)">' +
+      '<div style="flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:' + (isDynamic ? '#0EA5E9' : 'var(--primary)') + ';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.8rem">' + loc.code + '</div>' +
       '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:2px">' + escape(key) + ' &bull; ' + escape(loc.category) + '</div>' +
-        '<input class="form-input" id="loc-input-' + loc.code + '" value="' + escapeAttr(current) + '" placeholder="' + escapeAttr(loc.defaultName) + '" style="padding:0.3rem 0.5rem;font-size:0.85rem"/>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">' +
+          '<div style="font-size:0.72rem;color:var(--text-secondary)">' + escape(key) + ' &bull; ' + escape(loc.category) + '</div>' +
+          (isDynamic ? '<button data-delname="' + escapeAttr(key) + '" onclick="adminDeleteOnlineLocation(this.dataset.delname)" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.75rem;padding:2px 4px">Delete</button>' : '') +
+        '</div>' +
+        '<input class="form-input" id="loc-input-' + loc.code + '" data-lockey="' + escapeAttr(key) + '" value="' + escapeAttr(current) + '" placeholder="' + escapeAttr(loc.defaultName) + '" style="padding:0.35rem 0.6rem;font-size:0.85rem"/>' +
       '</div>' +
     '</div>';
   });
 }
 
-function escapeAttr(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+window.adminAddOnlineLocation = async function() {
+  const inp = document.getElementById('admin-new-loc-input');
+  if (!inp) return;
+  const name = inp.value.trim();
+  if (!name) { alert('Please enter location name.'); return; }
+
+  try {
+    // 1. Update settings/locations list in Firestore (matches Flutter addLocation())
+    const ref = doc(db, 'settings', 'locations');
+    const snap = await getDoc(ref);
+    let curList = [];
+    if (snap.exists() && Array.isArray(snap.data()?.list)) {
+      curList = snap.data().list;
+    }
+    if (!curList.includes(name)) {
+      curList.push(name);
+      await setDoc(ref, { list: curList }, { merge: true });
+    }
+
+    // 2. Add to AFIT_LOCATIONS table locally
+    if (!AFIT_LOCATIONS[name]) {
+      AFIT_LOCATIONS[name] = {
+        code: 100 + curList.length,
+        lat: 10.6090 + (curList.length * 0.0008),
+        lng: 7.4420 + (curList.length * 0.0008),
+        category: 'Online Location',
+        defaultName: name
+      };
+    }
+    inp.value = '';
+    loadAdminLocations();
+    if (typeof renderCampusPins === 'function') renderCampusPins();
+    if (typeof updateDropdownNames === 'function') updateDropdownNames();
+    alert('Added online location "' + name + '". Synced to all devices.');
+  } catch(e) {
+    alert('Error adding location: ' + e.message);
+  }
+};
+
+window.adminDeleteOnlineLocation = async function(name) {
+  if (!confirm('Remove online location "' + name + '"?')) return;
+  try {
+    const ref = doc(db, 'settings', 'locations');
+    const snap = await getDoc(ref);
+    if (snap.exists() && Array.isArray(snap.data()?.list)) {
+      const curList = snap.data().list.filter(n => n !== name);
+      await setDoc(ref, { list: curList });
+    }
+    delete AFIT_LOCATIONS[name];
+    delete customLocationNames[name];
+    loadAdminLocations();
+    if (typeof renderCampusPins === 'function') renderCampusPins();
+    if (typeof updateDropdownNames === 'function') updateDropdownNames();
+    alert('Removed location "' + name + '".');
+  } catch(e) {
+    alert('Error removing location: ' + e.message);
+  }
+};
 
 window.saveAllLocationNames = async function() {
   const updates = {};
+  const onlineList = [];
+
   Object.keys(AFIT_LOCATIONS).forEach(key => {
     const loc = AFIT_LOCATIONS[key];
     const inp = document.getElementById('loc-input-' + loc.code);
-    if (!inp) return;
-    const val = inp.value.trim();
+    const val = inp ? inp.value.trim() : (customLocationNames[key] || loc.defaultName || key);
     if (val && val !== (loc.defaultName || key)) {
       updates[key] = val;
-    } else {
-      // If reverted to default or empty, remove custom entry
-      updates[key] = '';
     }
+    onlineList.push(val || loc.defaultName || key);
   });
 
-  // Build Firestore-safe payload (remove empty keys from Firestore)
-  const firestorePayload = {};
-  Object.keys(updates).forEach(k => {
-    if (updates[k]) firestorePayload[k] = updates[k];
-  });
-
-  // Update in-memory + localStorage
-  customLocationNames = firestorePayload;
+  // Update in-memory & localStorage
+  customLocationNames = updates;
   localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
 
-  // Save to Firestore
   try {
-    await setDoc(doc(db, 'settings', 'location_names'), firestorePayload);
-    renderCampusPins();
-    updateDropdownNames();
-    alert('&#128205; Location names saved to server! All users will see the new names.');
+    // 1. Save display name mappings to settings/location_names
+    await setDoc(doc(db, 'settings', 'location_names'), updates);
+
+    // 2. Save location list to settings/locations (list field) for Flutter app compatibility
+    await setDoc(doc(db, 'settings', 'locations'), { list: onlineList }, { merge: true });
+
+    if (typeof renderCampusPins === 'function') renderCampusPins();
+    if (typeof updateDropdownNames === 'function') updateDropdownNames();
+    alert('Location names saved to Firebase! Fully synced with mobile app and all devices.');
   } catch(e) {
-    alert('Saved locally but could not reach server: ' + e.message);
+    alert('Saved locally. Firebase update note: ' + e.message);
   }
 };
 
