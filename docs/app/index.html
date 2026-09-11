@@ -206,6 +206,66 @@
     .pickup-id { font-size: 2rem; font-weight: 900; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; color: var(--primary); margin-top: 0.2rem; }
     
     .section-title { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin: 1.25rem 0 0.75rem; }
+    
+    /* Map Layer Switcher & Rename Pin Styles */
+    .map-controls-bar {
+      position: absolute;
+      top: calc(var(--safe-top) + 3.8rem);
+      left: 1rem;
+      right: 1rem;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+    .map-pill-group {
+      display: inline-flex;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px);
+      padding: 4px;
+      border-radius: 30px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+      border: 1px solid var(--border);
+      pointer-events: auto;
+    }
+    .map-pill-btn {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .map-pill-btn.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 8px rgba(21,101,192,0.3);
+    }
+    .campus-pin-inner {
+      background: #0D47A1;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 800;
+      white-space: nowrap;
+      border: 1.5px solid white;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: transform 0.15s;
+    }
+    .campus-pin-inner:hover {
+      transform: scale(1.08);
+      background: #1565C0;
+    }
+
     .quick-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
     .quick-btn { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.1rem; cursor: pointer; transition: all 0.2s; text-align: left; }
     .quick-btn:active { transform: scale(0.97); }
@@ -582,6 +642,18 @@
       </div>
     </div>
     
+    <!-- Map Layer Switcher Bar -->
+    <div class="map-controls-bar">
+      <div class="map-pill-group">
+        <button class="map-pill-btn active" id="btn-map-groads" onclick="setMapBaseLayer(&quot;google_roads&quot;)">🗺️ Google Maps</button>
+        <button class="map-pill-btn" id="btn-map-gsat" onclick="setMapBaseLayer(&quot;google_sat&quot;)">🛰️ Satellite</button>
+        <button class="map-pill-btn" id="btn-map-osm" onclick="setMapBaseLayer(&quot;osm&quot;)">🌐 Street</button>
+      </div>
+      <div class="map-pill-group">
+        <button class="map-pill-btn" style="color:var(--primary)" onclick="alert(&quot;Tap any campus location pin on the map to rename it to how students know it!&quot;)">✏️ Tap Pin to Rename</button>
+      </div>
+    </div>
+
     <div id="tracking-map"></div>
 
     <!-- Floating Tracking Details Card -->
@@ -936,6 +1008,27 @@
   </div>
 </div>
 
+<!-- RENAME LOCATION MODAL -->
+<div class="modal-overlay" id="modal-rename-location">
+  <div class="modal-sheet">
+    <div class="modal-title">✏️ Customize Location Name</div>
+    <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:1rem">
+      Give this campus spot the exact name students know it by (e.g. <em>Bukka Pot, Bush Canteen, New Mechanical, Girls Hostel</em>).
+    </div>
+    <div class="form-group">
+      <label class="form-label">Original Official Spot</label>
+      <input class="form-input" id="loc-original-key" readonly style="background:var(--bg);font-weight:700;color:var(--text-secondary)"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Student / Campus Display Name</label>
+      <input class="form-input" id="loc-custom-name" placeholder="Enter popular student name..."/>
+    </div>
+    <button class="btn btn-primary" onclick="saveCustomLocationName()">Save Custom Name</button>
+    <button class="btn btn-secondary" style="margin-top:0.6rem" onclick="resetLocationName()">Reset to Default</button>
+    <button class="btn btn-secondary" style="margin-top:0.6rem" onclick="closeModal('modal-rename-location')">Cancel</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-lf-report">
   <div class="modal-sheet">
     <div class="modal-title">&#128269; Report Lost / Found Item</div>
@@ -958,6 +1051,14 @@
     <div class="form-group">
       <label class="form-label">Campus Location</label>
       <input class="form-input" id="lf-location" placeholder="e.g. Near AFIT Gates"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Phone Number / WhatsApp</label>
+      <input class="form-input" type="tel" id="lf-phone" placeholder="e.g. 08012345678"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Retrieval / Handover Instructions</label>
+      <textarea class="form-input" id="lf-retrieval" rows="2" placeholder="How should the owner retrieve this item? (e.g. Call my phone, collect at Security Post, Meet at Library)"></textarea>
     </div>
     <div class="form-group">
       <label class="form-label">Attach Photo (Optional)</label>
@@ -1039,19 +1140,31 @@ const rtdb = getDatabase(FB);
 
 // 12 Campus Locations with Geographic Coordinates (AFIT Kaduna Campus Area)
 const AFIT_LOCATIONS = {
-  'AFIT Gates':                 { code: 1,  lat: 10.5100, lng: 7.4130, category: 'Main Entrance' },
-  '45x1 Hostel':                { code: 2,  lat: 10.5115, lng: 7.4140, category: 'Hostel' },
-  'Old Girls Hostel':           { code: 3,  lat: 10.5122, lng: 7.4150, category: 'Hostel' },
-  'TETFUND Hostel':             { code: 4,  lat: 10.5130, lng: 7.4160, category: 'Hostel' },
-  'BK':                         { code: 5,  lat: 10.5110, lng: 7.4170, category: 'Academic' },
-  'Boys Hostel':                { code: 6,  lat: 10.5140, lng: 7.4180, category: 'Hostel' },
-  'Alfa Hall':                  { code: 7,  lat: 10.5108, lng: 7.4185, category: 'Lecture Hall' },
-  'EED':                        { code: 8,  lat: 10.5095, lng: 7.4175, category: 'Centre' },
-  'AFIT Mosque':                { code: 9,  lat: 10.5098, lng: 7.4160, category: 'Worship' },
-  'New Mechanical':             { code: 10, lat: 10.5125, lng: 7.4200, category: 'Engineering' },
-  'Centre of Entrepreneurship': { code: 11, lat: 10.5090, lng: 7.4190, category: 'Centre' },
-  'Hall A':                     { code: 12, lat: 10.5085, lng: 7.4170, category: 'Auditorium' }
+  'AFIT Gates':                 { code: 1,  lat: 10.5065, lng: 7.4160, category: 'Main Entrance', defaultName: 'AFIT Main Gate' },
+  '45x1 Hostel':                { code: 2,  lat: 10.5150, lng: 7.4270, category: 'Hostel', defaultName: 'AFIT Boys Hostel (45x1)' },
+  'Old Girls Hostel':           { code: 3,  lat: 10.5125, lng: 7.4260, category: 'Hostel', defaultName: 'AFIT Girls Hostel' },
+  'TETFUND Hostel':             { code: 4,  lat: 10.5140, lng: 7.4290, category: 'Hostel', defaultName: 'Princess Gimbiya / TETFUND Hostel' },
+  'BK':                         { code: 5,  lat: 10.5085, lng: 7.4200, category: 'Academic', defaultName: 'School of Basic & Remedial Studies (BK)' },
+  'Boys Hostel':                { code: 6,  lat: 10.5155, lng: 7.4255, category: 'Hostel', defaultName: 'Boys Hostel' },
+  'Alfa Hall':                  { code: 7,  lat: 10.5072, lng: 7.4195, category: 'Lecture Hall', defaultName: 'Ibrahim Alfa Auditorium' },
+  'EED':                        { code: 8,  lat: 10.5088, lng: 7.4215, category: 'Engineering', defaultName: 'Armament Engineering / EED' },
+  'AFIT Mosque':                { code: 9,  lat: 10.5088, lng: 7.4185, category: 'Worship', defaultName: 'AFIT Central Masjid' },
+  'New Mechanical':             { code: 10, lat: 10.5080, lng: 7.4180, category: 'Engineering', defaultName: 'Mechanical & Aerospace / Bush Canteen' },
+  'Centre of Entrepreneurship': { code: 11, lat: 10.5075, lng: 7.4230, category: 'Faculty', defaultName: 'Faculty of Science & Computing' },
+  'Hall A':                     { code: 12, lat: 10.5080, lng: 7.4225, category: 'Faculty', defaultName: 'Social & Management Science / Bukka Pot' }
 };
+
+// Dynamic Location Customization Map (stored in localStorage)
+let customLocationNames = {};
+try {
+  customLocationNames = JSON.parse(localStorage.getItem('assa-custom-locs') || '{}');
+} catch(e) {}
+
+function getLocDisplayName(locKey) {
+  if (customLocationNames[locKey]) return customLocationNames[locKey];
+  if (AFIT_LOCATIONS[locKey]) return AFIT_LOCATIONS[locKey].defaultName || locKey;
+  return locKey;
+}
 
 // Deterministic Pickup ID generator matching Flutter user_dashboard.dart
 function generatePickupId(uid) {
@@ -1650,31 +1763,144 @@ window.refreshTrackingMap = function() {
   }
 };
 
+let currentBaseLayer = null;
+let currentBaseLayerType = 'google_roads';
+let activeShuttleListener = null;
+
+window.setMapBaseLayer = function(type) {
+  currentBaseLayerType = type;
+  document.querySelectorAll('.map-pill-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById('btn-map-' + (type === 'google_roads' ? 'groads' : type === 'google_sat' ? 'gsat' : 'osm'));
+  if (activeBtn) activeBtn.classList.add('active');
+
+  if (!trackMap) return;
+  if (currentBaseLayer) trackMap.removeLayer(currentBaseLayer);
+
+  if (type === 'google_roads') {
+    currentBaseLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      attribution: '&copy; Google Maps'
+    }).addTo(trackMap);
+  } else if (type === 'google_sat') {
+    currentBaseLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      attribution: '&copy; Google Maps Satellite'
+    }).addTo(trackMap);
+  } else {
+    currentBaseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(trackMap);
+  }
+};
+
+let editingLocKey = null;
+window.openRenameModal = function(locKey) {
+  editingLocKey = locKey;
+  document.getElementById('loc-original-key').value = locKey;
+  document.getElementById('loc-custom-name').value = customLocationNames[locKey] || (AFIT_LOCATIONS[locKey]?.defaultName || locKey);
+  openModal('modal-rename-location');
+};
+
+window.saveCustomLocationName = function() {
+  if (!editingLocKey) return;
+  const val = document.getElementById('loc-custom-name').value.trim();
+  if (val) {
+    customLocationNames[editingLocKey] = val;
+  } else {
+    delete customLocationNames[editingLocKey];
+  }
+  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+  closeModal('modal-rename-location');
+  renderCampusPins();
+  updateTrackingMap();
+  updateDropdownNames();
+  alert('Location updated to: "' + (val || editingLocKey) + '"');
+};
+
+window.resetLocationName = function() {
+  if (!editingLocKey) return;
+  delete customLocationNames[editingLocKey];
+  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+  closeModal('modal-rename-location');
+  renderCampusPins();
+  updateTrackingMap();
+  updateDropdownNames();
+  alert('Reset location to default.');
+};
+
+function updateDropdownNames() {
+  ['req-pickup', 'req-dest'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Select location...</option>';
+    Object.keys(AFIT_LOCATIONS).forEach(k => {
+      const dName = getLocDisplayName(k);
+      const opt = document.createElement('option');
+      opt.value = k;
+      opt.textContent = dName;
+      if (k === cur) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+function renderCampusPins() {
+  if (!trackMap || !mapLocationsLayer) return;
+  mapLocationsLayer.clearLayers();
+  Object.keys(AFIT_LOCATIONS).forEach(key => {
+    const loc = AFIT_LOCATIONS[key];
+    const dName = getLocDisplayName(key);
+    const iconHtml = '<div class="campus-pin-inner" data-lockey="' + key + '" onclick="openRenameModal(this.dataset.lockey)">' +
+      '<span>📍</span> ' + escape(dName) + ' <span style="font-size:8px;opacity:0.8">✏️</span></div>';
+    const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [120, 24], iconAnchor: [60, 12] });
+    const marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(mapLocationsLayer);
+    marker.bindPopup('<b>' + escape(dName) + '</b><br><small>Original: ' + key + '</small><br><button class="btn btn-primary btn-sm" style="margin-top:6px;font-size:11px;padding:3px 8px" data-lockey="' + key + '" onclick="openRenameModal(this.dataset.lockey)">✏️ Rename this Spot</button>');
+  });
+}
+
 function initTrackingMap() {
   setTimeout(() => {
     if (!trackMap) {
-      trackMap = L.map('tracking-map', { zoomControl: false }).setView([10.5105, 7.4165], 16);
+      // Centered on AFIT Kaduna campus landmarks
+      trackMap = L.map('tracking-map', { zoomControl: false }).setView([10.5100, 7.4215], 16);
       L.control.zoom({ position: 'topright' }).addTo(trackMap);
 
-      // OpenStreetMap Tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19
-      }).addTo(trackMap);
+      // Default to Google Maps Roadmap
+      setMapBaseLayer('google_roads');
 
-      // Render 12 Campus Landmarks
+      // Render 12 Campus Landmarks with Student Names
       mapLocationsLayer = L.layerGroup().addTo(trackMap);
-      Object.keys(AFIT_LOCATIONS).forEach(name => {
-        const loc = AFIT_LOCATIONS[name];
-        const iconHtml = '<div style="background:#0D47A1;color:white;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:700;white-space:nowrap;border:1.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)">' + name + '</div>';
-        const customIcon = L.divIcon({ html: iconHtml, className: 'campus-pin', iconSize: [80, 20], iconAnchor: [40, 10] });
-        L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(mapLocationsLayer);
-      });
+      renderCampusPins();
+      updateDropdownNames();
     } else {
       trackMap.invalidateSize();
+      renderCampusPins();
     }
     updateTrackingMap();
+    startLiveTelemetryListener();
   }, 200);
+}
+
+function startLiveTelemetryListener() {
+  if (activeShuttleListener) return;
+  try {
+    const q = query(collection(db, 'shuttle_status'));
+    activeShuttleListener = onSnapshot(q, snap => {
+      if (activeRideData) {
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          const targetShuttle = activeRideData.shuttleId || activeRideData.shuttleIdFeedback || 'A002';
+          if (docSnap.id === targetShuttle && d.lat && d.lng) {
+            activeRideData.liveLat = d.lat;
+            activeRideData.liveLng = d.lng;
+            updateTrackingMap();
+          }
+        });
+      }
+    });
+  } catch(e) {}
 }
 
 function updateTrackingMap() {
@@ -1692,7 +1918,7 @@ function updateTrackingMap() {
     const pLoc = AFIT_LOCATIONS[pickupName] || { lat: 10.5100, lng: 7.4130 };
     const dLoc = AFIT_LOCATIONS[destName] || { lat: 10.5085, lng: 7.4170 };
 
-    routeText.innerHTML = pickupName + ' &rarr; ' + destName;
+    routeText.innerHTML = getLocDisplayName(pickupName) + ' &rarr; ' + getLocDisplayName(destName);
     const isAssigned = activeRideData.status === 1 || activeRideData.status === 2;
     statusBadge.textContent = isAssigned ? 'SHUTTLE ON THE WAY' : 'PENDING DISPATCH';
     statusBadge.className = isAssigned ? 'badge badge-assigned' : 'badge badge-pending';
@@ -1731,9 +1957,9 @@ function updateTrackingMap() {
       opacity: 0.8
     }).addTo(trackMap);
 
-    // 4. Shuttle Marker (Simulated/Live Vehicle Location)
-    const sLat = (pLoc.lat * 0.7 + dLoc.lat * 0.3) + 0.0008;
-    const sLng = (pLoc.lng * 0.7 + dLoc.lng * 0.3) - 0.0005;
+    // 4. Shuttle Marker (Live GPS Telemetry or Intelligent Route Interpolation)
+    const sLat = activeRideData.liveLat || ((pLoc.lat * 0.65 + dLoc.lat * 0.35) + 0.0006);
+    const sLng = activeRideData.liveLng || ((pLoc.lng * 0.65 + dLoc.lng * 0.35) - 0.0004);
     const sIcon = L.divIcon({
       html: '<div style="background:#0D47A1;color:white;padding:5px 8px;border-radius:20px;font-size:12px;font-weight:900;border:2px solid #90CAF9;box-shadow:0 4px 14px rgba(10,46,110,0.5);display:flex;align-items:center;gap:4px">&#128652; ' + shId + '</div>',
       className: '', iconSize: [80, 28], iconAnchor: [40, 14]
@@ -1859,9 +2085,12 @@ function renderLF(filter) {
         '</div>' +
         (desc ? '<div class="lf-desc">' + escape(desc) + '</div>' : '') +
         '<div class="lf-meta">' +
-          '<span>&#128205; ' + escape(loc) + '</span>' +
-          (contact ? '<span>&#128100; ' + escape(contact) + '</span>' : '') +
+          '<span>📍 ' + escape(loc) + '</span>' +
+          (contact ? '<span>👤 ' + escape(contact) + '</span>' : '') +
+          (item.phone ? '<span>📞 <a href="tel:' + escape(item.phone) + '" style="color:var(--primary);font-weight:700;text-decoration:underline">' + escape(item.phone) + '</a></span>' : '') +
         '</div>' +
+        (item.retrieval ? '<div style="margin-top:0.6rem;padding:0.6rem 0.8rem;background:var(--bg);border-radius:10px;font-size:0.8rem;border-left:3px solid var(--primary)"><strong>🔑 How to retrieve / Handover:</strong> ' + escape(item.retrieval) + '</div>' : '') +
+        (item.phone ? '<div style="display:flex;gap:0.5rem;margin-top:0.75rem"><a href="tel:' + escape(item.phone) + '" class="btn btn-primary btn-sm" style="flex:1;text-decoration:none">📞 Call Owner/Finder</a>' + (item.phone.startsWith('0') || item.phone.startsWith('+') ? '<a href="https://wa.me/' + escape(item.phone.replace(/D/g,'')) + '" target="_blank" class="btn btn-success btn-sm" style="flex:1;text-decoration:none">💬 WhatsApp</a>' : '') + '</div>' : '') +
       '</div>';
     el.appendChild(div);
   });
@@ -1892,6 +2121,8 @@ window.submitLFReport = async function() {
   const name = document.getElementById('lf-name').value.trim();
   const desc = document.getElementById('lf-desc').value.trim();
   const location = document.getElementById('lf-location').value.trim();
+  const phone = document.getElementById('lf-phone').value.trim();
+  const retrieval = document.getElementById('lf-retrieval').value.trim();
   const photoInput = document.getElementById('lf-photo-input');
   const errEl = document.getElementById('lf-error');
   errEl.classList.remove('show');
@@ -1919,6 +2150,10 @@ window.submitLFReport = async function() {
       description: desc,
       locationName: location,
       location: location,
+      phone: phone || currentUserData?.phoneNumber || currentUserData?.phone || '',
+      contactPhone: phone || '',
+      retrieval: retrieval,
+      howToRetrieve: retrieval,
       contactName: currentUserData?.name || 'User',
       userName: currentUserData?.name || 'User',
       userId: currentUser.uid,
@@ -1931,6 +2166,8 @@ window.submitLFReport = async function() {
     document.getElementById('lf-name').value = '';
     document.getElementById('lf-desc').value = '';
     document.getElementById('lf-location').value = '';
+    document.getElementById('lf-phone').value = '';
+    document.getElementById('lf-retrieval').value = '';
     document.getElementById('lf-preview').style.display = 'none';
     if (photoInput) photoInput.value = '';
     loadLostFound();
