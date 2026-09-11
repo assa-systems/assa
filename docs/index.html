@@ -200,6 +200,59 @@
     .active-ride-details { display: flex; justify-content: space-between; font-size: 0.8rem; color: rgba(255,255,255,0.85); margin-bottom: 0.9rem; }
     .active-ride-actions { display: flex; gap: 0.6rem; }
     
+    
+    /* Three Panel Switcher */
+    .three-panel-switcher {
+      display: inline-flex;
+      background: rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 30px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .panel-switch-btn {
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,0.75);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .panel-switch-btn.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .badge-role-admin {
+      background: linear-gradient(135deg, #EF4444, #DC2626);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 8px;
+      letter-spacing: 0.05em;
+      vertical-align: middle;
+      margin-left: 6px;
+      display: inline-block;
+    }
+    .gps-pulse-marker {
+      width: 18px;
+      height: 18px;
+      background: #0284C7;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(2,132,199,0.8);
+      animation: pulseGps 1.5s infinite;
+    }
+    @keyframes pulseGps {
+      0% { box-shadow: 0 0 0 0 rgba(2,132,199,0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(2,132,199,0); }
+      100% { box-shadow: 0 0 0 0 rgba(2,132,199,0); }
+    }
+
     /* Pickup Pill */
     .pickup-pill { background: var(--card); border: 1.5px solid var(--border); border-radius: 18px; padding: 1.15rem; color: var(--text-primary); margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
     .pickup-label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -524,6 +577,16 @@
 
       <div class="section-title">Quick Actions</div>
       <div class="quick-grid">
+        <div class="quick-btn" id="dash-admin-card" style="display:none;background:linear-gradient(135deg,rgba(239,68,68,0.12),rgba(185,28,28,0.08));border:1.5px solid rgba(239,68,68,0.3)" onclick="showScreen('admin')">
+          <div class="quick-icon">&#128737;</div>
+          <div class="quick-label" style="color:var(--danger)">Admin Panel</div>
+          <div class="quick-desc">Manage system &amp; map</div>
+        </div>
+        <div class="quick-btn" id="dash-driver-card" style="display:none;background:linear-gradient(135deg,rgba(14,165,233,0.12),rgba(2,132,199,0.08));border:1.5px solid rgba(14,165,233,0.3)" onclick="showScreen('driver')">
+          <div class="quick-icon">&#128652;</div>
+          <div class="quick-label" style="color:#0284C7">Driver Mode</div>
+          <div class="quick-desc">Accept ride requests</div>
+        </div>
         <div class="quick-btn" onclick="showScreen('request')">
           <div class="quick-icon">&#x1F68C;</div>
           <div class="quick-label">Request Shuttle</div>
@@ -809,6 +872,16 @@
         <div class="card-title">&#128100; My Profile</div>
         <div id="settings-profile" style="font-size:0.9rem;color:var(--text-secondary);line-height:1.9"></div>
       </div>
+      <div id="settings-admin-row" style="display:none;background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.3)" class="settings-row" onclick="showScreen('admin')">
+        <div class="settings-icon" style="color:var(--danger)">&#128737;</div>
+        <div class="settings-label" style="font-weight:800;color:var(--danger)">Open Admin Panel</div>
+        <div class="settings-arrow">&#8250;</div>
+      </div>
+      <div id="settings-driver-row" style="display:none;background:rgba(14,165,233,0.08);border-color:rgba(14,165,233,0.3)" class="settings-row" onclick="showScreen('driver')">
+        <div class="settings-icon" style="color:#0284C7">&#128652;</div>
+        <div class="settings-label" style="font-weight:800;color:#0284C7">Open Driver Panel</div>
+        <div class="settings-arrow">&#8250;</div>
+      </div>
       <div class="settings-row" onclick="showChangePassword()">
         <div class="settings-icon">&#128273;</div>
         <div class="settings-label">Change Password</div>
@@ -963,25 +1036,117 @@
     </div>
   </div>
 
+  
+  <!-- DRIVER PANEL (Accept and Manage Rides) -->
+  <div class="screen" id="screen-driver">
+    <div class="topbar">
+      <div class="topbar-row">
+        <button class="topbar-icon" onclick="showScreen('dashboard')">&#8592;</button>
+        <div class="topbar-name" style="flex:1;text-align:center">&#128652; Driver Panel</div>
+        <div id="driver-panel-switcher" class="three-panel-switcher">
+          <button class="panel-switch-btn" onclick="showScreen('dashboard')">User</button>
+          <button class="panel-switch-btn active" onclick="showScreen('driver')">Driver</button>
+          <button class="panel-switch-btn" onclick="showScreen('admin')">Admin</button>
+        </div>
+      </div>
+    </div>
+    <div class="screen-content">
+      <!-- Driver Shuttle Card -->
+      <div class="card" style="background:linear-gradient(135deg,#0F172A,#1E3A8A);color:#fff;margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
+          <div>
+            <div style="font-size:0.75rem;color:rgba(255,255,255,0.7);text-transform:uppercase;font-weight:700">Assigned Vehicle</div>
+            <div style="font-size:1.4rem;font-weight:900" id="driver-shuttle-title">Shuttle 2</div>
+          </div>
+          <div style="background:rgba(34,197,94,0.25);border:1px solid rgba(74,222,128,0.5);border-radius:20px;padding:4px 12px;font-size:0.75rem;font-weight:700;color:#4ADE80" id="driver-status-badge">
+            &#9679; ONLINE
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="font-size:0.78rem;color:rgba(255,255,255,0.8)">Select Shuttle #:</label>
+          <select class="form-input" id="driver-shuttle-select" onchange="changeDriverShuttle(this.value)" style="padding:3px 8px;font-size:0.8rem;background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(255,255,255,0.3);width:auto">
+            <option value="1">Shuttle 1</option>
+            <option value="2" selected>Shuttle 2</option>
+            <option value="3">Shuttle 3</option>
+            <option value="4">Shuttle 4</option>
+            <option value="5">Shuttle 5</option>
+            <option value="6">Shuttle 6</option>
+            <option value="7">Shuttle 7</option>
+            <option value="8">Shuttle 8</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Current Active Trip (if accepted) -->
+      <div id="driver-active-trip-section" style="display:none;margin-bottom:1.25rem">
+        <div class="section-title">&#128652; Current Trip</div>
+        <div id="driver-active-trip-card"></div>
+      </div>
+
+      <!-- Pending Ride Requests -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <div class="section-title" style="margin:0">&#128227; Incoming Ride Requests</div>
+        <span style="font-size:0.75rem;color:var(--text-secondary)" id="driver-pending-count">0 waiting</span>
+      </div>
+      <div id="driver-requests-list">
+        <div class="empty-state"><div class="empty-icon">&#128652;</div><div class="empty-title">Waiting for ride requests...</div></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ADMIN PANEL -->
   <div class="screen" id="screen-admin">
     <div class="topbar">
       <div class="topbar-row">
-        <button class="topbar-icon" onclick="doLogout()">&#8592;</button>
+        <button class="topbar-icon" onclick="showScreen('dashboard')">&#8592;</button>
         <div class="topbar-name" style="flex:1;text-align:center">&#128737; Admin Panel</div>
-        <button class="topbar-icon" onclick="toggleTheme()">&#127769;</button>
-        <button class="topbar-icon" style="background:rgba(255,82,82,0.15);color:var(--danger)" onclick="doLogout()">&#x1F6AA;</button>
+        <div class="three-panel-switcher">
+          <button class="panel-switch-btn" onclick="showScreen('dashboard')">User</button>
+          <button class="panel-switch-btn" onclick="showScreen('driver')">Driver</button>
+          <button class="panel-switch-btn active" onclick="showScreen('admin')">Admin</button>
+        </div>
+        <button class="topbar-icon" style="background:rgba(255,82,82,0.15);color:var(--danger);margin-left:4px" onclick="doLogout()">&#x1F6AA;</button>
       </div>
     </div>
     <div class="admin-tab-bar">
-      <button class="admin-tab active" onclick="switchAdminTab('drivers',this)">&#128100; Drivers</button>
-      <button class="admin-tab" onclick="switchAdminTab('lostfound',this)">&#128269; L&amp;F</button>
+      <button class="admin-tab active" onclick="switchAdminTab('map',this)">&#128506;&#65039; Live Map &amp; Pins</button>
+      <button class="admin-tab" onclick="switchAdminTab('locations',this)">&#128205; Locations</button>
+      <button class="admin-tab" onclick="switchAdminTab('drivers',this)">&#128100; Drivers</button>
       <button class="admin-tab" onclick="switchAdminTab('rides',this)">&#x1F68C; Rides</button>
+      <button class="admin-tab" onclick="switchAdminTab('lostfound',this)">&#128269; L&amp;F</button>
       <button class="admin-tab" onclick="switchAdminTab('notifs',this)">&#128276; Notifs</button>
       <button class="admin-tab" onclick="switchAdminTab('ads',this)">&#128226; Ads</button>
-      <button class="admin-tab" onclick="switchAdminTab('locations',this)">&#128205; Locations</button>
     </div>
-    <div class="admin-section active" id="admin-drivers">
+    
+    <!-- ADMIN LIVE GPS MAP & PIN TAGGER -->
+    <div class="admin-section active" id="admin-map">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <div>
+          <div style="font-weight:800;font-size:0.95rem;color:var(--text-primary)">Live GPS Campus Map &amp; Tagger</div>
+          <div style="font-size:0.72rem;color:var(--text-secondary)" id="admin-gps-status">Tracking your live GPS location...</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="adminCenterOnGps()">&#128205; My GPS</button>
+      </div>
+
+      <!-- Tagger Actions -->
+      <div style="display:flex;gap:6px;margin-bottom:0.6rem">
+        <button class="btn btn-success btn-sm" style="flex:1;font-weight:700;font-size:0.78rem" onclick="openTagCurrentLocationModal()">
+          &#128205; Tag My Current Location
+        </button>
+        <button class="btn btn-secondary btn-sm" style="flex:1;font-size:0.78rem" onclick="enableDropPinMode()">
+          &#128070; Drop Pin on Map
+        </button>
+      </div>
+
+      <div style="position:relative;height:360px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 14px var(--shadow)">
+        <div id="admin-live-map" style="width:100%;height:100%"></div>
+      </div>
+      <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:6px;text-align:center">
+        Tap anywhere on the map or use "Tag My Current Location" to name spots inside or outside AFIT. Changes sync to Users &amp; Drivers instantly.
+      </div>
+    </div>
+
+    <div class="admin-section" id="admin-drivers">
       <div class="section-title">Pending Driver Approvals</div>
       <div id="pending-drivers-list"><div class="empty-state"><div class="empty-icon">&#128100;</div><div class="empty-title">No pending drivers</div></div></div>
     </div>
@@ -1063,6 +1228,36 @@
   <div style="position:relative;max-width:90vw;max-height:85vh;text-align:center" onclick="event.stopPropagation()">
     <img id="image-viewer-src" src="" style="max-width:100%;max-height:80vh;border-radius:12px;object-fit:contain;box-shadow:0 10px 40px rgba(0,0,0,0.5)" alt="Preview"/>
     <button class="btn btn-secondary btn-sm" style="margin-top:1rem;color:white;border-color:rgba(255,255,255,0.4)" onclick="closeModal('modal-image-viewer')">&#10005; Close Photo</button>
+  </div>
+</div>
+
+
+<!-- TAG LOCATION MODAL FOR ADMIN -->
+<div class="modal-overlay" id="modal-tag-spot">
+  <div class="modal-sheet">
+    <div class="modal-title">&#128205; Label Campus Location</div>
+    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:1rem">
+      Coordinates: <code id="tag-spot-coords" style="font-weight:700">0.000, 0.000</code>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Location Name</label>
+      <input class="form-input" id="tag-spot-name" placeholder="e.g. AFIT Parade Ground, Bush Canteen..."/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-input" id="tag-spot-category">
+        <option value="Academic">Academic</option>
+        <option value="Hostel">Hostel</option>
+        <option value="Engineering">Engineering</option>
+        <option value="Faculty">Faculty</option>
+        <option value="Main Entrance">Main Entrance</option>
+        <option value="Worship">Worship</option>
+        <option value="Commercial">Commercial / Food</option>
+        <option value="Campus Spot">Other Campus Spot</option>
+      </select>
+    </div>
+    <button class="btn btn-success" style="width:100%;font-weight:800;padding:0.75rem" onclick="saveTaggedSpot()">&#128190; Save &amp; Sync to All Devices</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:0.5rem" onclick="closeModal('modal-tag-spot')">Cancel</button>
   </div>
 </div>
 
@@ -1363,6 +1558,7 @@ window.toggleTheme = function() {
 // --- SCREEN MANAGEMENT ---
 window.showScreen = function(name) {
   window.__hasNavigated = true;
+  window.__currentScreen = name;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('screen-' + name);
   if (el) el.classList.add('active');
@@ -1377,7 +1573,14 @@ window.showScreen = function(name) {
   if (name === 'settings') loadSettings();
   if (name === 'leaderboard') loadLeaderboard(lbCurrentType);
   if (name === 'tracking') initTrackingMap();
-  if (name === 'admin') { loadAdminDrivers(); loadAdminRides(); loadAdminAds(); }
+  if (name === 'driver') { initDriverPanel(); }
+  if (name === 'admin') {
+    switchAdminTab('map');
+    initAdminLiveMap();
+    loadAdminDrivers();
+    loadAdminRides();
+    loadAdminAds();
+  }
 };
 
 // --- MODALS ---
@@ -1522,8 +1725,11 @@ onAuthStateChanged(auth, async function(user) {
     }
   } catch(e) {}
 
-  if (currentUserData.role === 'admin') {
+  // Immediate role routing from cached profile
+  if (currentUserData && currentUserData.role === 'admin') {
     showScreen('admin');
+  } else if (currentUserData && currentUserData.role === 'driver') {
+    showScreen('driver');
   } else {
     setupDashboard();
     showScreen('dashboard');
@@ -1541,6 +1747,12 @@ onAuthStateChanged(auth, async function(user) {
         updateDoc(userRef, { pickupId: pid }).catch(()=>{});
       }
       currentUserData = { ...d, pickupId: pid };
+      // If role is admin and currently on dashboard or splash, redirect to admin!
+      if (currentUserData.role === 'admin' && (window.__currentScreen === 'splash' || window.__currentScreen === 'dashboard')) {
+        showScreen('admin');
+      } else if (currentUserData.role === 'driver' && (window.__currentScreen === 'splash' || window.__currentScreen === 'dashboard')) {
+        showScreen('driver');
+      }
     } else {
       currentUserData = {
         name: user.displayName || (user.email ? user.email.split('@')[0] : 'User'),
@@ -2608,6 +2820,12 @@ function loadSettings() {
     '<br><b>Email:</b> ' + (currentUser?.email || 'N/A') +
     '<br><b>Pickup ID:</b> <span style="font-weight:900;color:var(--primary);font-family:monospace;font-size:1.15rem">' + pid + '</span>' +
     '<br><b>Role:</b> ' + (currentUserData.role || 'user').toUpperCase();
+
+  const adminRow = document.getElementById('settings-admin-row');
+  const driverRow = document.getElementById('settings-driver-row');
+  const isAdmin = currentUserData.role === 'admin';
+  if (adminRow) adminRow.style.display = isAdmin ? 'flex' : 'none';
+  if (driverRow) driverRow.style.display = isAdmin ? 'flex' : 'none';
 }
 
 // --- GAME POINTS ---
@@ -2908,8 +3126,13 @@ window.switchAdminTab = function(tab, btn) {
   document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  else {
+    const matchBtn = document.querySelector('.admin-tab[onclick*="' + tab + '"]');
+    if (matchBtn) matchBtn.classList.add('active');
+  }
   const sec = document.getElementById('admin-' + tab);
   if (sec) sec.classList.add('active');
+  if (tab === 'map') initAdminLiveMap();
   if (tab === 'drivers') loadAdminDrivers();
   if (tab === 'lostfound') loadAdminLF();
   if (tab === 'rides') loadAdminRides();
@@ -3221,6 +3444,364 @@ window.saveAllLocationNames = async function() {
     alert('Location names saved to Firebase! Fully synced with mobile app and all devices.');
   } catch(e) {
     alert('Saved locally. Firebase update note: ' + e.message);
+  }
+};
+
+
+// =============================================================================
+// ADMIN LIVE GPS MAP & PIN TAGGER
+// =============================================================================
+let adminLiveMap = null;
+let adminGpsMarker = null;
+let adminGpsCoords = null;
+let adminDropPinActive = false;
+let adminDropMarker = null;
+let adminPendingTagCoords = null;
+
+function initAdminLiveMap() {
+  setTimeout(() => {
+    const el = document.getElementById('admin-live-map');
+    if (!el) return;
+
+    if (!adminLiveMap) {
+      adminLiveMap = L.map('admin-live-map', { zoomControl: false }).setView([10.6110, 7.4450], 15);
+      L.control.zoom({ position: 'topright' }).addTo(adminLiveMap);
+
+      // Google Roadmap tiles
+      L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        attribution: 'Google Maps'
+      }).addTo(adminLiveMap);
+
+      // Map click handler for dropping pins
+      adminLiveMap.on('click', (e) => {
+        if (!adminDropPinActive) return;
+        adminDropPinActive = false;
+        adminPendingTagCoords = [e.latlng.lat, e.latlng.lng];
+
+        if (adminDropMarker) adminLiveMap.removeLayer(adminDropMarker);
+        adminDropMarker = L.marker(e.latlng).addTo(adminLiveMap);
+
+        openTagModalWithCoords(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
+    renderAdminMapPins();
+    startAdminGpsWatch();
+    adminLiveMap.invalidateSize();
+  }, 200);
+}
+
+function renderAdminMapPins() {
+  if (!adminLiveMap) return;
+  // Clear any existing custom pin layers
+  if (window.__adminPinsLayer) {
+    adminLiveMap.removeLayer(window.__adminPinsLayer);
+  }
+  window.__adminPinsLayer = L.layerGroup().addTo(adminLiveMap);
+
+  Object.keys(AFIT_LOCATIONS).forEach(key => {
+    const loc = AFIT_LOCATIONS[key];
+    const dName = getLocDisplayName(key);
+    const iconHtml = '<div style="background:var(--primary);color:#fff;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3)">' +
+      '📍 ' + escape(dName) + '</div>';
+    const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [110, 20], iconAnchor: [55, 10] });
+    const m = L.marker([loc.lat, loc.lng], { icon: cIcon }).addTo(window.__adminPinsLayer);
+    m.bindPopup('<b>' + escape(dName) + '</b><br><small>Original: ' + escape(key) + '</small><br><small>' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + '</small>');
+  });
+}
+
+function startAdminGpsWatch() {
+  if (!navigator.geolocation) {
+    const st = document.getElementById('admin-gps-status');
+    if (st) st.textContent = 'Geolocation not supported by this browser.';
+    return;
+  }
+
+  navigator.geolocation.watchPosition((pos) => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const acc = Math.round(pos.coords.accuracy);
+    adminGpsCoords = [lat, lng];
+
+    const st = document.getElementById('admin-gps-status');
+    if (st) st.textContent = 'Live GPS: ' + lat.toFixed(5) + ', ' + lng.toFixed(5) + ' (±' + acc + 'm)';
+
+    if (adminLiveMap) {
+      if (!adminGpsMarker) {
+        const gpsIcon = L.divIcon({
+          html: '<div class="gps-pulse-marker"></div>',
+          className: '',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9]
+        });
+        adminGpsMarker = L.marker([lat, lng], { icon: gpsIcon }).addTo(adminLiveMap);
+        adminGpsMarker.bindPopup('<b>You are here (Live GPS)</b>');
+      } else {
+        adminGpsMarker.setLatLng([lat, lng]);
+      }
+    }
+  }, (err) => {
+    const st = document.getElementById('admin-gps-status');
+    if (st) st.textContent = 'GPS note: ' + err.message + ' (Click map to drop pins)';
+  }, {
+    enableHighAccuracy: true,
+    maximumAge: 10000,
+    timeout: 15000
+  });
+}
+
+window.adminCenterOnGps = function() {
+  if (adminGpsCoords && adminLiveMap) {
+    adminLiveMap.setView(adminGpsCoords, 17);
+  } else {
+    alert('Acquiring GPS position. Make sure location permissions are allowed.');
+  }
+};
+
+window.enableDropPinMode = function() {
+  adminDropPinActive = true;
+  alert('Tap or click anywhere on the map to drop a pin and label that location.');
+};
+
+window.openTagCurrentLocationModal = function() {
+  if (!adminGpsCoords) {
+    alert('GPS location not ready yet. You can also tap "Drop Pin on Map" to click any spot.');
+    return;
+  }
+  openTagModalWithCoords(adminGpsCoords[0], adminGpsCoords[1]);
+};
+
+function openTagModalWithCoords(lat, lng) {
+  adminPendingTagCoords = [lat, lng];
+  const coordEl = document.getElementById('tag-spot-coords');
+  if (coordEl) coordEl.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+  const nameInp = document.getElementById('tag-spot-name');
+  if (nameInp) nameInp.value = '';
+  openModal('modal-tag-spot');
+}
+
+window.saveTaggedSpot = async function() {
+  const nameInp = document.getElementById('tag-spot-name');
+  const catSel = document.getElementById('tag-spot-category');
+  const name = nameInp ? nameInp.value.trim() : '';
+  const category = catSel ? catSel.value : 'Campus Spot';
+
+  if (!name) { alert('Please enter a location name.'); return; }
+  if (!adminPendingTagCoords) { alert('No coordinates selected.'); return; }
+
+  const [lat, lng] = adminPendingTagCoords;
+
+  try {
+    // 1. Add to AFIT_LOCATIONS table
+    AFIT_LOCATIONS[name] = {
+      code: 200 + Object.keys(AFIT_LOCATIONS).length,
+      lat: lat,
+      lng: lng,
+      category: category,
+      defaultName: name
+    };
+    customLocationNames[name] = name;
+    localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+
+    // 2. Save to Firestore settings/location_names
+    await setDoc(doc(db, 'settings', 'location_names'), { [name]: name }, { merge: true });
+
+    // 3. Save to Firestore settings/locations list for Flutter app compatibility
+    const locDocRef = doc(db, 'settings', 'locations');
+    const snap = await getDoc(locDocRef);
+    let curList = [];
+    if (snap.exists() && Array.isArray(snap.data()?.list)) {
+      curList = snap.data().list;
+    }
+    if (!curList.includes(name)) {
+      curList.push(name);
+      await setDoc(locDocRef, { list: curList }, { merge: true });
+    }
+
+    closeModal('modal-tag-spot');
+    renderAdminMapPins();
+    if (typeof renderCampusPins === 'function') renderCampusPins();
+    if (typeof updateDropdownNames === 'function') updateDropdownNames();
+    if (typeof renderLocationChips === 'function') {
+      renderLocationChips('req-pickup-grid', 'pickup');
+      renderLocationChips('req-dest-grid', 'dest');
+    }
+    alert('📍 Location "' + name + '" saved! It is now live on both the User and Driver sides.');
+  } catch(e) {
+    alert('Error saving location: ' + e.message);
+  }
+};
+
+// =============================================================================
+// DRIVER PANEL (Real-Time Requests, Accept Ride, Trip Lifecycle)
+// =============================================================================
+let driverShuttleId = '2';
+let driverRequestsUnsub = null;
+let driverActiveTripUnsub = null;
+
+function initDriverPanel() {
+  const sel = document.getElementById('driver-shuttle-select');
+  if (sel) sel.value = driverShuttleId;
+  const title = document.getElementById('driver-shuttle-title');
+  if (title) title.textContent = 'Shuttle ' + driverShuttleId;
+
+  startDriverRequestsListener();
+  startDriverActiveTripListener();
+}
+
+window.changeDriverShuttle = function(val) {
+  driverShuttleId = val;
+  const title = document.getElementById('driver-shuttle-title');
+  if (title) title.textContent = 'Shuttle ' + val;
+  startDriverActiveTripListener();
+};
+
+function startDriverRequestsListener() {
+  if (driverRequestsUnsub) { driverRequestsUnsub(); driverRequestsUnsub = null; }
+
+  const q = query(
+    collection(db, 'ride_requests'),
+    where('status', '==', 0)
+  );
+
+  driverRequestsUnsub = onSnapshot(q, (snapshot) => {
+    const listEl = document.getElementById('driver-requests-list');
+    const countEl = document.getElementById('driver-pending-count');
+    if (!listEl) return;
+
+    const reqs = [];
+    snapshot.forEach(d => reqs.push({ id: d.id, ...d.data() }));
+
+    if (countEl) countEl.textContent = reqs.length + ' waiting';
+
+    if (reqs.length === 0) {
+      listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128652;</div><div class="empty-title">No pending ride requests</div></div>';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    reqs.forEach(r => {
+      const pName = getLocDisplayName(r.pickupLocation || '?');
+      const dName = getLocDisplayName(r.destination || '?');
+      const pax = r.passengerCount || r.pax || 1;
+      const rType = r.rideType || 'Shared';
+
+      listEl.innerHTML += '<div class="card" style="margin-bottom:0.75rem;border-left:4px solid var(--warning);background:var(--surface)">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">' +
+          '<div style="font-weight:800;font-size:0.95rem">' + escape(r.userName || 'Passenger') + '</div>' +
+          '<div style="font-family:monospace;font-size:0.8rem;background:rgba(59,130,246,0.12);color:var(--primary);padding:2px 8px;border-radius:8px;font-weight:800">' +
+            'ID: ' + escape(r.pickupId || '---') +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size:0.85rem;font-weight:700;margin-bottom:0.35rem">' +
+          escape(pName) + ' &rarr; ' + escape(dName) +
+        '</div>' +
+        '<div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.75rem">' +
+          escape(rType) + ' &bull; ' + pax + ' passenger' + (pax > 1 ? 's' : '') +
+        '</div>' +
+        '<button class="btn btn-success btn-sm" style="width:100%;font-weight:800" data-reqid="' + r.id + '" onclick="driverAcceptRequest(this.dataset.reqid)">' +
+          '&#10003; Accept Request (Shuttle ' + driverShuttleId + ')' +
+        '</button>' +
+      '</div>';
+    });
+  });
+}
+
+function startDriverActiveTripListener() {
+  if (driverActiveTripUnsub) { driverActiveTripUnsub(); driverActiveTripUnsub = null; }
+
+  // Listen for accepted rides matching this shuttle (status 1, 2, or 3)
+  const q = query(
+    collection(db, 'ride_requests'),
+    where('status', 'in', [1, 2, 3])
+  );
+
+  driverActiveTripUnsub = onSnapshot(q, (snapshot) => {
+    const sec = document.getElementById('driver-active-trip-section');
+    const cardEl = document.getElementById('driver-active-trip-card');
+    if (!sec || !cardEl) return;
+
+    const trips = [];
+    snapshot.forEach(d => {
+      const data = d.data();
+      const sh = data.shuttleId || data.shuttleIdFeedback || '';
+      // Match current driver shuttle or any active if driver is assigned
+      if (String(sh) === String(driverShuttleId) || data.driverId === currentUser?.uid) {
+        trips.push({ id: d.id, ...data });
+      }
+    });
+
+    if (trips.length === 0) {
+      sec.style.display = 'none';
+      return;
+    }
+
+    sec.style.display = 'block';
+    const trip = trips[0];
+    const pName = getLocDisplayName(trip.pickupLocation || '?');
+    const dName = getLocDisplayName(trip.destination || '?');
+    const statusMap = { 1: 'ACCEPTED (ON THE WAY)', 2: 'IN TRANSIT', 3: 'ARRIVED AT PICKUP' };
+
+    cardEl.innerHTML = '<div class="card" style="background:linear-gradient(135deg,#064E3B,#059669);color:#fff">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">' +
+        '<span style="font-size:0.75rem;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:12px;font-weight:800">' +
+          (statusMap[trip.status] || 'ACTIVE') +
+        '</span>' +
+        '<span style="font-family:monospace;font-weight:900;font-size:0.9rem">' +
+          'ID: ' + escape(trip.pickupId || '---') +
+        '</span>' +
+      '</div>' +
+      '<div style="font-size:1.1rem;font-weight:900;margin-bottom:0.3rem">' +
+        escape(pName) + ' &rarr; ' + escape(dName) +
+      '</div>' +
+      '<div style="font-size:0.8rem;color:rgba(255,255,255,0.85);margin-bottom:0.9rem">' +
+        'Passenger: <strong>' + escape(trip.userName || 'Student') + '</strong> &bull; ' + (trip.passengerCount || 1) + ' pax' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button class="btn btn-sm" style="flex:1;background:#fff;color:#047857;font-weight:800" data-reqid="' + trip.id + '" onclick="driverUpdateTripStatus(this.dataset.reqid, 3)">' +
+          '&#128205; Arrived' +
+        '</button>' +
+        '<button class="btn btn-sm" style="flex:1;background:#fff;color:#0284C7;font-weight:800" data-reqid="' + trip.id + '" onclick="driverUpdateTripStatus(this.dataset.reqid, 2)">' +
+          '&#128640; Start Trip' +
+        '</button>' +
+        '<button class="btn btn-sm" style="flex:1;background:#10B981;color:#fff;font-weight:800" data-reqid="' + trip.id + '" onclick="driverUpdateTripStatus(this.dataset.reqid, 4)">' +
+          '&#127937; Complete' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  });
+}
+
+window.driverAcceptRequest = async function(reqId) {
+  if (!reqId) return;
+  try {
+    await updateDoc(doc(db, 'ride_requests', reqId), {
+      status: 1,
+      statusName: 'Accepted',
+      shuttleId: driverShuttleId,
+      shuttleIdFeedback: driverShuttleId,
+      driverName: currentUserData?.name || 'Driver',
+      driverId: currentUser?.uid || '',
+      acceptedAt: serverTimestamp()
+    });
+    alert('Accepted request for Shuttle ' + driverShuttleId + '! User has been notified that Shuttle ' + driverShuttleId + ' is coming.');
+  } catch(e) {
+    alert('Error accepting ride: ' + e.message);
+  }
+};
+
+window.driverUpdateTripStatus = async function(reqId, newStatus) {
+  const statusNames = { 2: 'In Transit', 3: 'Arrived', 4: 'Completed', 5: 'Cancelled' };
+  try {
+    const payload = {
+      status: newStatus,
+      statusName: statusNames[newStatus] || 'Updated'
+    };
+    if (newStatus === 4) payload.completedAt = serverTimestamp();
+    await updateDoc(doc(db, 'ride_requests', reqId), payload);
+  } catch(e) {
+    alert('Error updating status: ' + e.message);
   }
 };
 
