@@ -930,6 +930,7 @@
       <button class="admin-tab" onclick="switchAdminTab('rides',this)">&#x1F68C; Rides</button>
       <button class="admin-tab" onclick="switchAdminTab('notifs',this)">&#128276; Notifs</button>
       <button class="admin-tab" onclick="switchAdminTab('ads',this)">&#128226; Ads</button>
+      <button class="admin-tab" onclick="switchAdminTab('locations',this)">&#128205; Locations</button>
     </div>
     <div class="admin-section active" id="admin-drivers">
       <div class="section-title">Pending Driver Approvals</div>
@@ -980,6 +981,15 @@
       </div>
       <div class="section-title">Active Ads</div>
       <div id="admin-ads-list"><div class="empty-state"><div class="empty-icon">&#128226;</div><div class="empty-title">No ads posted yet</div></div></div>
+    </div>
+    <div class="admin-section" id="admin-locations">
+      <div class="section-title">&#128205; Campus Location Names</div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.75rem">
+        Edit the display names shown to all users on the map and booking dropdowns.
+        Changes are saved to the server instantly and apply to all devices.
+      </p>
+      <div id="admin-locations-list"><div class="empty-state"><div class="empty-icon">&#128205;</div><div class="empty-title">Loading locations...</div></div></div>
+      <button class="btn btn-success" style="margin-top:1rem;width:100%" onclick="saveAllLocationNames()">&#128190; Save All Names to Server</button>
     </div>
   </div>
 
@@ -1138,27 +1148,42 @@ const auth = getAuth(FB);
 const db = getFirestore(FB);
 const rtdb = getDatabase(FB);
 
-// 12 Campus Locations with Geographic Coordinates (AFIT Kaduna Campus Area)
+// 12 Campus Locations with Geographic Coordinates (AFIT Kaduna Campus — verified from campus map)
 const AFIT_LOCATIONS = {
-  'AFIT Gates':                 { code: 1,  lat: 10.5065, lng: 7.4160, category: 'Main Entrance', defaultName: 'AFIT Main Gate' },
-  '45x1 Hostel':                { code: 2,  lat: 10.5150, lng: 7.4270, category: 'Hostel', defaultName: 'AFIT Boys Hostel (45x1)' },
-  'Old Girls Hostel':           { code: 3,  lat: 10.5125, lng: 7.4260, category: 'Hostel', defaultName: 'AFIT Girls Hostel' },
-  'TETFUND Hostel':             { code: 4,  lat: 10.5140, lng: 7.4290, category: 'Hostel', defaultName: 'Princess Gimbiya / TETFUND Hostel' },
-  'BK':                         { code: 5,  lat: 10.5085, lng: 7.4200, category: 'Academic', defaultName: 'School of Basic & Remedial Studies (BK)' },
-  'Boys Hostel':                { code: 6,  lat: 10.5155, lng: 7.4255, category: 'Hostel', defaultName: 'Boys Hostel' },
-  'Alfa Hall':                  { code: 7,  lat: 10.5072, lng: 7.4195, category: 'Lecture Hall', defaultName: 'Ibrahim Alfa Auditorium' },
-  'EED':                        { code: 8,  lat: 10.5088, lng: 7.4215, category: 'Engineering', defaultName: 'Armament Engineering / EED' },
-  'AFIT Mosque':                { code: 9,  lat: 10.5088, lng: 7.4185, category: 'Worship', defaultName: 'AFIT Central Masjid' },
-  'New Mechanical':             { code: 10, lat: 10.5080, lng: 7.4180, category: 'Engineering', defaultName: 'Mechanical & Aerospace / Bush Canteen' },
-  'Centre of Entrepreneurship': { code: 11, lat: 10.5075, lng: 7.4230, category: 'Faculty', defaultName: 'Faculty of Science & Computing' },
-  'Hall A':                     { code: 12, lat: 10.5080, lng: 7.4225, category: 'Faculty', defaultName: 'Social & Management Science / Bukka Pot' }
+  'AFIT Gates':                 { code: 1,  lat: 10.4972, lng: 7.4169, category: 'Main Entrance', defaultName: 'AFIT Main Gate' },
+  '45x1 Hostel':                { code: 2,  lat: 10.5098, lng: 7.4193, category: 'Hostel', defaultName: 'AFIT Boys Hostel (45x1)' },
+  'Old Girls Hostel':           { code: 3,  lat: 10.5055, lng: 7.4250, category: 'Hostel', defaultName: 'AFIT Girls Hostel' },
+  'TETFUND Hostel':             { code: 4,  lat: 10.5080, lng: 7.4295, category: 'Hostel', defaultName: 'Princess Gimbiya / TETFUND Hostel' },
+  'BK':                         { code: 5,  lat: 10.5018, lng: 7.4205, category: 'Academic', defaultName: 'School of Basic & Remedial Studies (BK)' },
+  'Boys Hostel':                { code: 6,  lat: 10.5078, lng: 7.4218, category: 'Hostel', defaultName: 'Boys Hostel' },
+  'Alfa Hall':                  { code: 7,  lat: 10.5030, lng: 7.4225, category: 'Lecture Hall', defaultName: 'Ibrahim Alfa Auditorium' },
+  'EED':                        { code: 8,  lat: 10.5045, lng: 7.4195, category: 'Engineering', defaultName: 'Armament Engineering / EED' },
+  'AFIT Mosque':                { code: 9,  lat: 10.5060, lng: 7.4215, category: 'Worship', defaultName: 'AFIT Central Masjid' },
+  'New Mechanical':             { code: 10, lat: 10.5025, lng: 7.4175, category: 'Engineering', defaultName: 'Mechanical & Aerospace / Bush Canteen' },
+  'Centre of Entrepreneurship': { code: 11, lat: 10.5015, lng: 7.4240, category: 'Faculty', defaultName: 'Faculty of Science & Computing' },
+  'Hall A':                     { code: 12, lat: 10.5038, lng: 7.4210, category: 'Faculty', defaultName: 'Social & Management Science / Bukka Pot' }
 };
 
-// Dynamic Location Customization Map (stored in localStorage)
+// Dynamic Location Customization Map
+// Loaded from Firestore (settings/location_names), localStorage used as offline fallback
 let customLocationNames = {};
 try {
   customLocationNames = JSON.parse(localStorage.getItem('assa-custom-locs') || '{}');
 } catch(e) {}
+
+async function loadLocationNamesFromFirestore() {
+  try {
+    const snap = await getDoc(doc(db, 'settings', 'location_names'));
+    if (snap.exists()) {
+      const data = snap.data();
+      // Merge Firestore names (Firestore wins over localStorage)
+      customLocationNames = Object.assign({}, customLocationNames, data);
+      localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+      renderCampusPins();
+      updateDropdownNames();
+    }
+  } catch(e) { /* offline — use localStorage fallback */ }
+}
 
 function getLocDisplayName(locKey) {
   if (customLocationNames[locKey]) return customLocationNames[locKey];
@@ -1852,11 +1877,11 @@ function renderCampusPins() {
   Object.keys(AFIT_LOCATIONS).forEach(key => {
     const loc = AFIT_LOCATIONS[key];
     const dName = getLocDisplayName(key);
-    const iconHtml = '<div class="campus-pin-inner" data-lockey="' + key + '" onclick="openRenameModal(this.dataset.lockey)">' +
-      '<span>📍</span> ' + escape(dName) + ' <span style="font-size:8px;opacity:0.8">✏️</span></div>';
-    const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [120, 24], iconAnchor: [60, 12] });
+    const iconHtml = '<div class="campus-pin-inner">' +
+      '<span>📍</span> ' + escape(dName) + '</div>';
+    const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [130, 24], iconAnchor: [65, 12] });
     const marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(mapLocationsLayer);
-    marker.bindPopup('<b>' + escape(dName) + '</b><br><small>Original: ' + key + '</small><br><button class="btn btn-primary btn-sm" style="margin-top:6px;font-size:11px;padding:3px 8px" data-lockey="' + key + '" onclick="openRenameModal(this.dataset.lockey)">✏️ Rename this Spot</button>');
+    marker.bindPopup('<b>' + escape(dName) + '</b><br><small style="color:#888">Code: ' + loc.code + ' | ' + (loc.category||'') + '</small>');
   });
 }
 
@@ -1864,7 +1889,7 @@ function initTrackingMap() {
   setTimeout(() => {
     if (!trackMap) {
       // Centered on AFIT Kaduna campus landmarks
-      trackMap = L.map('tracking-map', { zoomControl: false }).setView([10.5100, 7.4215], 16);
+      trackMap = L.map('tracking-map', { zoomControl: false }).setView([10.5045, 7.4215], 15);
       L.control.zoom({ position: 'topright' }).addTo(trackMap);
 
       // Default to Google Maps Roadmap
@@ -2541,6 +2566,7 @@ window.switchAdminTab = function(tab, btn) {
   if (tab === 'lostfound') loadAdminLF();
   if (tab === 'rides') loadAdminRides();
   if (tab === 'ads') loadAdminAds();
+  if (tab === 'locations') loadAdminLocations();
 };
 
 async function loadAdminDrivers() {
@@ -2728,6 +2754,64 @@ window.deleteAd = async function(id) {
     await deleteDoc(doc(db, 'ads', id));
     loadAdminAds();
   } catch(e) {}
+};
+
+// --- ADMIN LOCATIONS ---
+function loadAdminLocations() {
+  const el = document.getElementById('admin-locations-list');
+  if (!el) return;
+  el.innerHTML = '';
+  Object.keys(AFIT_LOCATIONS).forEach(key => {
+    const loc = AFIT_LOCATIONS[key];
+    const current = customLocationNames[key] || loc.defaultName || key;
+    el.innerHTML += '<div class="card" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;padding:0.6rem 0.75rem">' +
+      '<div style="flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem">' + loc.code + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:2px">' + escape(key) + ' &bull; ' + escape(loc.category) + '</div>' +
+        '<input class="form-input" id="loc-input-' + loc.code + '" value="' + escapeAttr(current) + '" placeholder="' + escapeAttr(loc.defaultName) + '" style="padding:0.3rem 0.5rem;font-size:0.85rem"/>' +
+      '</div>' +
+    '</div>';
+  });
+}
+
+function escapeAttr(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+window.saveAllLocationNames = async function() {
+  const updates = {};
+  Object.keys(AFIT_LOCATIONS).forEach(key => {
+    const loc = AFIT_LOCATIONS[key];
+    const inp = document.getElementById('loc-input-' + loc.code);
+    if (!inp) return;
+    const val = inp.value.trim();
+    if (val && val !== (loc.defaultName || key)) {
+      updates[key] = val;
+    } else {
+      // If reverted to default or empty, remove custom entry
+      updates[key] = '';
+    }
+  });
+
+  // Build Firestore-safe payload (remove empty keys from Firestore)
+  const firestorePayload = {};
+  Object.keys(updates).forEach(k => {
+    if (updates[k]) firestorePayload[k] = updates[k];
+  });
+
+  // Update in-memory + localStorage
+  customLocationNames = firestorePayload;
+  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+
+  // Save to Firestore
+  try {
+    await setDoc(doc(db, 'settings', 'location_names'), firestorePayload);
+    renderCampusPins();
+    updateDropdownNames();
+    alert('&#128205; Location names saved to server! All users will see the new names.');
+  } catch(e) {
+    alert('Saved locally but could not reach server: ' + e.message);
+  }
 };
 
 // --- UTILITIES ---
