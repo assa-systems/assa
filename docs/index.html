@@ -353,22 +353,36 @@
           <label class="form-label">Pickup Location</label>
           <select class="form-input form-select" id="req-pickup">
             <option value="">Select pickup point...</option>
-            <option>Main Gate</option><option>Admin Block</option>
-            <option>Engineering Block</option><option>Science Block</option>
-            <option>Library</option><option>Cafeteria</option>
-            <option>Medical Centre</option><option>Sports Complex</option>
-            <option>Female Hostel</option><option>Male Hostel A</option><option>Male Hostel B</option>
+            <option>AFIT Gates</option>
+            <option>45x1 Hostel</option>
+            <option>Old Girls Hostel</option>
+            <option>TETFUND Hostel</option>
+            <option>BK</option>
+            <option>Boys Hostel</option>
+            <option>Alfa Hall</option>
+            <option>EED</option>
+            <option>AFIT Mosque</option>
+            <option>New Mechanical</option>
+            <option>Centre of Entrepreneurship</option>
+            <option>Hall A</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">Destination</label>
           <select class="form-input form-select" id="req-dest">
             <option value="">Select destination...</option>
-            <option>Main Gate</option><option>Admin Block</option>
-            <option>Engineering Block</option><option>Science Block</option>
-            <option>Library</option><option>Cafeteria</option>
-            <option>Medical Centre</option><option>Sports Complex</option>
-            <option>Female Hostel</option><option>Male Hostel A</option><option>Male Hostel B</option>
+            <option>AFIT Gates</option>
+            <option>45x1 Hostel</option>
+            <option>Old Girls Hostel</option>
+            <option>TETFUND Hostel</option>
+            <option>BK</option>
+            <option>Boys Hostel</option>
+            <option>Alfa Hall</option>
+            <option>EED</option>
+            <option>AFIT Mosque</option>
+            <option>New Mechanical</option>
+            <option>Centre of Entrepreneurship</option>
+            <option>Hall A</option>
           </select>
         </div>
         <div class="form-group">
@@ -812,6 +826,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs, onSnapshot, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getDatabase, ref as rtdbRef, set as rtdbSet, update as rtdbUpdate } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const FB = initializeApp({
   apiKey:"AIzaSyAF_BdwMdTDqUd1_A5WxotigT2byEz49U4",
@@ -824,6 +839,36 @@ const FB = initializeApp({
 });
 const auth = getAuth(FB);
 const db = getFirestore(FB);
+const rtdb = getDatabase(FB);
+
+// Location Codes (1 to 12)
+const LOCATION_CODES = {
+  'AFIT Gates': 1,
+  '45x1 Hostel': 2,
+  'Old Girls Hostel': 3,
+  'TETFUND Hostel': 4,
+  'BK': 5,
+  'Boys Hostel': 6,
+  'Alfa Hall': 7,
+  'EED': 8,
+  'AFIT Mosque': 9,
+  'New Mechanical': 10,
+  'Centre of Entrepreneurship': 11,
+  'Hall A': 12
+};
+
+// Deterministic Pickup ID generator matching Flutter user_dashboard.dart
+function generatePickupId(uid) {
+  if (!uid) return '---';
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let hash = 0;
+  for (let i = 0; i < uid.length; i++) {
+    hash = ((hash * 31) + uid.charCodeAt(i)) | 0;
+  }
+  const letter = letters[Math.abs(hash) % letters.length];
+  const digits = String(Math.abs(hash) % 100).padStart(2, '0');
+  return letter + digits;
+}
 
 // Globals
 let currentUser = null;
@@ -936,8 +981,15 @@ window.doRegister = async function() {
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     const uid = cred.user.uid;
-    const pickupId = 'P' + Math.random().toString(36).slice(2,7).toUpperCase();
-    await setDoc(doc(db,'users',uid), { name, email, role:'user', pickupId, platform:'pwa', createdAt: serverTimestamp() });
+    const pickupId = generatePickupId(uid);
+    await setDoc(doc(db,'users',uid), {
+      name,
+      email,
+      role: 'user',
+      pickupId: pickupId,
+      platform: 'pwa',
+      createdAt: serverTimestamp()
+    });
   } catch(e) {
     errEl.textContent = e.message;
     errEl.classList.add('show');
@@ -983,8 +1035,8 @@ window.doChangePassword = async function() {
   }
 };
 
-// AUTH STATE - Instantaneous Non-Blocking Navigation
-onAuthStateChanged(auth, function(user) {
+// AUTH STATE - Instantaneous Non-Blocking Navigation with Deterministic Pickup ID Sync
+onAuthStateChanged(auth, async function(user) {
   if (!user) {
     currentUser = null;
     currentUserData = null;
@@ -994,47 +1046,59 @@ onAuthStateChanged(auth, function(user) {
   }
   currentUser = user;
 
-  // 1. Instant screen transition using cached profile if available
-  let cached = null;
+  const deterministicPid = generatePickupId(user.uid);
+  currentUserData = {
+    name: user.displayName || (user.email ? user.email.split('@')[0] : 'User'),
+    email: user.email || '',
+    role: 'user',
+    pickupId: deterministicPid
+  };
+
+  // 1. Instant screen transition using cached profile if valid
   try {
     const raw = localStorage.getItem('assa-user-profile');
-    if (raw) cached = JSON.parse(raw);
+    if (raw) {
+      const cached = JSON.parse(raw);
+      if (cached && cached.pickupId && cached.pickupId.length === 3) {
+        currentUserData = cached;
+      }
+    }
   } catch(e) {}
 
-  if (cached) {
-    currentUserData = cached;
-    if (cached.role === 'admin') {
-      showScreen('admin');
-    } else {
-      setupDashboard();
-      showScreen('dashboard');
-    }
+  if (currentUserData.role === 'admin') {
+    showScreen('admin');
   } else {
-    // Default immediate user presentation so splash is gone in 0ms
-    currentUserData = {
-      name: user.displayName || (user.email ? user.email.split('@')[0] : 'User'),
-      email: user.email || '',
-      role: 'user',
-      pickupId: '---'
-    };
     setupDashboard();
     showScreen('dashboard');
   }
 
-  // 2. Fetch latest Firestore profile non-blockingly in background
-  getDoc(doc(db, 'users', user.uid)).then(snap => {
+  // 2. Fetch and sync Firestore user profile in background
+  try {
+    const userRef = doc(db, 'users', user.uid);
+    const snap = await getDoc(userRef);
     if (snap.exists()) {
-      currentUserData = snap.data();
-      try { localStorage.setItem('assa-user-profile', JSON.stringify(currentUserData)); } catch(e) {}
-      if (currentUserData.role === 'admin') {
-        showScreen('admin');
-      } else {
-        setupDashboard();
+      const d = snap.data();
+      let pid = d.pickupId;
+      if (!pid || pid.length !== 3) {
+        pid = deterministicPid;
+        updateDoc(userRef, { pickupId: pid }).catch(()=>{});
       }
+      currentUserData = { ...d, pickupId: pid };
+    } else {
+      currentUserData = {
+        name: user.displayName || (user.email ? user.email.split('@')[0] : 'User'),
+        email: user.email || '',
+        role: 'user',
+        pickupId: deterministicPid,
+        createdAt: serverTimestamp()
+      };
+      setDoc(userRef, currentUserData).catch(()=>{});
     }
-  }).catch(e => {
-    console.warn('Background profile fetch notice:', e);
-  });
+    localStorage.setItem('assa-user-profile', JSON.stringify(currentUserData));
+    setupDashboard();
+  } catch(e) {
+    console.warn('Background profile sync notice:', e);
+  }
 });
 
 // --- DASHBOARD ---
@@ -1046,7 +1110,7 @@ function setupDashboard() {
   document.getElementById('dash-greeting').textContent = greet;
   document.getElementById('dash-name').textContent = name;
   document.getElementById('dash-avatar').textContent = name[0].toUpperCase();
-  document.getElementById('dash-pickup').textContent = currentUserData.pickupId || '---';
+  document.getElementById('dash-pickup').textContent = currentUserData.pickupId || generatePickupId(currentUser?.uid);
   loadAds();
   loadRecentRequests();
   loadUnreadNotifCount();
@@ -1080,30 +1144,45 @@ async function loadAds() {
 async function loadRecentRequests() {
   if (!currentUser) return;
   try {
-    const snap = await getDocs(query(collection(db,'ride_requests'), where('userId','==',currentUser.uid), orderBy('createdAt','desc'), limit(3)));
+    const snap = await getDocs(query(collection(db, 'ride_requests'), where('userId', '==', currentUser.uid), limit(5)));
     const el = document.getElementById('dash-recent');
-    if (snap.empty) return;
-    el.innerHTML = '';
-    snap.forEach(d => {
-      const r = d.data();
-      el.innerHTML += makeRequestCard(r, d.id, true);
+    if (snap.empty) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F68C;</div><div class="empty-title">No recent rides</div><div class="empty-sub">Make your first request!</div></div>';
+      return;
+    }
+    const list = [];
+    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+    list.sort((a, b) => {
+      const ta = a.timestamp?.seconds || a.bookedAt?.seconds || a.createdAt?.seconds || 0;
+      const tb = b.timestamp?.seconds || b.bookedAt?.seconds || b.createdAt?.seconds || 0;
+      return tb - ta;
     });
-  } catch(e) { console.error('Recent requests error', e); }
+    el.innerHTML = '';
+    list.slice(0, 3).forEach(r => {
+      el.innerHTML += makeRequestCard(r, r.id, true);
+    });
+  } catch(e) {
+    console.error('Recent requests error', e);
+  }
 }
 
 function makeRequestCard(r, id, compact) {
-  const statusMap = {0:'Pending', 1:'Assigned', 4:'Completed', 5:'Cancelled'};
-  const badgeMap = {0:'badge-pending', 1:'badge-assigned', 4:'badge-completed', 5:'badge-cancelled'};
-  const st = statusMap[r.status] || 'Unknown';
+  const statusMap = {0:'Pending', 1:'Assigned', 2:'Accepted', 4:'Completed', 5:'Cancelled'};
+  const badgeMap = {0:'badge-pending', 1:'badge-assigned', 2:'badge-assigned', 4:'badge-completed', 5:'badge-cancelled'};
+  const st = statusMap[r.status] || r.statusName || 'Pending';
   const bd = badgeMap[r.status] || 'badge-pending';
+  const shuttle = r.shuttleId || r.shuttleIdFeedback || r['AFIT KEKE_id'] || r.shuttle_id || '';
+  const canCancel = r.status === 0 || r.status === 1 || r.status === 2;
+
   return '<div class="request-item">' +
     '<div class="request-route">' + (r.pickupLocation||'?') + ' &rarr; ' + (r.destination||'?') + '</div>' +
     '<div class="request-meta">' +
       '<span class="badge ' + bd + '">' + st + '</span>' +
-      (r.shuttleId ? '<span>Shuttle: ' + r.shuttleId + '</span>' : '') +
-      (r.rideType ? '<span>' + r.rideType + '</span>' : '') +
+      (shuttle && shuttle !== '0' ? '<span>Shuttle: ' + shuttle + '</span>' : '') +
+      (r.pickupId ? '<span>ID: ' + r.pickupId + '</span>' : '') +
     '</div>' +
-    (r.status === 1 && r.shuttleId ? '<div style="font-size:0.82rem;color:var(--success);font-weight:600">&#128652; Shuttle ' + r.shuttleId + ' is on the way!</div>' : '') +
+    (shuttle && shuttle !== '0' && (r.status === 1 || r.status === 2) ? '<div style="font-size:0.82rem;color:var(--success);font-weight:700;margin-top:0.35rem">&#128652; Shuttle ' + shuttle + ' accepted! On the way.</div>' : '') +
+    (canCancel ? '<button class="btn btn-danger btn-sm" style="margin-top:0.65rem;width:auto;padding:0.35rem 0.85rem;font-size:0.75rem;border-radius:8px" onclick="cancelRequest(\'' + (r.bookingId || id) + '\')">&#10005; Cancel Request</button>' : '') +
   '</div>';
 }
 
@@ -1118,66 +1197,163 @@ async function loadUnreadNotifCount() {
   } catch(e) {}
 }
 
-// --- RIDE REQUEST ---
+// --- RIDE REQUEST SUBMIT ---
 window.doRequest = async function() {
   const pickup = document.getElementById('req-pickup').value;
   const dest = document.getElementById('req-dest').value;
-  const rideType = document.getElementById('req-type').value;
-  const passengers = document.getElementById('req-passengers').value;
-  const notes = document.getElementById('req-notes').value;
+  const notes = document.getElementById('req-notes').value.trim();
   const errEl = document.getElementById('req-error');
   errEl.classList.remove('show');
-  if (!pickup || !dest) { errEl.textContent = 'Please select pickup and destination.'; errEl.classList.add('show'); return; }
-  if (pickup === dest) { errEl.textContent = 'Pickup and destination cannot be the same.'; errEl.classList.add('show'); return; }
+
+  if (!pickup || !dest) {
+    errEl.textContent = 'Please select both pickup and destination.';
+    errEl.classList.add('show');
+    return;
+  }
+  if (pickup === dest) {
+    errEl.textContent = 'Pickup and destination cannot be the same.';
+    errEl.classList.add('show');
+    return;
+  }
+
   const btn = document.getElementById('req-btn');
-  btn.textContent = 'Submitting...'; btn.disabled = true;
+  btn.textContent = 'Submitting...';
+  btn.disabled = true;
+
   try {
-    const ref = await addDoc(collection(db,'ride_requests'), {
+    const pickupCode = LOCATION_CODES[pickup] || 1;
+    const destCode = LOCATION_CODES[dest] || 1;
+    const pid = currentUserData?.pickupId || generatePickupId(currentUser.uid);
+    const bookingId = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+
+    // 1. Write Firestore
+    await setDoc(doc(db, 'ride_requests', bookingId), {
+      bookingId: bookingId,
       userId: currentUser.uid,
       userName: currentUserData?.name || 'User',
-      pickupId: currentUserData?.pickupId || '',
+      pickupId: pid,
+      onlineUUID: pid,
       pickupLocation: pickup,
       destination: dest,
-      rideType: rideType,
-      passengerCount: parseInt(passengers),
+      pickup_code: pickupCode,
+      destination_code: destCode,
+      rideType: 'Shared',
+      rideTypeName: 'Shared',
+      ride_type: 0,
+      passengerCount: 1,
+      pax: 1,
       notes: notes,
       status: 0,
-      driverId: '',
-      shuttleId: '',
+      statusName: 'Pending',
+      shuttle_id: 0,
+      shuttleIdFeedback: '',
+      requestType: 'online',
+      isSynced: true,
+      gatewayForwarded: false,
+      groupKey: pickupCode + '_' + destCode,
+      intentStatus: 'none',
+      assignedAt: null,
+      gatewayId: '',
+      timestamp: serverTimestamp(),
+      bookedAt: serverTimestamp(),
       createdAt: serverTimestamp()
     });
+
+    // 2. Write Realtime Database
+    try {
+      if (rtdb) {
+        await rtdbSet(rtdbRef(rtdb, 'rides/' + bookingId), {
+          status: 0,
+          statusName: 'Pending',
+          gw: 'PWA',
+          pickup: pickup,
+          destination: dest,
+          pickupId: pid,
+          userName: currentUserData?.name || 'User'
+        });
+      }
+    } catch(e) {}
+
     document.getElementById('req-success').style.display = 'block';
-    btn.textContent = '&#x1F68C; Request Shuttle'; btn.disabled = false;
+    btn.textContent = 'Request Shuttle';
+    btn.disabled = false;
     document.getElementById('req-notes').value = '';
-    listenForAcceptance(ref.id);
+
+    listenForAcceptance(bookingId);
+    loadRecentRequests();
   } catch(e) {
-    errEl.textContent = e.message; errEl.classList.add('show');
-    btn.textContent = '&#x1F68C; Request Shuttle'; btn.disabled = false;
+    errEl.textContent = 'Error submitting request: ' + e.message;
+    errEl.classList.add('show');
+    btn.textContent = 'Request Shuttle';
+    btn.disabled = false;
   }
 };
 
 function listenForAcceptance(reqId) {
-  const unsub = onSnapshot(doc(db,'ride_requests',reqId), snap => {
+  const unsub = onSnapshot(doc(db, 'ride_requests', reqId), snap => {
     if (!snap.exists()) return;
     const data = snap.data();
-    if (data.status === 1) {
-      document.getElementById('req-shuttle-info').textContent = 'Shuttle ' + (data.shuttleId||'') + ' accepted your request!';
+    if (data.status === 1 || data.status === 2) {
+      const sh = data.shuttleId || data.shuttleIdFeedback || data.shuttle_id || '';
+      document.getElementById('req-shuttle-info').textContent = 'Shuttle ' + sh + ' accepted your request!';
       unsub();
     }
   });
 }
 
+// --- CANCEL RIDE REQUEST ---
+window.cancelRequest = async function(reqId) {
+  if (!confirm('Are you sure you want to cancel this ride request?')) return;
+  try {
+    await updateDoc(doc(db, 'ride_requests', reqId), {
+      status: 5,
+      statusName: 'Cancelled',
+      cancelledAt: serverTimestamp()
+    });
+
+    try {
+      if (rtdb) {
+        await rtdbUpdate(rtdbRef(rtdb, 'rides/' + reqId), {
+          status: 5,
+          statusName: 'Cancelled',
+          gw: 'PWA'
+        });
+      }
+    } catch(e) {}
+
+    alert('Ride request cancelled.');
+    loadMyRequests();
+    loadRecentRequests();
+  } catch(err) {
+    alert('Failed to cancel request: ' + err.message);
+  }
+};
+
 // --- MY REQUESTS ---
 window.loadMyRequests = async function() {
   if (!currentUser) return;
   const el = document.getElementById('myrequests-list');
-  el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#8987;</div><div class="empty-title">Loading...</div></div>';
+  el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#8987;</div><div class="empty-title">Loading requests...</div></div>';
   try {
-    const snap = await getDocs(query(collection(db,'ride_requests'), where('userId','==',currentUser.uid), orderBy('createdAt','desc')));
-    if (snap.empty) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">No requests yet</div><div class="empty-sub">Make your first ride request!</div></div>'; return; }
+    const snap = await getDocs(query(collection(db, 'ride_requests'), where('userId', '==', currentUser.uid)));
+    if (snap.empty) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">No requests found</div><div class="empty-sub">Make your first ride request!</div></div>';
+      return;
+    }
+    const list = [];
+    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+    list.sort((a, b) => {
+      const ta = a.timestamp?.seconds || a.bookedAt?.seconds || a.createdAt?.seconds || 0;
+      const tb = b.timestamp?.seconds || b.bookedAt?.seconds || b.createdAt?.seconds || 0;
+      return tb - ta;
+    });
     el.innerHTML = '';
-    snap.forEach(d => { el.innerHTML += makeRequestCard(d.data(), d.id, false); });
-  } catch(e) { el.innerHTML = '<div class="empty-state"><div class="empty-title">Error loading requests</div></div>'; }
+    list.forEach(r => {
+      el.innerHTML += makeRequestCard(r, r.id, false);
+    });
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-title">Could not load requests</div><div class="empty-sub">' + e.message + '</div></div>';
+  }
 };
 
 // --- NOTIFICATIONS ---
@@ -1213,28 +1389,67 @@ window.markAllRead = async function() {
 // --- LOST & FOUND ---
 window.loadLostFound = async function() {
   const el = document.getElementById('lostfound-list');
-  el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#8987;</div><div class="empty-title">Loading...</div></div>';
+  el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#8987;</div><div class="empty-title">Loading items...</div></div>';
   try {
-    const snap = await getDocs(query(collection(db,'lost_found'), orderBy('createdAt','desc')));
+    const snap = await getDocs(collection(db, 'lost_found'));
     lfAllItems = [];
-    snap.forEach(d => lfAllItems.push({id:d.id, ...d.data()}));
+    snap.forEach(d => {
+      lfAllItems.push({ id: d.id, ...d.data() });
+    });
+    lfAllItems.sort((a, b) => {
+      const ta = a.timestamp?.seconds || a.createdAt?.seconds || 0;
+      const tb = b.timestamp?.seconds || b.createdAt?.seconds || 0;
+      return tb - ta;
+    });
     renderLF('all');
-  } catch(e) { el.innerHTML = '<div class="empty-state"><div class="empty-title">Error loading items</div></div>'; }
+  } catch(e) {
+    console.error('L&F load error:', e);
+    el.innerHTML = '<div class="empty-state"><div class="empty-title">Could not load items</div><div class="empty-sub">' + e.message + '</div></div>';
+  }
 };
 
 function renderLF(filter) {
   const el = document.getElementById('lostfound-list');
-  const items = filter === 'all' ? lfAllItems : lfAllItems.filter(i => i.type === filter);
-  if (items.length === 0) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128269;</div><div class="empty-title">No items found</div></div>'; return; }
+  const items = filter === 'all'
+    ? lfAllItems
+    : lfAllItems.filter(i => {
+        const t = (i.itemType || i.type || i.status || '').toLowerCase();
+        return t === filter.toLowerCase();
+      });
+
+  if (items.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128269;</div><div class="empty-title">No ' + (filter === 'all' ? '' : filter) + ' items found</div></div>';
+    return;
+  }
+
   el.innerHTML = '';
   items.forEach(item => {
     const div = document.createElement('div');
     div.className = 'lf-item';
-    const imgHtml = item.imageUrl
-      ? '<img class="lf-img" src="'+item.imageUrl+'" alt="'+escape(item.itemName||'')+'" onerror="this.parentElement.querySelector(\'.lf-img-placeholder\').style.display=\'flex\';this.style.display=\'none\'">'
+    const type = (item.itemType || item.type || item.status || 'Lost').toUpperCase();
+    const isLost = type.includes('LOST');
+    const typeClass = isLost ? 'lost' : 'found';
+    const name = item.itemName || item.category || item.description || 'Unknown Item';
+    const desc = item.description || item.itemName || '';
+    const loc = item.locationName || item.location || 'AFIT Campus';
+    const contact = item.userName || item.contactName || '';
+    const imgUrl = item.imageUrl || '';
+
+    const imgHtml = imgUrl
+      ? '<img class="lf-img" src="' + imgUrl + '" alt="' + escape(name) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'
       : '';
-    const placeholder = !item.imageUrl ? '<div class="lf-img-placeholder">&#128269;</div>' : '<div class="lf-img-placeholder" style="display:none">&#128269;</div>';
-    div.innerHTML = imgHtml + placeholder + '<div class="lf-body"><div class="lf-type-tag ' + (item.type||'lost') + '">' + (item.type||'lost').toUpperCase() + '</div><div class="lf-name">' + (item.itemName||'Unknown item') + '</div><div class="lf-desc">' + (item.description||'') + '</div><div class="lf-meta"><span>&#128205; ' + (item.location||'') + '</span>' + (item.contactName?'<span>&#128100; '+item.contactName+'</span>':'') + '</div></div>';
+    const placeholder = '<div class="lf-img-placeholder" style="' + (imgUrl ? 'display:none;' : '') + '">&#128269;</div>';
+
+    div.innerHTML = imgHtml + placeholder +
+      '<div class="lf-body">' +
+        '<div class="lf-type-tag ' + typeClass + '">' + type + '</div>' +
+        '<div class="lf-name">' + escape(name) + '</div>' +
+        (desc ? '<div class="lf-desc">' + escape(desc) + '</div>' : '') +
+        '<div class="lf-meta">' +
+          '<span>&#128205; ' + escape(loc) + '</span>' +
+          (contact ? '<span>&#128100; ' + escape(contact) + '</span>' : '') +
+        '</div>' +
+      '</div>';
     el.appendChild(div);
   });
 }
@@ -1251,8 +1466,10 @@ window.previewLFPhoto = function(input) {
   const reader = new FileReader();
   reader.onload = e => {
     const preview = document.getElementById('lf-preview');
-    preview.src = e.target.result;
-    preview.style.display = 'block';
+    if (preview) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    }
   };
   reader.readAsDataURL(file);
 };
@@ -1266,20 +1483,33 @@ window.submitLFReport = async function() {
   errEl.classList.remove('show');
   if (!name || !desc) { errEl.textContent = 'Please fill item name and description.'; errEl.classList.add('show'); return; }
   try {
-    await addDoc(collection(db,'lost_found'), {
-      type, itemName:name, description:desc, location,
+    await addDoc(collection(db, 'lost_found'), {
+      itemType: type === 'lost' ? 'Lost' : 'Found',
+      type: type,
+      status: type === 'lost' ? 'Lost' : 'Found',
+      category: 'Other',
+      itemName: name,
+      description: desc,
+      locationName: location,
+      location: location,
       contactName: currentUserData?.name || 'User',
+      userName: currentUserData?.name || 'User',
       userId: currentUser.uid,
       imageUrl: '',
+      is_active: true,
+      timestamp: serverTimestamp(),
       createdAt: serverTimestamp()
     });
     closeModal('modal-lf-report');
-    document.getElementById('lf-name').value='';
-    document.getElementById('lf-desc').value='';
-    document.getElementById('lf-location').value='';
-    document.getElementById('lf-preview').style.display='none';
+    document.getElementById('lf-name').value = '';
+    document.getElementById('lf-desc').value = '';
+    document.getElementById('lf-location').value = '';
     loadLostFound();
-  } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
+    alert('Lost & Found item submitted successfully!');
+  } catch(e) {
+    errEl.textContent = 'Error: ' + e.message;
+    errEl.classList.add('show');
+  }
 };
 
 // --- REPORT / COMPLAINT ---
