@@ -1381,12 +1381,12 @@
 <div class="modal-overlay" id="modal-tag-spot">
   <div class="modal-sheet">
     <div class="modal-title">&#128205; Label Campus Location</div>
-    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:1rem">
+    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.75rem">
       Coordinates: <code id="tag-spot-coords" style="font-weight:700">0.000, 0.000</code>
     </div>
     <div class="form-group">
       <label class="form-label">Location Name</label>
-      <input class="form-input" id="tag-spot-name" placeholder="e.g. AFIT Parade Ground, Bush Canteen..."/>
+      <input class="form-input" id="tag-spot-name" placeholder="e.g. Bukka Pot, Library, PT Gate..."/>
     </div>
     <div class="form-group">
       <label class="form-label">Category</label>
@@ -1400,6 +1400,24 @@
         <option value="Commercial">Commercial / Food</option>
         <option value="Campus Spot">Other Campus Spot</option>
       </select>
+    </div>
+
+    <!-- Building / Landmark Picture Upload -->
+    <div class="form-group">
+      <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📷 Building / Landmark Photo</span>
+        <span style="font-size:0.7rem;color:var(--text-secondary)">Visible to students &amp; drivers</span>
+      </label>
+      <input type="file" id="tag-spot-photo-file" accept="image/*" capture="environment" style="display:none" onchange="handleLocationPhotoSelect(this)"/>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('tag-spot-photo-file').click()" style="flex:1;font-weight:700;font-size:0.78rem;padding:0.5rem;display:flex;align-items:center;justify-content:center;gap:5px">
+          <span>📁</span> Take or Choose Photo
+        </button>
+      </div>
+      <div id="tag-spot-preview-wrap" style="display:none;position:relative;width:100%;height:130px;border-radius:12px;overflow:hidden;border:1.5px solid var(--border);margin-top:4px">
+        <img id="tag-spot-preview-img" src="" style="width:100%;height:100%;object-fit:cover" alt="Building preview"/>
+        <button type="button" onclick="clearLocationPhotoPreview()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.7);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:12px;font-weight:900;cursor:pointer">&times;</button>
+      </div>
     </div>
     <button class="btn btn-success" style="width:100%;font-weight:800;padding:0.75rem" onclick="saveTaggedSpot()">&#128190; Save &amp; Sync to All Devices</button>
     <button class="btn btn-secondary" style="width:100%;margin-top:0.5rem" onclick="closeModal('modal-tag-spot')">Cancel</button>
@@ -1640,6 +1658,44 @@ const AFIT_LOCATIONS = {
   'Hall A':                     { code: 12, lat: 10.6090, lng: 7.4380, category: 'Faculty', defaultName: 'AMAO Hall / Auditorium' }
 };
 
+// Building / Landmark Photos for Locations (Local-first & Firebase Synced)
+let customLocationImages = {};
+try {
+  customLocationImages = JSON.parse(localStorage.getItem('assa-loc-images') || '{}');
+} catch(e) {}
+
+// High-performance canvas image compressor (resizes camera photos to max 640px JPEG ~35KB)
+function compressImageFile(file, maxWidth = 640, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const base64 = canvas.toDataURL('image/jpeg', quality);
+        resolve(base64);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+window.compressImageFile = compressImageFile;
+
+let pendingSpotPhotoBase64 = '';
+
 // Deleted Locations Tracking (Removes Pins from Map, Dropdowns & Firebase)
 let deletedLocationKeys = new Set();
 try {
@@ -1662,6 +1718,20 @@ deletedLocationKeys.forEach(k => {
 
 async function loadLocationNamesFromFirestore() {
   try {
+    // Listen to settings/location_images for building landmark photos
+    onSnapshot(doc(db, 'settings', 'location_images'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() || {};
+        customLocationImages = Object.assign({}, customLocationImages, data);
+        localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
+        if (typeof renderAdminMapPins === 'function') renderAdminMapPins();
+        if (typeof renderLocationChips === 'function') {
+          renderLocationChips('req-pickup-grid', 'pickup');
+          renderLocationChips('req-dest-grid', 'dest');
+        }
+      }
+    });
+
     // 1. Listen to settings/location_names doc for display name overrides
     onSnapshot(doc(db, 'settings', 'location_names'), (snap) => {
       if (snap.exists()) {
@@ -2317,16 +2387,48 @@ function renderLocationChips(gridId, type) {
   const grid = document.getElementById(gridId);
   if (!grid) return;
   grid.innerHTML = '';
-  Object.keys(AFIT_LOCATIONS).forEach(key => {
+  Object.keys(AFIT_LOCATIONS).filter(k => !deletedLocationKeys.has(k)).forEach(key => {
     const dName = getLocDisplayName(key);
+    const hasPhoto = !!customLocationImages[key];
     const chip = document.createElement('div');
     chip.className = 'loc-chip';
     chip.id = 'chip-' + type + '-' + key.replace(/s+/g,'-');
-    chip.textContent = dName;
+    chip.innerHTML = (hasPhoto ? '<span style="margin-right:4px">📷</span>' : '') + escape(dName);
     chip.style.cssText = 'display:inline-flex;align-items:center;padding:8px 14px;border-radius:20px;border:1px solid var(--input-border);background:var(--surface);font-size:0.85rem;font-weight:600;color:var(--text-primary);cursor:pointer;transition:all 0.15s;white-space:nowrap';
     chip.onclick = () => type === 'pickup' ? selectPickupChip(key) : selectDestChip(key);
     grid.appendChild(chip);
   });
+  updateLandmarkPreview(type);
+}
+
+function updateLandmarkPreview(type) {
+  const selectedKey = type === 'pickup' ? reqSelectedPickup : reqSelectedDest;
+  const cardId = 'landmark-preview-' + type;
+  let card = document.getElementById(cardId);
+  const grid = document.getElementById('req-' + type + '-grid');
+  if (!grid) return;
+
+  if (!card) {
+    card = document.createElement('div');
+    card.id = cardId;
+    card.style.cssText = 'display:none;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:8px 12px;margin-top:8px;box-shadow:0 4px 12px var(--shadow);cursor:pointer';
+    grid.parentNode.insertBefore(card, grid.nextSibling);
+  }
+
+  const photo = customLocationImages[selectedKey];
+  if (photo) {
+    card.style.display = 'flex';
+    card.innerHTML = '<img src="' + photo + '" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid var(--border);flex-shrink:0" alt="Building Landmark"/>' +
+      '<div style="flex:1">' +
+        '<div style="font-weight:800;font-size:0.83rem;color:var(--text-primary)">🏛️ ' + escape(getLocDisplayName(selectedKey)) + '</div>' +
+        '<div style="font-size:0.72rem;color:var(--primary);font-weight:700;display:flex;align-items:center;gap:4px">' +
+          '<span>🔍</span> Tap photo to view building full screen' +
+        '</div>' +
+      '</div>';
+    card.onclick = () => viewFullImage(photo);
+  } else {
+    card.style.display = 'none';
+  }
 }
 
 function selectPickupChip(key) {
@@ -3762,6 +3864,56 @@ window.showDriverAcceptedModal = function(ride) {
   openModal('modal-driver-accepted');
 };
 
+window.handleLocationPhotoSelect = async function(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    const base64 = await compressImageFile(file, 640, 0.7);
+    pendingSpotPhotoBase64 = base64;
+    const previewWrap = document.getElementById('tag-spot-preview-wrap');
+    const previewImg = document.getElementById('tag-spot-preview-img');
+    if (previewImg) previewImg.src = base64;
+    if (previewWrap) previewWrap.style.display = 'block';
+  } catch(e) {
+    alert('Error loading image: ' + e.message);
+  }
+};
+
+window.clearLocationPhotoPreview = function() {
+  pendingSpotPhotoBase64 = '';
+  const previewWrap = document.getElementById('tag-spot-preview-wrap');
+  const previewImg = document.getElementById('tag-spot-preview-img');
+  if (previewImg) previewImg.src = '';
+  if (previewWrap) previewWrap.style.display = 'none';
+  const fileInput = document.getElementById('tag-spot-photo-file');
+  if (fileInput) fileInput.value = '';
+};
+
+window.uploadPinPhoto = async function(input, key) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    const base64 = await compressImageFile(file, 640, 0.7);
+    customLocationImages[key] = base64;
+    localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
+
+    if (adminLiveMap) adminLiveMap.closePopup();
+    renderAdminMapPins();
+    if (typeof renderLocationChips === 'function') {
+      renderLocationChips('req-pickup-grid', 'pickup');
+      renderLocationChips('req-dest-grid', 'dest');
+    }
+
+    const safeKey = key.replace(/[./]/g, '_');
+    await setDoc(doc(db, 'settings', 'location_images'), { [safeKey]: base64 }, { merge: true }).catch(err => console.warn('Photo sync notice:', err));
+
+    const dName = getLocDisplayName(key);
+    alert('📷 Landmark photo for "' + dName + '" updated! Students and drivers can now see the building when tapping this location.');
+  } catch(e) {
+    alert('Error uploading photo: ' + e.message);
+  }
+};
+
 window.trackFromAcceptedModal = function() {
   closeModal('modal-driver-accepted');
   if (typeof showScreen === 'function') {
@@ -3882,20 +4034,41 @@ function renderAdminMapPins() {
   keys.forEach(key => {
     const loc = AFIT_LOCATIONS[key];
     const dName = getLocDisplayName(key);
+    const photo = customLocationImages[key] || '';
 
     const iconHtml = '<div style="background:#1E3A8A;color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,0.35);cursor:pointer;border:1.5px solid #fff">' +
-      '&#128205; ' + loc.code + '. ' + escape(dName) + '</div>';
+      (photo ? '📷 ' : '📍 ') + loc.code + '. ' + escape(dName) + '</div>';
     const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [120, 22], iconAnchor: [60, 11] });
     const m = L.marker([loc.lat, loc.lng], { icon: cIcon }).addTo(window.__adminPinsLayer);
 
-    const popupHtml = '<div style="min-width:230px;padding:6px">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
-        '<span style="font-weight:900;font-size:13px;color:#1E3A8A">&#128205; Pin #' + loc.code + '</span>' +
+    const popupHtml = '<div style="min-width:240px;padding:6px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+        '<span style="font-weight:900;font-size:13px;color:#1E3A8A">📍 Pin #' + loc.code + '</span>' +
         '<span style="font-size:10px;background:#E0E7FF;color:#3730A3;padding:2px 6px;border-radius:6px;font-weight:700">' + escape(loc.category) + '</span>' +
       '</div>' +
       '<div style="font-size:11px;color:#666;margin-bottom:6px">' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + '</div>' +
+      
+      // Landmark Building Photo Display with tap-to-enlarge
+      (photo ? (
+        '<div style="position:relative;margin-bottom:8px;border-radius:10px;overflow:hidden;cursor:pointer;border:1.5px solid #CBD5E1" data-img="' + encodeURI(photo) + '" onclick="viewFullImage(decodeURI(this.dataset.img))">' +
+          '<img src="' + photo + '" style="width:100%;height:115px;object-fit:cover;display:block" alt="Building photo"/>' +
+          '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;font-weight:700;padding:4px 6px;text-align:center">' +
+            '🔍 Tap photo to view building full screen' +
+          '</div>' +
+        '</div>'
+      ) : '') +
+
       '<label style="font-size:11px;font-weight:700;color:#333;display:block;margin-bottom:2px">Label for Students &amp; Drivers:</label>' +
-      '<input id="admin-pin-name-' + loc.code + '" value="' + escapeAttr(dName) + '" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:12px;font-weight:600;margin-bottom:8px;box-sizing:border-box" />' +
+      '<input id="admin-pin-name-' + loc.code + '" value="' + escapeAttr(dName) + '" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:12px;font-weight:600;margin-bottom:6px;box-sizing:border-box" />' +
+      
+      // Photo Upload button on Pin Popup
+      '<div style="margin-bottom:8px">' +
+        '<label style="font-size:11px;font-weight:700;color:#2563EB;cursor:pointer;display:inline-flex;align-items:center;gap:4px">' +
+          '<span>📷</span> ' + (photo ? 'Change Building Photo' : 'Attach Building Photo') +
+          '<input type="file" accept="image/*" capture="environment" style="display:none" data-lockey="' + escapeAttr(key) + '" onchange="uploadPinPhoto(this, this.dataset.lockey)"/>' +
+        '</label>' +
+      '</div>' +
+
       '<div style="display:flex;gap:6px">' +
         '<button data-code="' + loc.code + '" data-key="' + escapeAttr(key) + '" data-lat="' + loc.lat + '" data-lng="' + loc.lng + '" onclick="submitPinEdit(this.dataset.code, this.dataset.key, Number(this.dataset.lat), Number(this.dataset.lng))" style="flex:1;background:#16a34a;color:#fff;border:none;padding:7px;border-radius:6px;font-weight:800;font-size:11px;cursor:pointer">' +
           '&#128190; Update' +
@@ -4054,7 +4227,7 @@ window.savePinFromMap = async function(key, newName, lat, lng) {
   }
 };
 
-window.saveNewPinFromMap = async function(name, lat, lng) {
+window.saveNewPinFromMap = async function(name, lat, lng, photoBase64 = '') {
   name = (name || '').trim();
   if (!name) { alert('Please enter a location name.'); return; }
 
@@ -4069,6 +4242,13 @@ window.saveNewPinFromMap = async function(name, lat, lng) {
   };
   customLocationNames[name] = name;
   localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+
+  if (photoBase64) {
+    customLocationImages[name] = photoBase64;
+    localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
+    const safeKey = name.replace(/[./]/g, '_');
+    setDoc(doc(db, 'settings', 'location_images'), { [safeKey]: photoBase64 }, { merge: true }).catch(err => console.warn('Photo sync notice:', err));
+  }
 
   // 2. Immediately close popups and update map pins and dropdowns
   if (adminLiveMap) adminLiveMap.closePopup();
@@ -4257,7 +4437,8 @@ window.saveTaggedSpot = async function() {
     return;
   }
 
-  await saveNewPinFromMap(name, coords[0], coords[1]);
+  await saveNewPinFromMap(name, coords[0], coords[1], pendingSpotPhotoBase64);
+  clearLocationPhotoPreview();
   closeModal('modal-tag-spot');
 };
 
