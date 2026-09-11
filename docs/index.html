@@ -9,13 +9,17 @@
   <meta name="apple-mobile-web-app-title" content="ASSA"/>
   <link rel="manifest" href="manifest.json"/>
   <link rel="apple-touch-icon" href="icon-192.png"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"/>
+  
+  <!-- Leaflet Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(reg){reg.unregister();});});
-      if (caches) caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});});
+      navigator.serviceWorker.getRegistrations().then(function(r){ r.forEach(function(reg){ reg.unregister(); }); });
+      if (window.caches) caches.keys().then(function(n){ n.forEach(function(k){ caches.delete(k); }); });
     }
-    // Instant safety fallback: dismiss splash after 350ms max if still active
     window.__hasNavigated = false;
     setTimeout(function() {
       if (!window.__hasNavigated) {
@@ -26,174 +30,289 @@
           login.classList.add('active');
         }
       }
-    }, 350);
+    }, 400);
   </script>
   <style>
     :root {
-      --primary:#1565C0;--primary-dark:#0D47A1;--primary-deeper:#0A2E6E;
-      --accent:#42A5F5;--success:#2E7D32;--success-light:#E8F5E9;
-      --warning:#F57F17;--warning-light:#FFF8E1;
-      --danger:#C62828;--danger-light:#FFEBEE;
-      --text-primary:#1A237E;--text-secondary:#546E7A;--text-muted:#90A4AE;
-      --bg:#F0F4FF;--card:#FFFFFF;--border:#E3E8F0;
-      --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+      --primary: #1565C0;
+      --primary-dark: #0D47A1;
+      --primary-deeper: #0A2E6E;
+      --accent: #42A5F5;
+      --accent-light: #90CAF9;
+      --success: #2E7D32;
+      --success-light: #E8F5E9;
+      --warning: #F57F17;
+      --warning-light: #FFF8E1;
+      --danger: #C62828;
+      --danger-light: #FFEBEE;
+      --text-primary: #1A237E;
+      --text-secondary: #546E7A;
+      --text-muted: #90A4AE;
+      --bg: #F0F4FF;
+      --card: #FFFFFF;
+      --border: #E3E8F0;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     [data-theme="dark"] {
-      --primary:#42A5F5;--primary-dark:#1E88E5;--primary-deeper:#0D47A1;
-      --accent:#90CAF9;--success:#66BB6A;--success-light:#1B5E20;
-      --warning:#FFA726;--warning-light:#4E342E;
-      --danger:#EF5350;--danger-light:#4A0F0F;
-      --text-primary:#E3F2FD;--text-secondary:#90A4AE;--text-muted:#546E7A;
-      --bg:#0D1117;--card:#161B22;--border:#30363D;
+      --primary: #42A5F5;
+      --primary-dark: #1E88E5;
+      --primary-deeper: #0D47A1;
+      --accent: #90CAF9;
+      --accent-light: #BBDEFB;
+      --success: #66BB6A;
+      --success-light: #1B381E;
+      --warning: #FFA726;
+      --warning-light: #3D2C00;
+      --danger: #EF5350;
+      --danger-light: #3E1414;
+      --text-primary: #E8EAF6;
+      --text-secondary: #B0BEC5;
+      --text-muted: #78909C;
+      --bg: #0D1117;
+      --card: #161B22;
+      --border: #30363D;
     }
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-primary);-webkit-tap-highlight-color:transparent;transition:background 0.3s,color 0.3s}
-    #app{height:100%;display:flex;flex-direction:column;overflow:hidden}
-    .screen{display:none;flex-direction:column;height:100%;overflow:hidden}
-    .screen.active{display:flex}
-    #screen-splash{background:linear-gradient(160deg,#0A2E6E 0%,#1565C0 60%,#1976D2 100%);align-items:center;justify-content:center;gap:1rem}
-    .splash-logo{font-size:3.5rem;font-weight:800;color:white;letter-spacing:-0.02em}
-    .splash-logo span{color:#90CAF9}
-    .splash-sub{color:rgba(255,255,255,0.65);font-size:0.85rem}
-    .splash-spinner{width:32px;height:32px;border:3px solid rgba(255,255,255,0.25);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;margin-top:2rem}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    #screen-login,#screen-register{background:linear-gradient(160deg,#0A2E6E 0%,#1565C0 50%,#1565C0 100%);overflow-y:auto}
-    .auth-container{min-height:100%;display:flex;flex-direction:column;padding:calc(var(--safe-top) + 3rem) 1.5rem calc(var(--safe-bottom) + 2rem)}
-    .auth-logo{font-size:2.5rem;font-weight:800;color:white;text-align:center;margin-bottom:0.3rem}
-    .auth-logo span{color:#90CAF9}
-    .auth-tagline{color:rgba(255,255,255,0.6);text-align:center;font-size:0.8rem;margin-bottom:2.5rem}
-    .auth-card{background:white;border-radius:24px;padding:1.8rem;box-shadow:0 20px 60px rgba(0,0,0,0.25)}
-    .auth-title{font-size:1.3rem;font-weight:700;color:#0D47A1;margin-bottom:1.5rem}
-    .form-group{margin-bottom:1rem;position:relative}
-    .form-label{display:block;font-size:0.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.04em}
-    .form-input{width:100%;padding:0.85rem 1rem;border:1.5px solid var(--border);border-radius:12px;font-size:0.95rem;font-family:inherit;color:#1a1a2e;background:#FAFCFF;transition:border-color 0.2s;outline:none}
-    .form-input.has-eye{padding-right:2.8rem}
-    .form-input:focus{border-color:#42A5F5;background:white}
-    .form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23546E7A'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 1rem center;padding-right:2.5rem}
-    .btn{display:flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.9rem;border:none;border-radius:14px;font-size:0.95rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all 0.15s}
-    .btn:active{transform:scale(0.97)}
-    .btn-primary{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:white}
-    .btn-secondary{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary)}
-    .btn-danger{background:var(--danger-light);color:var(--danger)}
-    .btn-success{background:var(--success);color:white}
-    .btn-sm{width:auto;padding:0.5rem 1rem;font-size:0.82rem;border-radius:10px}
-    .auth-switch{text-align:center;margin-top:1.2rem;color:rgba(255,255,255,0.7);font-size:0.85rem}
-    .auth-switch a{color:#90CAF9;font-weight:600;text-decoration:none}
-    .error-msg{background:var(--danger-light);color:var(--danger);padding:0.75rem 1rem;border-radius:10px;font-size:0.82rem;margin-bottom:1rem;font-weight:500;display:none}
-    .error-msg.show{display:block}
-    .eye-btn{position:absolute;right:0.8rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.15rem;color:#90A4AE;padding:4px;line-height:1;z-index:2}
-    .topbar{background:linear-gradient(135deg,#1565C0 0%,#0D47A1 100%);padding:calc(var(--safe-top) + 1rem) 1.2rem 1.2rem;flex-shrink:0;border-radius:0 0 24px 24px}
-    .topbar-row{display:flex;align-items:center;gap:0.75rem}
-    .topbar-avatar{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:white;flex-shrink:0;border:2px solid rgba(255,255,255,0.3)}
-    .topbar-name{color:white;font-weight:700;font-size:1rem;flex:1}
-    .topbar-greeting{color:rgba(255,255,255,0.7);font-size:0.73rem;font-weight:400}
-    .topbar-icon{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;color:white;position:relative;flex-shrink:0;font-size:1.1rem;font-family:inherit}
-    .notif-badge{position:absolute;top:4px;right:4px;width:16px;height:16px;background:#FF5252;border-radius:50%;font-size:9px;font-weight:700;color:white;display:flex;align-items:center;justify-content:center;border:1.5px solid white}
-    .notif-badge.hidden{display:none}
-    .screen-content{flex:1;overflow-y:auto;padding:1rem 1rem calc(var(--safe-bottom) + 5rem);-webkit-overflow-scrolling:touch}
-    .screen-content-notab{padding-bottom:calc(var(--safe-bottom) + 1.5rem) !important}
-    .card{background:var(--card);border-radius:20px;padding:1.2rem;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid var(--border);margin-bottom:1rem}
-    .card-title{font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem}
-    .section-title{font-size:0.82rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin:1.2rem 0 0.6rem}
-    .bottom-nav{display:flex;background:var(--card);border-top:1px solid var(--border);padding:0.5rem 0 calc(var(--safe-bottom) + 0.5rem);flex-shrink:0}
-    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:0.2rem;padding:0.4rem;cursor:pointer;border:none;background:none;color:var(--text-muted);font-size:0.65rem;font-weight:600;font-family:inherit;transition:color 0.2s}
-    .nav-item.active{color:var(--primary)}
-    .nav-item .nav-icon{font-size:1.4rem}
-    .quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;margin-bottom:1rem}
-    .quick-btn{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.2rem 1rem;display:flex;flex-direction:column;align-items:flex-start;gap:0.5rem;cursor:pointer;transition:all 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
-    .quick-btn:active{transform:scale(0.97)}
-    .quick-icon{font-size:1.8rem}
-    .quick-label{font-size:0.85rem;font-weight:700;color:var(--text-primary)}
-    .quick-desc{font-size:0.72rem;color:var(--text-secondary)}
-    .badge{display:inline-block;padding:0.25rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:700}
-    .badge-pending{background:#FFF8E1;color:#F57F17}
-    .badge-assigned{background:#E3F2FD;color:#1565C0}
-    .badge-completed{background:#E8F5E9;color:#2E7D32}
-    .badge-cancelled{background:#FFEBEE;color:#C62828}
-    .request-item{background:var(--card);border-radius:16px;padding:1rem;border:1px solid var(--border);margin-bottom:0.75rem;display:flex;flex-direction:column;gap:0.5rem}
-    .request-route{font-weight:700;font-size:0.95rem;color:var(--text-primary)}
-    .request-meta{display:flex;gap:0.75rem;font-size:0.78rem;color:var(--text-secondary);flex-wrap:wrap}
-    .game-card{background:var(--card);border-radius:20px;padding:1.3rem;border:1px solid var(--border);margin-bottom:0.75rem;display:flex;align-items:center;gap:1rem;cursor:pointer;transition:all 0.15s}
-    .game-card:active{transform:scale(0.97)}
-    .game-icon{font-size:2.4rem;flex-shrink:0}
-    .game-info{flex:1}
-    .game-name{font-size:1rem;font-weight:700;color:var(--text-primary)}
-    .game-desc{font-size:0.78rem;color:var(--text-secondary);margin-top:0.2rem}
-    .game-points{font-size:0.78rem;font-weight:700;color:var(--primary);background:var(--bg);border-radius:8px;padding:0.25rem 0.6rem;white-space:nowrap}
-    #puzzle-board{display:grid;gap:3px;width:min(80vw,360px);height:min(80vw,360px);margin:1rem auto}
-    .puzzle-tile{border:none;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;font-size:1.4rem;font-weight:700;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;overflow:hidden}
-    .puzzle-tile:active{transform:scale(0.95)}
-    .puzzle-tile.empty{background:var(--bg);cursor:default}
-    .puzzle-tile img{width:100%;height:100%;object-fit:cover;display:block}
-    .quiz-question{font-size:1rem;font-weight:600;color:var(--text-primary);line-height:1.5;margin-bottom:1.2rem;text-align:center}
-    .quiz-options{display:flex;flex-direction:column;gap:0.6rem}
-    .quiz-opt{padding:0.9rem 1.1rem;border:1.5px solid var(--border);border-radius:14px;font-size:0.9rem;font-weight:500;cursor:pointer;transition:all 0.15s;background:var(--card);text-align:left;font-family:inherit;color:var(--text-primary)}
-    .quiz-opt.correct{background:var(--success-light);border-color:var(--success);color:var(--success)}
-    .quiz-opt.wrong{background:var(--danger-light);border-color:var(--danger);color:var(--danger)}
-    .quiz-progress{height:6px;background:var(--border);border-radius:3px;margin-bottom:1rem;overflow:hidden}
-    .quiz-progress-bar{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width 0.3s}
-    #tap-area{width:min(72vw,280px);height:min(72vw,280px);margin:1rem auto;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;cursor:pointer;box-shadow:0 8px 32px rgba(21,101,192,0.4);transition:transform 0.1s;user-select:none;-webkit-user-select:none}
-    #tap-area:active{transform:scale(0.93)}
-    .tap-count{font-size:4rem;font-weight:800;line-height:1}
-    .tap-label{font-size:0.85rem;opacity:0.8;margin-top:0.3rem}
-    .tap-timer{font-size:0.9rem;font-weight:600;opacity:0.9;margin-top:0.5rem}
-    .lf-item{background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--border);margin-bottom:0.75rem}
-    .lf-img{width:100%;height:160px;object-fit:cover;display:block}
-    .lf-img-placeholder{width:100%;height:120px;background:linear-gradient(135deg,#E3F2FD,#BBDEFB);display:flex;align-items:center;justify-content:center;font-size:2.5rem}
-    .lf-body{padding:0.9rem}
-    .lf-type-tag{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem}
-    .lf-type-tag.lost{color:var(--danger)}
-    .lf-type-tag.found{color:var(--success)}
-    .lf-name{font-size:1rem;font-weight:700;color:var(--text-primary)}
-    .lf-desc{font-size:0.82rem;color:var(--text-secondary);margin-top:0.25rem}
-    .lf-meta{font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;display:flex;gap:1rem;flex-wrap:wrap}
-    .notif-item{background:var(--card);border-radius:14px;padding:1rem;border:1px solid var(--border);margin-bottom:0.6rem}
-    .notif-item.unread{border-left:4px solid var(--primary)}
-    .notif-title{font-size:0.9rem;font-weight:700;color:var(--text-primary)}
-    .notif-body{font-size:0.8rem;color:var(--text-secondary);margin-top:0.25rem}
-    .notif-time{font-size:0.7rem;color:var(--text-muted);margin-top:0.4rem}
-    .admin-tab-bar{display:flex;gap:0.5rem;padding:0.75rem 1rem 0;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;background:var(--card);border-bottom:1px solid var(--border)}
-    .admin-tab{padding:0.5rem 0.9rem;border-radius:50px;font-size:0.8rem;font-weight:700;cursor:pointer;white-space:nowrap;border:none;background:transparent;color:var(--text-secondary);font-family:inherit;transition:all 0.15s}
-    .admin-tab.active{background:var(--primary);color:white}
-    .admin-section{display:none;flex:1;overflow-y:auto;padding:1rem 1rem calc(var(--safe-bottom) + 1rem)}
-    .admin-section.active{display:block}
-    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;display:none;align-items:flex-end;justify-content:center}
-    .modal-overlay.show{display:flex}
-    .modal-sheet{background:var(--card);border-radius:24px 24px 0 0;padding:1.5rem 1.5rem calc(var(--safe-bottom) + 1.5rem);width:100%;max-height:90vh;overflow-y:auto}
-    .modal-handle{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 1.2rem}
-    .modal-title{font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:1.2rem}
-    .pickup-pill{background:linear-gradient(135deg,var(--primary),var(--accent));color:white;border-radius:14px;padding:0.9rem 1.2rem;margin-bottom:1rem}
-    .pickup-id{font-size:1.8rem;font-weight:800;letter-spacing:0.05em}
-    .pickup-label{font-size:0.75rem;opacity:0.8;margin-top:0.2rem}
-    .app-links{display:flex;gap:0.75rem;margin:0.5rem 0}
-    .app-link-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.75rem;border-radius:14px;font-size:0.82rem;font-weight:700;text-decoration:none;transition:all 0.15s;color:white}
-    .app-link-android{background:linear-gradient(135deg,#1565C0,#0D47A1)}
-    .app-link-pwa{background:linear-gradient(135deg,#2E7D32,#1B5E20)}
-    .lb-item{display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--card);border-radius:12px;border:1px solid var(--border);margin-bottom:0.5rem}
-    .lb-rank{font-size:1.2rem;font-weight:800;width:32px;text-align:center;flex-shrink:0}
-    .lb-name{flex:1;font-size:0.88rem;font-weight:600;color:var(--text-primary)}
-    .lb-pts{font-size:0.82rem;font-weight:700;color:var(--primary)}
-    .rank-1{color:#FFD700}.rank-2{color:#C0C0C0}.rank-3{color:#CD7F32}
-    textarea.form-input{min-height:90px;resize:none}
-    .settings-row{display:flex;align-items:center;padding:1rem;background:var(--card);border-radius:14px;border:1px solid var(--border);margin-bottom:0.6rem;cursor:pointer;gap:0.75rem}
-    .settings-icon{font-size:1.3rem;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:10px;flex-shrink:0}
-    .settings-label{flex:1;font-size:0.9rem;font-weight:600;color:var(--text-primary)}
-    .settings-arrow{color:var(--text-muted);font-size:0.9rem}
-    .file-upload-label{display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:1.2rem;border:2px dashed var(--border);border-radius:14px;cursor:pointer;color:var(--text-secondary);font-size:0.85rem}
-    #lf-preview{width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin-top:0.75rem;display:none}
-    .forgot-link{text-align:right;margin-bottom:0.75rem}
-    .forgot-link a{font-size:0.8rem;color:#1565C0;font-weight:600;text-decoration:none}
-    .empty-state{text-align:center;padding:3rem 1rem;color:var(--text-muted)}
-    .empty-icon{font-size:3rem;margin-bottom:0.75rem}
-    .empty-title{font-size:1rem;font-weight:700;color:var(--text-secondary)}
-    .empty-sub{font-size:0.82rem;margin-top:0.4rem}
-    .driver-card{background:var(--card);border-radius:14px;padding:1rem;border:1px solid var(--border);margin-bottom:0.6rem;display:flex;align-items:center;gap:0.75rem}
-    .driver-name{flex:1;font-size:0.9rem;font-weight:700;color:var(--text-primary)}
-    .driver-email{font-size:0.78rem;color:var(--text-secondary)}
-    .ad-card{background:var(--card);border-radius:14px;padding:1rem;border:1px solid var(--border);margin-bottom:0.6rem}
-    ::-webkit-scrollbar{width:4px}
-    ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-primary); transition: background 0.3s, color 0.3s; }
+    #app { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+    .screen { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+    .screen.active { display: flex; }
+    
+    /* Splash */
+    #screen-splash { background: linear-gradient(160deg, #0A2E6E 0%, #1565C0 60%, #1976D2 100%); align-items: center; justify-content: center; gap: 1rem; }
+    .splash-logo { font-size: 3.5rem; font-weight: 900; color: white; letter-spacing: -0.02em; }
+    .splash-logo span { color: #90CAF9; }
+    .splash-sub { color: rgba(255,255,255,0.75); font-size: 0.9rem; font-weight: 500; }
+    .splash-spinner { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,0.25); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-top: 2rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Auth */
+    .auth-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; padding: 2rem 1.5rem; max-width: 440px; margin: 0 auto; width: 100%; }
+    .auth-logo { font-size: 2.8rem; font-weight: 900; color: var(--primary); text-align: center; letter-spacing: -0.02em; }
+    .auth-logo span { color: var(--accent); }
+    .auth-tagline { text-align: center; color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.2rem; margin-bottom: 2rem; }
+    .auth-card { background: var(--card); border-radius: 24px; padding: 2rem 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.06); border: 1px solid var(--border); }
+    .auth-title { font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin-bottom: 1.25rem; }
+    .form-group { margin-bottom: 1.1rem; position: relative; }
+    .form-label { display: block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin-bottom: 0.45rem; }
+    .form-input { width: 100%; padding: 0.85rem 1rem; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text-primary); font-size: 0.95rem; font-family: inherit; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,101,192,0.12); }
+    .form-input.has-eye { padding-right: 3.2rem; }
+    
+    /* Professional Vector Eye Button */
+    .eye-btn {
+      position: absolute;
+      right: 0.65rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s;
+      z-index: 4;
+      border-radius: 8px;
+    }
+    .eye-btn:hover { color: var(--primary); background: rgba(21,101,192,0.06); }
+    .eye-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+    
+    /* Buttons */
+    .btn { width: 100%; padding: 0.95rem; border-radius: 14px; font-size: 0.95rem; font-weight: 700; cursor: pointer; border: none; font-family: inherit; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 4px 14px rgba(21,101,192,0.3); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-secondary { background: var(--card); color: var(--text-primary); border: 1.5px solid var(--border); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-sm { padding: 0.45rem 0.9rem; font-size: 0.8rem; border-radius: 10px; width: auto; display: inline-flex; }
+    .forgot-link { text-align: right; margin-top: -0.4rem; margin-bottom: 1.25rem; }
+    .forgot-link a, .auth-switch a { color: var(--primary); font-size: 0.82rem; font-weight: 600; text-decoration: none; }
+    .auth-switch { text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-secondary); }
+    .app-links { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1rem; }
+    .app-link-btn { flex: 1; max-width: 170px; padding: 0.65rem 0.5rem; border-radius: 10px; font-size: 0.75rem; font-weight: 700; text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; color: white; }
+    .app-link-android { background: #2E7D32; }
+    .app-link-pwa { background: #1565C0; }
+
+    /* Topbar */
+    .topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: calc(var(--safe-top) + 0.75rem) 1rem 0.75rem; flex-shrink: 0; }
+    .topbar-row { display: flex; align-items: center; gap: 0.75rem; max-width: 600px; margin: 0 auto; }
+    .topbar-avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .topbar-greeting { font-size: 0.72rem; color: var(--text-secondary); }
+    .topbar-name { font-size: 0.95rem; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .topbar-icon { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-primary); font-size: 1.1rem; position: relative; flex-shrink: 0; }
+    .notif-badge { position: absolute; top: -4px; right: -4px; background: var(--danger); color: white; font-size: 0.65rem; font-weight: 800; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--card); }
+    .notif-badge.hidden { display: none; }
+    
+    .screen-content { flex: 1; overflow-y: auto; padding: 1rem; max-width: 600px; margin: 0 auto; width: 100%; -webkit-overflow-scrolling: touch; }
+    
+    /* Active Ride Banner */
+    .active-ride-card {
+      background: linear-gradient(135deg, #0A2E6E 0%, #1565C0 100%);
+      border-radius: 20px;
+      padding: 1.25rem;
+      color: white;
+      box-shadow: 0 8px 24px rgba(10,46,110,0.3);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 1.25rem;
+    }
+    .active-ride-card::after {
+      content: "";
+      position: absolute;
+      top: -20px;
+      right: -20px;
+      width: 90px;
+      height: 90px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 50%;
+    }
+    .active-ride-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+    .active-pulse-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 3px 10px;
+      border-radius: 50px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: #4ADE80;
+      border-radius: 50%;
+      box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+      animation: pulseAnim 1.6s infinite;
+    }
+    @keyframes pulseAnim {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+    }
+    .active-ride-route { font-size: 1.15rem; font-weight: 900; letter-spacing: -0.01em; margin-bottom: 0.4rem; }
+    .active-ride-details { display: flex; justify-content: space-between; font-size: 0.8rem; color: rgba(255,255,255,0.85); margin-bottom: 0.9rem; }
+    .active-ride-actions { display: flex; gap: 0.6rem; }
+    
+    /* Pickup Pill */
+    .pickup-pill { background: var(--card); border: 1.5px solid var(--border); border-radius: 18px; padding: 1.15rem; color: var(--text-primary); margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .pickup-label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pickup-id { font-size: 2rem; font-weight: 900; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; color: var(--primary); margin-top: 0.2rem; }
+    
+    .section-title { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin: 1.25rem 0 0.75rem; }
+    .quick-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
+    .quick-btn { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.1rem; cursor: pointer; transition: all 0.2s; text-align: left; }
+    .quick-btn:active { transform: scale(0.97); }
+    .quick-icon { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    .quick-label { font-size: 0.9rem; font-weight: 800; color: var(--text-primary); }
+    .quick-desc { font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.2rem; }
+    
+    .card { background: var(--card); border-radius: 18px; padding: 1.25rem; border: 1px solid var(--border); margin-bottom: 0.85rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .card-title { font-size: 0.95rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+    
+    /* Bottom Navigation */
+    .bottom-nav { background: var(--card); border-top: 1px solid var(--border); display: flex; padding-bottom: var(--safe-bottom); flex-shrink: 0; }
+    .nav-item { flex: 1; padding: 0.75rem 0.25rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.7rem; font-weight: 600; transition: color 0.2s; font-family: inherit; }
+    .nav-item.active { color: var(--primary); font-weight: 800; }
+    .nav-icon { font-size: 1.25rem; }
+    
+    .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .empty-title { font-size: 0.95rem; font-weight: 700; color: var(--text-secondary); }
+    .empty-sub { font-size: 0.8rem; margin-top: 0.25rem; }
+    
+    /* Request Card */
+    .request-item { background: var(--card); border-radius: 16px; padding: 1.1rem; border: 1px solid var(--border); margin-bottom: 0.85rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .request-route { font-size: 1rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between; }
+    .request-meta { display: flex; gap: 0.5rem; font-size: 0.75rem; color: var(--text-secondary); align-items: center; flex-wrap: wrap; margin-bottom: 0.4rem; }
+    .badge { padding: 0.25rem 0.65rem; border-radius: 50px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+    .badge-pending { background: var(--warning-light); color: var(--warning); }
+    .badge-assigned { background: var(--success-light); color: var(--success); }
+    .badge-completed { background: #E8EAF6; color: #1A237E; }
+    .badge-cancelled { background: var(--danger-light); color: var(--danger); }
+    
+    /* Professional Lost & Found Item Cards */
+    .lf-item { background: var(--card); border-radius: 18px; border: 1px solid var(--border); margin-bottom: 0.9rem; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+    .lf-thumb-wrap { width: 100%; max-height: 220px; background: #000; overflow: hidden; position: relative; cursor: pointer; }
+    .lf-thumb { width: 100%; height: 200px; object-fit: cover; display: block; }
+    .lf-body { padding: 1rem; }
+    .lf-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.35rem; }
+    .lf-type-tag { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 6px; }
+    .lf-type-tag.lost { background: var(--danger-light); color: var(--danger); }
+    .lf-type-tag.found { background: var(--success-light); color: var(--success); }
+    .lf-name { font-size: 1rem; font-weight: 800; color: var(--text-primary); }
+    .lf-desc { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.35rem; line-height: 1.45; }
+    .lf-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.6rem; display: flex; gap: 0.85rem; flex-wrap: wrap; }
+    
+    /* Live Map Tracking Screen */
+    #screen-tracking { position: relative; height: 100%; width: 100%; }
+    #tracking-map { width: 100%; height: 100%; z-index: 1; }
+    .map-overlay-card {
+      position: absolute;
+      bottom: calc(var(--safe-bottom) + 1.25rem);
+      left: 1rem;
+      right: 1rem;
+      max-width: 500px;
+      margin: 0 auto;
+      z-index: 1000;
+      background: var(--card);
+      border-radius: 20px;
+      padding: 1.25rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+      border: 1px solid var(--border);
+    }
+    
+    /* Games */
+    .game-card { background: var(--card); border-radius: 18px; padding: 1.2rem; border: 1px solid var(--border); margin-bottom: 0.85rem; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: all 0.2s; }
+    .game-card:active { transform: scale(0.98); }
+    .game-icon { font-size: 2.2rem; width: 50px; height: 50px; border-radius: 14px; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .game-info { flex: 1; }
+    .game-name { font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+    .game-desc { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; }
+    .game-points { font-size: 0.75rem; font-weight: 800; color: var(--primary); background: rgba(21,101,192,0.1); padding: 0.3rem 0.6rem; border-radius: 8px; white-space: nowrap; }
+    #puzzle-board { display: grid; gap: 4px; background: var(--border); border-radius: 14px; padding: 4px; margin: 1rem auto; touch-action: none; }
+    .puzzle-tile { border-radius: 10px; background: var(--primary); color: white; font-size: 1.3rem; font-weight: 900; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; overflow: hidden; }
+    .puzzle-tile.empty { background: transparent; cursor: default; }
+    .quiz-question { font-size: 1.05rem; font-weight: 800; color: var(--text-primary); margin-bottom: 1.25rem; line-height: 1.5; }
+    .quiz-options { display: flex; flex-direction: column; gap: 0.65rem; }
+    .quiz-opt { padding: 0.9rem 1rem; border-radius: 14px; border: 1.5px solid var(--border); background: var(--card); color: var(--text-primary); font-size: 0.9rem; font-weight: 600; text-align: left; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+    .quiz-opt.correct { background: var(--success); color: white; border-color: var(--success); }
+    .quiz-opt.wrong { background: var(--danger); color: white; border-color: var(--danger); }
+    #tap-area { width: 170px; height: 170px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; user-select: none; margin: 1.5rem auto; box-shadow: 0 10px 30px rgba(21,101,192,0.35); transition: transform 0.05s; }
+    #tap-area:active { transform: scale(0.94); }
+    .tap-count { font-size: 3rem; font-weight: 900; line-height: 1; }
+    .tap-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; opacity: 0.85; margin-top: 0.2rem; }
+    .tap-timer { font-size: 0.95rem; font-weight: 800; color: var(--warning); margin-top: 0.4rem; }
+    .lb-item { display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border); }
+    .lb-rank { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; flex-shrink: 0; background: var(--bg); color: var(--text-secondary); }
+    .lb-rank.rank-1 { background: #FFD700; color: #5B4500; font-size: 1.1rem; }
+    .lb-rank.rank-2 { background: #E0E0E0; color: #424242; font-size: 1.1rem; }
+    .lb-rank.rank-3 { background: #CD7F32; color: white; font-size: 1.1rem; }
+    .lb-name { flex: 1; font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+    .lb-pts { font-size: 0.85rem; font-weight: 800; color: var(--primary); }
+    
+    .admin-tab-bar { display: flex; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--card); border-bottom: 1px solid var(--border); overflow-x: auto; flex-shrink: 0; }
+    .admin-tab { padding: 0.45rem 0.9rem; border-radius: 50px; font-size: 0.75rem; font-weight: 700; border: 1.5px solid var(--border); background: var(--bg); color: var(--text-secondary); cursor: pointer; white-space: nowrap; font-family: inherit; }
+    .admin-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .admin-section { display: none; padding: 1rem; }
+    .admin-section.active { display: block; }
+    
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 2000; display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); }
+    .modal-overlay.show { display: flex; }
+    .modal-sheet { background: var(--card); border-radius: 28px 28px 0 0; padding: 1.5rem; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; }
+    .modal-title { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin-bottom: 1.25rem; }
+    .error-msg { background: var(--danger-light); color: var(--danger); padding: 0.65rem 0.85rem; border-radius: 10px; font-size: 0.8rem; margin-bottom: 1rem; display: none; }
+    .error-msg.show { display: block; }
+    .settings-row { display: flex; align-items: center; gap: 0.85rem; padding: 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 0.65rem; cursor: pointer; }
+    .settings-icon { font-size: 1.35rem; }
+    .settings-label { flex: 1; font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+    .settings-arrow { color: var(--text-muted); font-size: 1.2rem; }
   </style>
 </head>
 <body>
@@ -215,14 +334,17 @@
         <div class="auth-title">Welcome Back</div>
         <div class="error-msg" id="login-error"></div>
         <div class="form-group">
-          <label class="form-label">Email</label>
+          <label class="form-label">Email Address</label>
           <input class="form-input" type="email" id="login-email" placeholder="your@email.com" autocomplete="email"/>
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
           <div style="position:relative">
             <input class="form-input has-eye" type="password" id="login-password" placeholder="Password" autocomplete="current-password"/>
-            <button class="eye-btn" type="button" tabindex="-1" onclick="toggleEye('login-password',this)">&#128065;</button>
+            <button class="eye-btn" type="button" tabindex="-1" onclick="toggleEye('login-password',this)" aria-label="Toggle password visibility">
+              <!-- SVG Eye Open -->
+              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
           </div>
         </div>
         <div class="forgot-link"><a href="#" onclick="showForgotPassword();return false;">Forgot Password?</a></div>
@@ -231,7 +353,7 @@
       </div>
       <div class="auth-switch">New to ASSA? <a href="#" onclick="showScreen('register');return false;">Register</a></div>
       <div style="margin-top:1.5rem">
-        <div style="color:rgba(255,255,255,0.5);font-size:0.75rem;text-align:center;margin-bottom:0.75rem">Download the App</div>
+        <div style="color:rgba(255,255,255,0.7);font-size:0.75rem;text-align:center;margin-bottom:0.75rem">Download Official ASSA</div>
         <div class="app-links">
           <a class="app-link-btn app-link-android" href="https://afit-shuttle-system.web.app/assa-app.apk" target="_blank">&#129302; Android APK</a>
           <a class="app-link-btn app-link-pwa" href="https://assa-systems.github.io/assa/app/" target="_blank">&#127760; Web PWA</a>
@@ -244,7 +366,7 @@
   <div class="screen" id="screen-register">
     <div class="auth-container">
       <div class="auth-logo">ASSA<span>.</span></div>
-      <div class="auth-tagline">Create your account</div>
+      <div class="auth-tagline">Create your campus account</div>
       <div class="auth-card">
         <div class="auth-title">Register</div>
         <div class="error-msg" id="reg-error"></div>
@@ -253,14 +375,16 @@
           <input class="form-input" type="text" id="reg-name" placeholder="John Doe"/>
         </div>
         <div class="form-group">
-          <label class="form-label">Email</label>
+          <label class="form-label">Email Address</label>
           <input class="form-input" type="email" id="reg-email" placeholder="your@email.com"/>
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
           <div style="position:relative">
             <input class="form-input has-eye" type="password" id="reg-password" placeholder="Min 6 characters"/>
-            <button class="eye-btn" type="button" tabindex="-1" onclick="toggleEye('reg-password',this)">&#128065;</button>
+            <button class="eye-btn" type="button" tabindex="-1" onclick="toggleEye('reg-password',this)" aria-label="Toggle password visibility">
+              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
           </div>
         </div>
         <button class="btn btn-primary" onclick="doRegister()" id="reg-btn">Create Account</button>
@@ -283,56 +407,93 @@
           &#128276;
           <span class="notif-badge hidden" id="notif-badge">0</span>
         </button>
-        <button class="topbar-icon" style="background:rgba(255,82,82,0.2)" onclick="doLogout()">&#x1F6AA;</button>
+        <button class="topbar-icon" style="background:rgba(255,82,82,0.15);color:var(--danger)" onclick="doLogout()">&#x1F6AA;</button>
       </div>
     </div>
     <div class="screen-content">
-      <div id="ad-zone"></div>
-      <div class="pickup-pill">
-        <div class="pickup-label">Your Pickup ID</div>
-        <div class="pickup-id" id="dash-pickup">---</div>
+      
+      <!-- ACTIVE RIDE BANNER (Visible whenever a ride is active) -->
+      <div id="dash-active-ride" style="display:none">
+        <div class="active-ride-card">
+          <div class="active-ride-header">
+            <div class="active-pulse-badge">
+              <span class="pulse-dot"></span>
+              <span id="active-ride-status-text">ACTIVE RIDE</span>
+            </div>
+            <span id="active-ride-time" style="font-size:0.75rem;color:rgba(255,255,255,0.85)">Live</span>
+          </div>
+          <div class="active-ride-route" id="active-ride-route">Pickup &rarr; Destination</div>
+          <div class="active-ride-details">
+            <div id="active-ride-shuttle">&#128652; Shuttle: Awaiting assignment</div>
+            <div id="active-ride-pid-box">Pickup ID: <strong id="active-ride-pid" style="font-family:'JetBrains Mono',monospace">---</strong></div>
+          </div>
+          <div class="active-ride-actions">
+            <button class="btn btn-primary btn-sm" onclick="openLiveTracking()" style="flex:1;background:white;color:var(--primary-dark)">
+              &#128506;&#65039; Track on Live Map
+            </button>
+            <button class="btn btn-danger btn-sm" id="active-ride-cancel-btn" onclick="cancelActiveRide()" style="width:auto">
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
+
+      <div id="ad-zone"></div>
+
+      <div class="pickup-pill">
+        <div>
+          <div class="pickup-label">Your Campus Pickup ID</div>
+          <div class="pickup-id" id="dash-pickup">---</div>
+        </div>
+        <div style="font-size:2.2rem">&#128652;</div>
+      </div>
+
       <div class="section-title">Quick Actions</div>
       <div class="quick-grid">
         <div class="quick-btn" onclick="showScreen('request')">
           <div class="quick-icon">&#x1F68C;</div>
-          <div class="quick-label">Request Ride</div>
-          <div class="quick-desc">Book a shuttle now</div>
+          <div class="quick-label">Request Shuttle</div>
+          <div class="quick-desc">Book solo ride</div>
+        </div>
+        <div class="quick-btn" onclick="openLiveTracking()">
+          <div class="quick-icon">&#128506;&#65039;</div>
+          <div class="quick-label">Shuttle Map</div>
+          <div class="quick-desc">Live GPS tracking</div>
         </div>
         <div class="quick-btn" onclick="showScreen('myrequests')">
           <div class="quick-icon">&#128203;</div>
           <div class="quick-label">My Requests</div>
-          <div class="quick-desc">Track your rides</div>
+          <div class="quick-desc">Track &amp; manage</div>
+        </div>
+        <div class="quick-btn" onclick="showScreen('lostfound')">
+          <div class="quick-icon">&#128269;</div>
+          <div class="quick-label">Lost &amp; Found</div>
+          <div class="quick-desc">View &amp; report items</div>
         </div>
         <div class="quick-btn" onclick="showScreen('gamehub')">
           <div class="quick-icon">&#127918;</div>
           <div class="quick-label">Campus Games</div>
           <div class="quick-desc">Quiz, Puzzle, Tap</div>
         </div>
-        <div class="quick-btn" onclick="showScreen('lostfound')">
-          <div class="quick-icon">&#128269;</div>
-          <div class="quick-label">Lost &amp; Found</div>
-          <div class="quick-desc">Find or report items</div>
-        </div>
         <div class="quick-btn" onclick="showScreen('report')">
           <div class="quick-icon">&#128221;</div>
-          <div class="quick-label">Report Issue</div>
-          <div class="quick-desc">Send a complaint</div>
-        </div>
-        <div class="quick-btn" onclick="showScreen('settings')">
-          <div class="quick-icon">&#9881;</div>
-          <div class="quick-label">Settings</div>
-          <div class="quick-desc">Profile &amp; preferences</div>
+          <div class="quick-label">Complaints</div>
+          <div class="quick-desc">Send feedback</div>
         </div>
       </div>
+
       <div class="section-title">Recent Requests</div>
-      <div id="dash-recent"><div class="empty-state"><div class="empty-icon">&#x1F68C;</div><div class="empty-title">No recent rides</div><div class="empty-sub">Make your first request!</div></div></div>
+      <div id="dash-recent">
+        <div class="empty-state"><div class="empty-icon">&#x1F68C;</div><div class="empty-title">No recent rides</div><div class="empty-sub">Make your first request!</div></div>
+      </div>
     </div>
+    
     <div class="bottom-nav">
       <button class="nav-item active" id="nav-home" onclick="showScreen('dashboard')"><span class="nav-icon">&#127968;</span>Home</button>
       <button class="nav-item" id="nav-ride" onclick="showScreen('request')"><span class="nav-icon">&#x1F68C;</span>Ride</button>
-      <button class="nav-item" id="nav-games" onclick="showScreen('gamehub')"><span class="nav-icon">&#127918;</span>Games</button>
+      <button class="nav-item" id="nav-map" onclick="openLiveTracking()"><span class="nav-icon">&#128506;&#65039;</span>Map</button>
       <button class="nav-item" id="nav-lf" onclick="showScreen('lostfound')"><span class="nav-icon">&#128269;</span>Lost&amp;Found</button>
+      <button class="nav-item" id="nav-settings" onclick="showScreen('settings')"><span class="nav-icon">&#9881;</span>Settings</button>
     </div>
   </div>
 
@@ -345,13 +506,13 @@
         <div style="width:38px"></div>
       </div>
     </div>
-    <div class="screen-content screen-content-notab">
+    <div class="screen-content">
       <div class="card">
         <div class="card-title">&#x1F68C; Ride Details</div>
         <div class="error-msg" id="req-error"></div>
         <div class="form-group">
           <label class="form-label">Pickup Location</label>
-          <select class="form-input form-select" id="req-pickup">
+          <select class="form-input" id="req-pickup">
             <option value="">Select pickup point...</option>
             <option>AFIT Gates</option>
             <option>45x1 Hostel</option>
@@ -369,7 +530,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Destination</label>
-          <select class="form-input form-select" id="req-dest">
+          <select class="form-input" id="req-dest">
             <option value="">Select destination...</option>
             <option>AFIT Gates</option>
             <option>45x1 Hostel</option>
@@ -387,29 +548,53 @@
         </div>
         <div class="form-group">
           <label class="form-label">Ride Type</label>
-          <select class="form-input form-select" id="req-type">
-            <option value="individual">Individual (Solo)</option>
+          <select class="form-input" id="req-type">
+            <option value="Shared">Shared Shuttle (Solo Passenger)</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Number of Passengers</label>
-          <select class="form-input form-select" id="req-passengers">
-            <option value="1">1 Passenger</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Additional Notes (optional)</label>
-          <input class="form-input" type="text" id="req-notes" placeholder="Any special instructions..."/>
+          <label class="form-label">Additional Instructions (Optional)</label>
+          <input class="form-input" type="text" id="req-notes" placeholder="e.g. In front of entrance gate"/>
         </div>
         <button class="btn btn-primary" onclick="doRequest()" id="req-btn">&#x1F68C; Request Shuttle</button>
       </div>
       <div id="req-success" style="display:none" class="card">
-        <div style="text-align:center;padding:1rem">
-          <div style="font-size:3rem;margin-bottom:0.75rem">&#9989;</div>
-          <div style="font-size:1.1rem;font-weight:700;color:var(--success)">Request Submitted!</div>
-          <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.5rem" id="req-shuttle-info">Waiting for a driver to accept...</div>
-          <button class="btn btn-primary" style="margin-top:1.2rem" onclick="showScreen('myrequests')">Track My Request</button>
+        <div style="text-align:center;padding:1.2rem">
+          <div style="font-size:2.8rem;margin-bottom:0.5rem">&#9989;</div>
+          <div style="font-size:1.15rem;font-weight:800;color:var(--success)">Request Dispatched!</div>
+          <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.4rem" id="req-shuttle-info">Waiting for available campus shuttle...</div>
+          <div style="display:flex;gap:0.6rem;margin-top:1.2rem">
+            <button class="btn btn-primary btn-sm" style="flex:1" onclick="openLiveTracking()">&#128506;&#65039; Track Live Map</button>
+            <button class="btn btn-secondary btn-sm" style="flex:1" onclick="showScreen('myrequests')">View My Rides</button>
+          </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE SHUTTLE TRACKING MAP -->
+  <div class="screen" id="screen-tracking">
+    <div class="topbar" style="position:absolute;top:0;left:0;right:0;z-index:1001;background:rgba(255,255,255,0.95);backdrop-filter:blur(8px)">
+      <div class="topbar-row">
+        <button class="topbar-icon" onclick="showScreen('dashboard')">&#8592;</button>
+        <div class="topbar-name" style="flex:1;text-align:center">&#128506;&#65039; Campus Shuttle Tracker</div>
+        <button class="topbar-icon" onclick="refreshTrackingMap()" title="Recenter">&#x1F504;</button>
+      </div>
+    </div>
+    
+    <div id="tracking-map"></div>
+
+    <!-- Floating Tracking Details Card -->
+    <div class="map-overlay-card" id="map-status-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <div class="badge badge-assigned" id="map-status-badge">SHUTTLE TRACKING</div>
+        <span style="font-size:0.75rem;font-weight:700;color:var(--primary)" id="map-eta-text">Live Telemetry</span>
+      </div>
+      <div style="font-size:1.05rem;font-weight:800;color:var(--text-primary)" id="map-route-text">AFIT Campus &bull; Monitoring Shuttles</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-top:0.3rem" id="map-shuttle-text">&#128652; Active Shuttles on Campus: 5</div>
+      <div style="display:flex;gap:0.5rem;margin-top:0.85rem">
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="showScreen('myrequests')">&#128203; My Requests</button>
+        <button class="btn btn-secondary btn-sm" onclick="showScreen('dashboard')">&#127968; Dashboard</button>
       </div>
     </div>
   </div>
@@ -423,8 +608,8 @@
         <button class="topbar-icon" onclick="loadMyRequests()">&#x1F504;</button>
       </div>
     </div>
-    <div class="screen-content screen-content-notab" id="myrequests-list">
-      <div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">No requests yet</div><div class="empty-sub">Make your first ride request!</div></div>
+    <div class="screen-content" id="myrequests-list">
+      <div class="empty-state"><div class="empty-icon">&#8987;</div><div class="empty-title">Loading requests...</div></div>
     </div>
   </div>
 
@@ -437,7 +622,7 @@
         <button class="topbar-icon" onclick="markAllRead()">&#10003;</button>
       </div>
     </div>
-    <div class="screen-content screen-content-notab" id="notif-list">
+    <div class="screen-content" id="notif-list">
       <div class="empty-state"><div class="empty-icon">&#128276;</div><div class="empty-title">No notifications</div></div>
     </div>
   </div>
@@ -452,40 +637,40 @@
       </div>
     </div>
     <div style="display:flex;gap:0.5rem;padding:0.75rem 1rem;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0">
-      <button class="admin-tab active" onclick="filterLF('all',this)">All</button>
+      <button class="admin-tab active" onclick="filterLF('all',this)">All Items</button>
       <button class="admin-tab" onclick="filterLF('lost',this)">Lost</button>
       <button class="admin-tab" onclick="filterLF('found',this)">Found</button>
     </div>
-    <div class="screen-content screen-content-notab" id="lostfound-list">
+    <div class="screen-content" id="lostfound-list">
       <div class="empty-state"><div class="empty-icon">&#128269;</div><div class="empty-title">Loading items...</div></div>
     </div>
   </div>
 
-  <!-- REPORT ISSUE -->
+  <!-- COMPLAINTS / REPORT ISSUE -->
   <div class="screen" id="screen-report">
     <div class="topbar">
       <div class="topbar-row">
         <button class="topbar-icon" onclick="showScreen('dashboard')">&#8592;</button>
-        <div class="topbar-name" style="flex:1;text-align:center">Report / Complaint</div>
+        <div class="topbar-name" style="flex:1;text-align:center">Feedback &amp; Complaints</div>
         <div style="width:38px"></div>
       </div>
     </div>
-    <div class="screen-content screen-content-notab">
+    <div class="screen-content">
       <div class="card">
-        <div class="card-title">&#128221; Submit a Complaint</div>
+        <div class="card-title">&#128221; Submit Report</div>
         <div class="error-msg" id="report-error"></div>
         <div class="form-group">
           <label class="form-label">Subject</label>
-          <input class="form-input" type="text" id="report-subject" placeholder="Brief subject..."/>
+          <input class="form-input" type="text" id="report-subject" placeholder="Brief subject (e.g. Shuttle Delay)"/>
         </div>
         <div class="form-group">
-          <label class="form-label">Message</label>
-          <textarea class="form-input" id="report-message" placeholder="Describe your issue in detail..."></textarea>
+          <label class="form-label">Detailed Message</label>
+          <textarea class="form-input" id="report-message" rows="3" placeholder="Provide full details..."></textarea>
         </div>
-        <button class="btn btn-primary" onclick="doReport()">Submit Report</button>
+        <button class="btn btn-primary" onclick="doReport()">Submit Feedback</button>
       </div>
-      <div class="section-title">My Reports</div>
-      <div id="reports-list"><div class="empty-state"><div class="empty-icon">&#128221;</div><div class="empty-title">No reports yet</div></div></div>
+      <div class="section-title">My Past Reports</div>
+      <div id="reports-list"><div class="empty-state"><div class="empty-icon">&#128221;</div><div class="empty-title">No reports submitted yet</div></div></div>
     </div>
   </div>
 
@@ -498,14 +683,14 @@
         <div style="width:38px"></div>
       </div>
     </div>
-    <div class="screen-content screen-content-notab">
+    <div class="screen-content">
       <div class="card">
-        <div class="card-title">&#128100; Profile</div>
-        <div id="settings-profile" style="font-size:0.9rem;color:var(--text-secondary);line-height:1.8"></div>
+        <div class="card-title">&#128100; My Profile</div>
+        <div id="settings-profile" style="font-size:0.9rem;color:var(--text-secondary);line-height:1.9"></div>
       </div>
       <div class="settings-row" onclick="showChangePassword()">
         <div class="settings-icon">&#128273;</div>
-        <div class="settings-label">Thank You (Change Password)</div>
+        <div class="settings-label">Change Password</div>
         <div class="settings-arrow">&#8250;</div>
       </div>
       <div class="settings-row" onclick="toggleTheme()">
@@ -514,7 +699,7 @@
         <div class="settings-arrow">&#8250;</div>
       </div>
       <div class="settings-row" style="border-color:var(--danger-light)" onclick="doLogout()">
-        <div class="settings-icon">&#x1F6AA;</div>
+        <div class="settings-icon" style="color:var(--danger)">&#x1F6AA;</div>
         <div class="settings-label" style="color:var(--danger)">Sign Out</div>
         <div class="settings-arrow">&#8250;</div>
       </div>
@@ -530,20 +715,20 @@
         <button class="topbar-icon" onclick="showScreen('leaderboard')">&#127942;</button>
       </div>
     </div>
-    <div class="screen-content screen-content-notab">
+    <div class="screen-content">
       <div class="card" style="background:linear-gradient(135deg,var(--primary),var(--accent));border:none;margin-bottom:1rem">
-        <div style="color:rgba(255,255,255,0.85);font-size:0.8rem;font-weight:600">Your Points This Week</div>
+        <div style="color:rgba(255,255,255,0.85);font-size:0.8rem;font-weight:700">Your Weekly Points</div>
         <div style="display:flex;gap:2rem;margin-top:0.6rem">
-          <div><div style="color:white;font-size:1.6rem;font-weight:800" id="pts-puzzle">0</div><div style="color:rgba(255,255,255,0.7);font-size:0.72rem">Puzzle</div></div>
-          <div><div style="color:white;font-size:1.6rem;font-weight:800" id="pts-quiz">0</div><div style="color:rgba(255,255,255,0.7);font-size:0.72rem">Quiz</div></div>
-          <div><div style="color:white;font-size:1.6rem;font-weight:800" id="pts-tap">0</div><div style="color:rgba(255,255,255,0.7);font-size:0.72rem">Tap</div></div>
+          <div><div style="color:white;font-size:1.6rem;font-weight:900" id="pts-puzzle">0</div><div style="color:rgba(255,255,255,0.75);font-size:0.75rem">Puzzle</div></div>
+          <div><div style="color:white;font-size:1.6rem;font-weight:900" id="pts-quiz">0</div><div style="color:rgba(255,255,255,0.75);font-size:0.75rem">Quiz</div></div>
+          <div><div style="color:white;font-size:1.6rem;font-weight:900" id="pts-tap">0</div><div style="color:rgba(255,255,255,0.75);font-size:0.75rem">Tap</div></div>
         </div>
       </div>
       <div class="game-card" onclick="startPuzzle(3)">
         <div class="game-icon">&#129513;</div>
         <div class="game-info">
           <div class="game-name">Slide Puzzle (3x3)</div>
-          <div class="game-desc">Rearrange tiles to solve the image. Easy mode.</div>
+          <div class="game-desc">Arrange 8 tiles in order. Quick campus challenge.</div>
         </div>
         <div class="game-points">+10 pts</div>
       </div>
@@ -551,7 +736,7 @@
         <div class="game-icon">&#129513;</div>
         <div class="game-info">
           <div class="game-name">Slide Puzzle (4x4)</div>
-          <div class="game-desc">15 tiles. Hard mode challenge.</div>
+          <div class="game-desc">Arrange 15 tiles in order. Master challenge.</div>
         </div>
         <div class="game-points">+20 pts</div>
       </div>
@@ -559,7 +744,7 @@
         <div class="game-icon">&#129504;</div>
         <div class="game-info">
           <div class="game-name">Campus Quiz</div>
-          <div class="game-desc">Test your knowledge. Multiple choice questions.</div>
+          <div class="game-desc">Test your AFIT knowledge with trivia questions.</div>
         </div>
         <div class="game-points">+5 pts each</div>
       </div>
@@ -567,7 +752,7 @@
         <div class="game-icon">&#128070;</div>
         <div class="game-info">
           <div class="game-name">Tap Challenge</div>
-          <div class="game-desc">Tap as fast as possible in 30 seconds!</div>
+          <div class="game-desc">Tap as fast as you can in 30 seconds!</div>
         </div>
         <div class="game-points">+1 pt/10 taps</div>
       </div>
@@ -583,7 +768,7 @@
         <button class="topbar-icon" onclick="shufflePuzzle()">&#x1F500;</button>
       </div>
     </div>
-    <div class="screen-content screen-content-notab" style="display:flex;flex-direction:column;align-items:center">
+    <div class="screen-content" style="display:flex;flex-direction:column;align-items:center">
       <div style="text-align:center;margin:0.5rem 0;font-size:0.85rem;color:var(--text-secondary)">
         Moves: <strong id="puzzle-moves" style="color:var(--primary)">0</strong>
         &nbsp;&nbsp; Time: <strong id="puzzle-time" style="color:var(--primary)">0s</strong>
@@ -591,9 +776,9 @@
       <div id="puzzle-board"></div>
       <div id="puzzle-win" style="display:none;text-align:center;margin-top:1rem">
         <div style="font-size:2.5rem">&#127881;</div>
-        <div style="font-size:1.1rem;font-weight:700;color:var(--success);margin-top:0.5rem">Puzzle Solved!</div>
-        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.3rem" id="puzzle-win-msg"></div>
-        <button class="btn btn-primary btn-sm" style="margin:0.75rem auto 0;width:auto;padding:0.6rem 1.5rem" onclick="shufflePuzzle()">Play Again</button>
+        <div style="font-size:1.1rem;font-weight:800;color:var(--success);margin-top:0.3rem">Puzzle Solved!</div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem" id="puzzle-win-msg"></div>
+        <button class="btn btn-primary btn-sm" style="margin:0.75rem auto 0" onclick="shufflePuzzle()">Play Again</button>
       </div>
     </div>
   </div>
@@ -604,12 +789,12 @@
       <div class="topbar-row">
         <button class="topbar-icon" onclick="showScreen('gamehub')">&#8592;</button>
         <div class="topbar-name" style="flex:1;text-align:center">&#129504; Campus Quiz</div>
-        <div style="color:rgba(255,255,255,0.9);font-size:0.85rem;font-weight:700" id="quiz-score-top">0 pts</div>
+        <div style="color:var(--primary);font-size:0.85rem;font-weight:800" id="quiz-score-top">0 pts</div>
       </div>
     </div>
-    <div class="screen-content screen-content-notab">
+    <div class="screen-content">
       <div id="quiz-container">
-        <div class="empty-state"><div class="empty-icon">&#129504;</div><div class="empty-title">Loading questions...</div></div>
+        <div class="empty-state"><div class="empty-icon">&#129504;</div><div class="empty-title">Loading quiz...</div></div>
       </div>
     </div>
   </div>
@@ -623,8 +808,8 @@
         <div style="width:38px"></div>
       </div>
     </div>
-    <div class="screen-content screen-content-notab" style="display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div id="tap-status" style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:1.5rem;text-align:center">Tap the button as fast as you can in 30 seconds!</div>
+    <div class="screen-content" style="display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div id="tap-status" style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:1.5rem;text-align:center">Tap the circle as fast as you can in 30 seconds!</div>
       <div id="tap-area" onclick="doTap()">
         <div class="tap-count" id="tap-count">0</div>
         <div class="tap-label">TAPS</div>
@@ -632,8 +817,8 @@
       </div>
       <div id="tap-result" style="display:none;text-align:center;margin-top:1.5rem">
         <div style="font-size:2.5rem">&#127881;</div>
-        <div style="font-size:1.1rem;font-weight:700;color:var(--success);margin-top:0.5rem" id="tap-result-msg"></div>
-        <button class="btn btn-primary btn-sm" style="margin:0.75rem auto 0;width:auto;padding:0.6rem 1.5rem" onclick="resetTap()">Play Again</button>
+        <div style="font-size:1.1rem;font-weight:800;color:var(--success);margin-top:0.3rem" id="tap-result-msg"></div>
+        <button class="btn btn-primary btn-sm" style="margin:0.75rem auto 0" onclick="resetTap()">Play Again</button>
       </div>
     </div>
   </div>
@@ -652,8 +837,8 @@
       <button class="admin-tab" onclick="loadLeaderboard('quiz',this)">&#129504; Quiz</button>
       <button class="admin-tab" onclick="loadLeaderboard('tap',this)">&#128070; Tap</button>
     </div>
-    <div class="screen-content screen-content-notab" id="lb-list">
-      <div class="empty-state"><div class="empty-icon">&#127942;</div><div class="empty-title">Loading...</div></div>
+    <div class="screen-content" id="lb-list">
+      <div class="empty-state"><div class="empty-icon">&#127942;</div><div class="empty-title">Loading leaderboard...</div></div>
     </div>
   </div>
 
@@ -664,7 +849,7 @@
         <button class="topbar-icon" onclick="doLogout()">&#8592;</button>
         <div class="topbar-name" style="flex:1;text-align:center">&#128737; Admin Panel</div>
         <button class="topbar-icon" onclick="toggleTheme()">&#127769;</button>
-        <button class="topbar-icon" style="background:rgba(255,82,82,0.2)" onclick="doLogout()">&#x1F6AA;</button>
+        <button class="topbar-icon" style="background:rgba(255,82,82,0.15);color:var(--danger)" onclick="doLogout()">&#x1F6AA;</button>
       </div>
     </div>
     <div class="admin-tab-bar">
@@ -679,37 +864,37 @@
       <div id="pending-drivers-list"><div class="empty-state"><div class="empty-icon">&#128100;</div><div class="empty-title">No pending drivers</div></div></div>
     </div>
     <div class="admin-section" id="admin-lostfound">
-      <button class="btn btn-primary btn-sm" style="margin:0.75rem 0;width:auto;padding:0.6rem 1.2rem" onclick="showAdminPostLF()">+ Post Item</button>
-      <div id="admin-lf-list"><div class="empty-state"><div class="empty-icon">&#128269;</div><div class="empty-title">Loading...</div></div></div>
+      <button class="btn btn-primary btn-sm" style="margin-bottom:0.75rem" onclick="showAdminPostLF()">+ Post Lost/Found Item</button>
+      <div id="admin-lf-list"><div class="empty-state"><div class="empty-icon">&#128269;</div><div class="empty-title">Loading items...</div></div></div>
     </div>
     <div class="admin-section" id="admin-rides">
       <div class="section-title">All Ride Requests</div>
-      <div id="admin-rides-list"><div class="empty-state"><div class="empty-icon">&#x1F68C;</div><div class="empty-title">Loading...</div></div></div>
+      <div id="admin-rides-list"><div class="empty-state"><div class="empty-icon">&#x1F68C;</div><div class="empty-title">Loading rides...</div></div></div>
     </div>
     <div class="admin-section" id="admin-notifs">
       <div class="card">
-        <div class="card-title">&#128226; Send Notification</div>
+        <div class="card-title">&#128226; Broadcast Notification</div>
         <div class="form-group">
           <label class="form-label">Title</label>
-          <input class="form-input" id="notif-title-admin" placeholder="Notification title..."/>
+          <input class="form-input" id="notif-title-admin" placeholder="Important announcement..."/>
         </div>
         <div class="form-group">
           <label class="form-label">Message</label>
-          <textarea class="form-input" id="notif-body-admin" placeholder="Notification message..."></textarea>
+          <textarea class="form-input" id="notif-body-admin" rows="3" placeholder="Notification text for all users..."></textarea>
         </div>
         <button class="btn btn-primary" onclick="sendAdminNotif()">Send to All Users</button>
       </div>
     </div>
     <div class="admin-section" id="admin-ads">
       <div class="card">
-        <div class="card-title">&#128226; Post New Ad</div>
+        <div class="card-title">&#128226; Create Ad Banner</div>
         <div class="form-group">
           <label class="form-label">Title</label>
           <input class="form-input" id="ad-title" placeholder="Ad title..."/>
         </div>
         <div class="form-group">
           <label class="form-label">Body Text</label>
-          <input class="form-input" id="ad-body" placeholder="Ad description..."/>
+          <input class="form-input" id="ad-body" placeholder="Ad message..."/>
         </div>
         <div class="form-group">
           <label class="form-label">Image URL (optional)</label>
@@ -722,16 +907,23 @@
         <button class="btn btn-primary" onclick="postAd()">Post Ad</button>
       </div>
       <div class="section-title">Active Ads</div>
-      <div id="admin-ads-list"><div class="empty-state"><div class="empty-icon">&#128226;</div><div class="empty-title">No ads yet</div></div></div>
+      <div id="admin-ads-list"><div class="empty-state"><div class="empty-icon">&#128226;</div><div class="empty-title">No ads posted yet</div></div></div>
     </div>
   </div>
 
 </div><!-- /#app -->
 
+<!-- FULL IMAGE LIGHTBOX MODAL -->
+<div class="modal-overlay" id="modal-image-viewer" style="background:rgba(0,0,0,0.92);align-items:center;justify-content:center" onclick="closeModal('modal-image-viewer')">
+  <div style="position:relative;max-width:90vw;max-height:85vh;text-align:center" onclick="event.stopPropagation()">
+    <img id="image-viewer-src" src="" style="max-width:100%;max-height:80vh;border-radius:12px;object-fit:contain;box-shadow:0 10px 40px rgba(0,0,0,0.5)" alt="Preview"/>
+    <button class="btn btn-secondary btn-sm" style="margin-top:1rem;color:white;border-color:rgba(255,255,255,0.4)" onclick="closeModal('modal-image-viewer')">&#10005; Close Photo</button>
+  </div>
+</div>
+
 <!-- MODALS -->
 <div class="modal-overlay" id="modal-forgot">
   <div class="modal-sheet">
-    <div class="modal-handle"></div>
     <div class="modal-title">&#128273; Forgot Password</div>
     <div class="error-msg" id="forgot-error"></div>
     <div class="form-group">
@@ -740,38 +932,37 @@
     </div>
     <button class="btn btn-primary" onclick="doForgotPassword()">Send Reset Email</button>
     <button class="btn btn-secondary" style="margin-top:0.75rem" onclick="closeModal('modal-forgot')">Cancel</button>
-    <div id="forgot-success" style="display:none;text-align:center;padding:1rem;color:var(--success);font-weight:600">&#9989; Reset email sent! Check your inbox.</div>
+    <div id="forgot-success" style="display:none;text-align:center;padding:1rem;color:var(--success);font-weight:700">&#9989; Reset email sent! Check your inbox.</div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-lf-report">
   <div class="modal-sheet">
-    <div class="modal-handle"></div>
     <div class="modal-title">&#128269; Report Lost / Found Item</div>
     <div class="error-msg" id="lf-error"></div>
     <div class="form-group">
-      <label class="form-label">Type</label>
-      <select class="form-input form-select" id="lf-type">
-        <option value="lost">Lost Item</option><option value="found">Found Item</option>
+      <label class="form-label">Report Type</label>
+      <select class="form-input" id="lf-type">
+        <option value="lost">Lost Item</option>
+        <option value="found">Found Item</option>
       </select>
     </div>
     <div class="form-group">
       <label class="form-label">Item Name</label>
-      <input class="form-input" id="lf-name" placeholder="e.g. Black backpack"/>
+      <input class="form-input" id="lf-name" placeholder="e.g. Student ID Card, Backpack"/>
     </div>
     <div class="form-group">
       <label class="form-label">Description</label>
-      <textarea class="form-input" id="lf-desc" placeholder="Describe the item, location..."></textarea>
+      <textarea class="form-input" id="lf-desc" rows="2" placeholder="Color, brand, distinguishing marks..."></textarea>
     </div>
     <div class="form-group">
-      <label class="form-label">Location</label>
-      <input class="form-input" id="lf-location" placeholder="e.g. Near the library"/>
+      <label class="form-label">Campus Location</label>
+      <input class="form-input" id="lf-location" placeholder="e.g. Near AFIT Gates"/>
     </div>
     <div class="form-group">
-      <label class="form-label">Photo (optional)</label>
-      <label class="file-upload-label" for="lf-photo">&#128247; Tap to add photo</label>
-      <input type="file" id="lf-photo" accept="image/*" style="display:none" onchange="previewLFPhoto(this)"/>
-      <img id="lf-preview" src="" alt="Preview"/>
+      <label class="form-label">Attach Photo (Optional)</label>
+      <input type="file" id="lf-photo-input" accept="image/*" class="form-input" onchange="previewLFPhoto(this)"/>
+      <img id="lf-preview" src="" style="display:none;width:100%;max-height:140px;object-fit:cover;border-radius:10px;margin-top:0.5rem" alt="Preview"/>
     </div>
     <button class="btn btn-primary" onclick="submitLFReport()">Submit Report</button>
     <button class="btn btn-secondary" style="margin-top:0.75rem" onclick="closeModal('modal-lf-report')">Cancel</button>
@@ -780,18 +971,18 @@
 
 <div class="modal-overlay" id="modal-admin-lf">
   <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-title">&#128269; Post Lost &amp; Found</div>
+    <div class="modal-title">&#128269; Post Lost / Found (Admin)</div>
     <div class="form-group">
       <label class="form-label">Type</label>
-      <select class="form-input form-select" id="admin-lf-type">
-        <option value="lost">Lost Item</option><option value="found">Found Item</option>
+      <select class="form-input" id="admin-lf-type">
+        <option value="lost">Lost Item</option>
+        <option value="found">Found Item</option>
       </select>
     </div>
-    <div class="form-group"><label class="form-label">Item Name</label><input class="form-input" id="admin-lf-name" placeholder="e.g. Student ID card"/></div>
-    <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="admin-lf-desc" placeholder="Describe the item..."></textarea></div>
-    <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="admin-lf-location" placeholder="Location found/lost"/></div>
-    <div class="form-group"><label class="form-label">Contact Name</label><input class="form-input" id="admin-lf-contact" placeholder="Admin contact name"/></div>
+    <div class="form-group"><label class="form-label">Item Name</label><input class="form-input" id="admin-lf-name" placeholder="Item name"/></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="admin-lf-desc" rows="2" placeholder="Description"></textarea></div>
+    <div class="form-group"><label class="form-label">Location</label><input class="form-input" id="admin-lf-location" placeholder="Location"/></div>
+    <div class="form-group"><label class="form-label">Contact Name</label><input class="form-input" id="admin-lf-contact" placeholder="Admin/Office contact"/></div>
     <div class="form-group"><label class="form-label">Image URL (optional)</label><input class="form-input" id="admin-lf-img" placeholder="https://..."/></div>
     <button class="btn btn-primary" onclick="submitAdminLF()">Post Item</button>
     <button class="btn btn-secondary" style="margin-top:0.75rem" onclick="closeModal('modal-admin-lf')">Cancel</button>
@@ -800,61 +991,66 @@
 
 <div class="modal-overlay" id="modal-change-password">
   <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-title">&#128273; Thank You &mdash; Change Password</div>
+    <div class="modal-title">&#128273; Change Password</div>
     <div class="error-msg" id="cp-error"></div>
     <div class="form-group">
       <label class="form-label">New Password</label>
       <div style="position:relative">
-        <input class="form-input has-eye" type="password" id="cp-new" placeholder="New password (min 6 chars)"/>
-        <button class="eye-btn" type="button" onclick="toggleEye('cp-new',this)">&#128065;</button>
+        <input class="form-input has-eye" type="password" id="cp-new" placeholder="Min 6 characters"/>
+        <button class="eye-btn" type="button" onclick="toggleEye('cp-new',this)" aria-label="Toggle password visibility">
+          <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button>
       </div>
     </div>
     <div class="form-group">
       <label class="form-label">Confirm Password</label>
       <div style="position:relative">
         <input class="form-input has-eye" type="password" id="cp-confirm" placeholder="Confirm new password"/>
-        <button class="eye-btn" type="button" onclick="toggleEye('cp-confirm',this)">&#128065;</button>
+        <button class="eye-btn" type="button" onclick="toggleEye('cp-confirm',this)" aria-label="Toggle password visibility">
+          <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button>
       </div>
     </div>
     <button class="btn btn-primary" onclick="doChangePassword()">Update Password</button>
     <button class="btn btn-secondary" style="margin-top:0.75rem" onclick="closeModal('modal-change-password')">Cancel</button>
-    <div id="cp-success" style="display:none;text-align:center;padding:1rem;color:var(--success);font-weight:600">&#9989; Password updated!</div>
+    <div id="cp-success" style="display:none;text-align:center;padding:1rem;color:var(--success);font-weight:700">&#9989; Password updated!</div>
   </div>
 </div>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, updatePassword } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs, onSnapshot, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getDatabase, ref as rtdbRef, set as rtdbSet, update as rtdbUpdate } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, limit, getDocs, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getDatabase, ref as rtdbRef, set as rtdbSet, update as rtdbUpdate, onValue as rtdbOnValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const FB = initializeApp({
-  apiKey:"AIzaSyAF_BdwMdTDqUd1_A5WxotigT2byEz49U4",
-  authDomain:"afit-shuttle-system.firebaseapp.com",
-  projectId:"afit-shuttle-system",
-  storageBucket:"afit-shuttle-system.firebasestorage.app",
-  messagingSenderId:"419651451775",
-  appId:"1:419651451775:android:c1f0f7f294263a9015b84a",
-  databaseURL:"https://afit-shuttle-system-default-rtdb.firebaseio.com"
+  apiKey: "AIzaSyAF_BdwMdTDqUd1_A5WxotigT2byEz49U4",
+  authDomain: "afit-shuttle-system.firebaseapp.com",
+  projectId: "afit-shuttle-system",
+  storageBucket: "afit-shuttle-system.firebasestorage.app",
+  messagingSenderId: "419651451775",
+  appId: "1:419651451775:android:c1f0f7f294263a9015b84a",
+  databaseURL: "https://afit-shuttle-system-default-rtdb.firebaseio.com"
 });
+
 const auth = getAuth(FB);
 const db = getFirestore(FB);
 const rtdb = getDatabase(FB);
 
-// Location Codes (1 to 12)
-const LOCATION_CODES = {
-  'AFIT Gates': 1,
-  '45x1 Hostel': 2,
-  'Old Girls Hostel': 3,
-  'TETFUND Hostel': 4,
-  'BK': 5,
-  'Boys Hostel': 6,
-  'Alfa Hall': 7,
-  'EED': 8,
-  'AFIT Mosque': 9,
-  'New Mechanical': 10,
-  'Centre of Entrepreneurship': 11,
-  'Hall A': 12
+// 12 Campus Locations with Geographic Coordinates (AFIT Kaduna Campus Area)
+const AFIT_LOCATIONS = {
+  'AFIT Gates':                 { code: 1,  lat: 10.5100, lng: 7.4130, category: 'Main Entrance' },
+  '45x1 Hostel':                { code: 2,  lat: 10.5115, lng: 7.4140, category: 'Hostel' },
+  'Old Girls Hostel':           { code: 3,  lat: 10.5122, lng: 7.4150, category: 'Hostel' },
+  'TETFUND Hostel':             { code: 4,  lat: 10.5130, lng: 7.4160, category: 'Hostel' },
+  'BK':                         { code: 5,  lat: 10.5110, lng: 7.4170, category: 'Academic' },
+  'Boys Hostel':                { code: 6,  lat: 10.5140, lng: 7.4180, category: 'Hostel' },
+  'Alfa Hall':                  { code: 7,  lat: 10.5108, lng: 7.4185, category: 'Lecture Hall' },
+  'EED':                        { code: 8,  lat: 10.5095, lng: 7.4175, category: 'Centre' },
+  'AFIT Mosque':                { code: 9,  lat: 10.5098, lng: 7.4160, category: 'Worship' },
+  'New Mechanical':             { code: 10, lat: 10.5125, lng: 7.4200, category: 'Engineering' },
+  'Centre of Entrepreneurship': { code: 11, lat: 10.5090, lng: 7.4190, category: 'Centre' },
+  'Hall A':                     { code: 12, lat: 10.5085, lng: 7.4170, category: 'Auditorium' }
 };
 
 // Deterministic Pickup ID generator matching Flutter user_dashboard.dart
@@ -873,6 +1069,7 @@ function generatePickupId(uid) {
 // Globals
 let currentUser = null;
 let currentUserData = null;
+let activeRideData = null;
 let lfAllItems = [];
 let quizQuestions = [];
 let quizIndex = 0;
@@ -890,25 +1087,44 @@ let tapSeconds = 30;
 let tapRunning = false;
 let lbCurrentType = 'puzzle';
 
+// Leaflet Map globals
+let trackMap = null;
+let mapShuttleMarker = null;
+let mapPickupMarker = null;
+let mapDestMarker = null;
+let mapRouteLine = null;
+let mapLocationsLayer = null;
+
+// --- EYE TOGGLE (Clean SVG Vector) ---
+const SVG_EYE = '<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+const SVG_EYE_SLASH = '<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+
+window.toggleEye = function(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.innerHTML = SVG_EYE_SLASH;
+    btn.setAttribute('aria-label', 'Hide password');
+  } else {
+    inp.type = 'password';
+    btn.innerHTML = SVG_EYE;
+    btn.setAttribute('aria-label', 'Show password');
+  }
+};
+
 // --- THEME ---
 window.toggleTheme = function() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
   localStorage.setItem('assa-theme', isDark ? 'light' : 'dark');
-  document.querySelector('#screen-dashboard .topbar-icon[onclick="toggleTheme()"]').textContent = isDark ? '\u{1F319}' : '\u2600\uFE0F';
+  const btn = document.querySelector('#screen-dashboard .topbar-icon[onclick="toggleTheme()"]');
+  if (btn) btn.textContent = isDark ? '🌙' : '☀️';
 };
 (function() {
   const t = localStorage.getItem('assa-theme') || 'light';
   document.documentElement.setAttribute('data-theme', t);
 })();
-
-// --- EYE TOGGLE ---
-window.toggleEye = function(inputId, btn) {
-  const inp = document.getElementById(inputId);
-  if (!inp) return;
-  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '\u{1F648}'; }
-  else { inp.type = 'password'; btn.textContent = '\u{1F441}\uFE0F'; }
-};
 
 // --- SCREEN MANAGEMENT ---
 window.showScreen = function(name) {
@@ -916,13 +1132,16 @@ window.showScreen = function(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('screen-' + name);
   if (el) el.classList.add('active');
+  
+  if (name === 'dashboard') { setupDashboard(); loadRecentRequests(); checkActiveRide(); }
   if (name === 'myrequests') loadMyRequests();
   if (name === 'notifications') loadNotifications();
   if (name === 'lostfound') loadLostFound();
   if (name === 'report') loadReports();
   if (name === 'gamehub') loadGamePoints();
   if (name === 'settings') loadSettings();
-  if (name === 'leaderboard') loadLeaderboard(lbCurrentType, document.querySelector('#lb-list'));
+  if (name === 'leaderboard') loadLeaderboard(lbCurrentType);
+  if (name === 'tracking') initTrackingMap();
   if (name === 'admin') { loadAdminDrivers(); loadAdminRides(); loadAdminAds(); }
 };
 
@@ -944,8 +1163,12 @@ window.showChangePassword = function() {
   document.getElementById('cp-success').style.display = 'none';
   document.getElementById('modal-change-password').classList.add('show');
 };
+window.viewFullImage = function(src) {
+  if (!src) return;
+  document.getElementById('image-viewer-src').src = src;
+  document.getElementById('modal-image-viewer').classList.add('show');
+};
 
-// Close modal on overlay click
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove('show'); });
 });
@@ -982,9 +1205,9 @@ window.doRegister = async function() {
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     const uid = cred.user.uid;
     const pickupId = generatePickupId(uid);
-    await setDoc(doc(db,'users',uid), {
-      name,
-      email,
+    await setDoc(doc(db, 'users', uid), {
+      name: name,
+      email: email,
       role: 'user',
       pickupId: pickupId,
       platform: 'pwa',
@@ -1002,7 +1225,7 @@ window.doForgotPassword = async function() {
   const errEl = document.getElementById('forgot-error');
   const success = document.getElementById('forgot-success');
   errEl.classList.remove('show'); success.style.display = 'none';
-  if (!email) { errEl.textContent = 'Please enter your email.'; errEl.classList.add('show'); return; }
+  if (!email) { errEl.textContent = 'Please enter your email address.'; errEl.classList.add('show'); return; }
   try {
     await sendPasswordResetEmail(auth, email);
     success.style.display = 'block';
@@ -1035,7 +1258,7 @@ window.doChangePassword = async function() {
   }
 };
 
-// AUTH STATE - Instantaneous Non-Blocking Navigation with Deterministic Pickup ID Sync
+// AUTH STATE LISTENER
 onAuthStateChanged(auth, async function(user) {
   if (!user) {
     currentUser = null;
@@ -1054,7 +1277,6 @@ onAuthStateChanged(auth, async function(user) {
     pickupId: deterministicPid
   };
 
-  // 1. Instant screen transition using cached profile if valid
   try {
     const raw = localStorage.getItem('assa-user-profile');
     if (raw) {
@@ -1072,7 +1294,7 @@ onAuthStateChanged(auth, async function(user) {
     showScreen('dashboard');
   }
 
-  // 2. Fetch and sync Firestore user profile in background
+  // Fetch Firestore doc in background
   try {
     const userRef = doc(db, 'users', user.uid);
     const snap = await getDoc(userRef);
@@ -1096,9 +1318,7 @@ onAuthStateChanged(auth, async function(user) {
     }
     localStorage.setItem('assa-user-profile', JSON.stringify(currentUserData));
     setupDashboard();
-  } catch(e) {
-    console.warn('Background profile sync notice:', e);
-  }
+  } catch(err) {}
 });
 
 // --- DASHBOARD ---
@@ -1112,13 +1332,45 @@ function setupDashboard() {
   document.getElementById('dash-avatar').textContent = name[0].toUpperCase();
   document.getElementById('dash-pickup').textContent = currentUserData.pickupId || generatePickupId(currentUser?.uid);
   loadAds();
-  loadRecentRequests();
   loadUnreadNotifCount();
+  checkActiveRide();
 }
+
+// CHECK ACTIVE RIDE FOR DASHBOARD BANNER
+async function checkActiveRide() {
+  if (!currentUser) return;
+  try {
+    const snap = await getDocs(query(collection(db, 'ride_requests'), where('userId', '==', currentUser.uid)));
+    const list = [];
+    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+    // Filter for active rides: status 0 (Pending), 1 (Assigned), 2 (Accepted)
+    const active = list.find(r => r.status === 0 || r.status === 1 || r.status === 2);
+    const banner = document.getElementById('dash-active-ride');
+    if (active) {
+      activeRideData = active;
+      banner.style.display = 'block';
+      const statusMap = { 0: '🟡 WAITING FOR SHUTTLE', 1: '🟢 SHUTTLE ON THE WAY', 2: '🟢 SHUTTLE ARRIVED' };
+      document.getElementById('active-ride-status-text').textContent = statusMap[active.status] || 'ACTIVE RIDE';
+      document.getElementById('active-ride-route').innerHTML = (active.pickupLocation || '?') + ' &rarr; ' + (active.destination || '?');
+      const shuttle = active.shuttleId || active.shuttleIdFeedback || active.shuttle_id || '';
+      document.getElementById('active-ride-shuttle').textContent = shuttle ? ('🛺 Shuttle: ' + shuttle) : '🛺 Shuttle: Finding driver...';
+      document.getElementById('active-ride-pid').textContent = active.pickupId || currentUserData?.pickupId || '---';
+    } else {
+      activeRideData = null;
+      banner.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+window.cancelActiveRide = async function() {
+  if (!activeRideData) return;
+  await cancelRequest(activeRideData.bookingId || activeRideData.id);
+  checkActiveRide();
+};
 
 async function loadAds() {
   try {
-    const snap = await getDocs(query(collection(db,'ads'), where('isActive','==',true)));
+    const snap = await getDocs(query(collection(db, 'ads'), where('isActive', '==', true)));
     const zone = document.getElementById('ad-zone');
     zone.innerHTML = '';
     snap.forEach(d => {
@@ -1129,22 +1381,25 @@ async function loadAds() {
         const img = document.createElement('img');
         img.src = ad.imageUrl;
         img.style.cssText = 'width:100%;display:block;max-height:160px;object-fit:cover;';
-        img.onerror = () => div.style.display='none';
+        img.onerror = () => div.style.display = 'none';
         div.appendChild(img);
       } else {
         div.style.padding = '1rem';
-        div.innerHTML = '<div style="color:white;font-weight:700">' + (ad.title||'') + '</div><div style="color:rgba(255,255,255,0.8);font-size:0.82rem;margin-top:0.25rem">' + (ad.body||'') + '</div>';
+        div.innerHTML = '<div style="color:white;font-weight:700">' + (ad.title||'') + '</div><div style="color:rgba(255,255,255,0.85);font-size:0.82rem;margin-top:0.25rem">' + (ad.body||'') + '</div>';
       }
-      if (ad.linkUrl) { div.style.cursor='pointer'; div.onclick=()=>window.open(ad.linkUrl,'_blank'); }
+      if (ad.linkUrl) {
+        div.style.cursor = 'pointer';
+        div.onclick = () => window.open(ad.linkUrl, '_blank');
+      }
       zone.appendChild(div);
     });
-  } catch(e) { console.error('Ads error', e); }
+  } catch(e) {}
 }
 
 async function loadRecentRequests() {
   if (!currentUser) return;
   try {
-    const snap = await getDocs(query(collection(db, 'ride_requests'), where('userId', '==', currentUser.uid), limit(5)));
+    const snap = await getDocs(query(collection(db, 'ride_requests'), where('userId', '==', currentUser.uid)));
     const el = document.getElementById('dash-recent');
     if (snap.empty) {
       el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F68C;</div><div class="empty-title">No recent rides</div><div class="empty-sub">Make your first request!</div></div>';
@@ -1161,9 +1416,7 @@ async function loadRecentRequests() {
     list.slice(0, 3).forEach(r => {
       el.innerHTML += makeRequestCard(r, r.id, true);
     });
-  } catch(e) {
-    console.error('Recent requests error', e);
-  }
+  } catch(e) {}
 }
 
 function makeRequestCard(r, id, compact) {
@@ -1173,16 +1426,30 @@ function makeRequestCard(r, id, compact) {
   const bd = badgeMap[r.status] || 'badge-pending';
   const shuttle = r.shuttleId || r.shuttleIdFeedback || r['AFIT KEKE_id'] || r.shuttle_id || '';
   const canCancel = r.status === 0 || r.status === 1 || r.status === 2;
+  const isTracking = r.status === 0 || r.status === 1 || r.status === 2;
+  const bId = String(r.bookingId || id || '');
+
+  let actionsHtml = '<div style="display:flex;gap:0.5rem;margin-top:0.65rem">';
+  if (isTracking) {
+    actionsHtml += '<button class="btn btn-primary btn-sm" style="flex:1" data-ride-id="' + bId + '" onclick="openLiveTrackingWithRide(this.dataset.rideId)">&#128506;&#65039; Track Shuttle Map</button>';
+  }
+  if (canCancel) {
+    actionsHtml += '<button class="btn btn-danger btn-sm" data-ride-id="' + bId + '" onclick="cancelRequest(this.dataset.rideId)">&#10005; Cancel</button>';
+  }
+  actionsHtml += '</div>';
 
   return '<div class="request-item">' +
-    '<div class="request-route">' + (r.pickupLocation||'?') + ' &rarr; ' + (r.destination||'?') + '</div>' +
-    '<div class="request-meta">' +
+    '<div class="request-route">' +
+      '<span>' + (r.pickupLocation||'?') + ' &rarr; ' + (r.destination||'?') + '</span>' +
       '<span class="badge ' + bd + '">' + st + '</span>' +
-      (shuttle && shuttle !== '0' ? '<span>Shuttle: ' + shuttle + '</span>' : '') +
-      (r.pickupId ? '<span>ID: ' + r.pickupId + '</span>' : '') +
     '</div>' +
-    (shuttle && shuttle !== '0' && (r.status === 1 || r.status === 2) ? '<div style="font-size:0.82rem;color:var(--success);font-weight:700;margin-top:0.35rem">&#128652; Shuttle ' + shuttle + ' accepted! On the way.</div>' : '') +
-    (canCancel ? '<button class="btn btn-danger btn-sm" style="margin-top:0.65rem;width:auto;padding:0.35rem 0.85rem;font-size:0.75rem;border-radius:8px" onclick="cancelRequest(\'' + (r.bookingId || id) + '\')">&#10005; Cancel Request</button>' : '') +
+    '<div class="request-meta">' +
+      (shuttle && shuttle !== '0' ? '<span style="font-weight:700;color:var(--primary)">&#128652; Shuttle: ' + shuttle + '</span>' : '<span>&#128652; Shuttle: Finding driver...</span>') +
+      (r.pickupId ? '<span>ID: <strong>' + r.pickupId + '</strong></span>' : '') +
+      '<span>' + formatTime(r.timestamp || r.bookedAt || r.createdAt) + '</span>' +
+    '</div>' +
+    (shuttle && shuttle !== '0' && (r.status === 1 || r.status === 2) ? '<div style="font-size:0.82rem;color:var(--success);font-weight:700;margin:0.35rem 0">&#128652; Shuttle ' + shuttle + ' accepted! On the way.</div>' : '') +
+    actionsHtml +
   '</div>';
 }
 
@@ -1221,8 +1488,8 @@ window.doRequest = async function() {
   btn.disabled = true;
 
   try {
-    const pickupCode = LOCATION_CODES[pickup] || 1;
-    const destCode = LOCATION_CODES[dest] || 1;
+    const pickupInfo = AFIT_LOCATIONS[pickup] || { code: 1, lat: 10.5100, lng: 7.4130 };
+    const destInfo = AFIT_LOCATIONS[dest] || { code: 1, lat: 10.5100, lng: 7.4130 };
     const pid = currentUserData?.pickupId || generatePickupId(currentUser.uid);
     const bookingId = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
 
@@ -1235,8 +1502,12 @@ window.doRequest = async function() {
       onlineUUID: pid,
       pickupLocation: pickup,
       destination: dest,
-      pickup_code: pickupCode,
-      destination_code: destCode,
+      pickup_code: pickupInfo.code,
+      destination_code: destInfo.code,
+      pickup_lat: pickupInfo.lat,
+      pickup_lng: pickupInfo.lng,
+      dest_lat: destInfo.lat,
+      dest_lng: destInfo.lng,
       rideType: 'Shared',
       rideTypeName: 'Shared',
       ride_type: 0,
@@ -1250,10 +1521,7 @@ window.doRequest = async function() {
       requestType: 'online',
       isSynced: true,
       gatewayForwarded: false,
-      groupKey: pickupCode + '_' + destCode,
-      intentStatus: 'none',
-      assignedAt: null,
-      gatewayId: '',
+      groupKey: pickupInfo.code + '_' + destInfo.code,
       timestamp: serverTimestamp(),
       bookedAt: serverTimestamp(),
       createdAt: serverTimestamp()
@@ -1281,6 +1549,7 @@ window.doRequest = async function() {
 
     listenForAcceptance(bookingId);
     loadRecentRequests();
+    checkActiveRide();
   } catch(e) {
     errEl.textContent = 'Error submitting request: ' + e.message;
     errEl.classList.add('show');
@@ -1296,6 +1565,7 @@ function listenForAcceptance(reqId) {
     if (data.status === 1 || data.status === 2) {
       const sh = data.shuttleId || data.shuttleIdFeedback || data.shuttle_id || '';
       document.getElementById('req-shuttle-info').textContent = 'Shuttle ' + sh + ' accepted your request!';
+      checkActiveRide();
       unsub();
     }
   });
@@ -1324,12 +1594,13 @@ window.cancelRequest = async function(reqId) {
     alert('Ride request cancelled.');
     loadMyRequests();
     loadRecentRequests();
+    checkActiveRide();
   } catch(err) {
     alert('Failed to cancel request: ' + err.message);
   }
 };
 
-// --- MY REQUESTS ---
+// --- MY REQUESTS (Resilient Query) ---
 window.loadMyRequests = async function() {
   if (!currentUser) return;
   const el = document.getElementById('myrequests-list');
@@ -1356,37 +1627,175 @@ window.loadMyRequests = async function() {
   }
 };
 
+// --- INTERACTIVE LEAFLET SHUTTLE TRACKING MAP ---
+window.openLiveTracking = function() {
+  showScreen('tracking');
+};
+
+window.openLiveTrackingWithRide = async function(rideId) {
+  showScreen('tracking');
+  try {
+    const snap = await getDoc(doc(db, 'ride_requests', rideId));
+    if (snap.exists()) {
+      activeRideData = { id: snap.id, ...snap.data() };
+      updateTrackingMap();
+    }
+  } catch(e) {}
+};
+
+window.refreshTrackingMap = function() {
+  if (trackMap) {
+    trackMap.setView([10.5105, 7.4165], 16);
+    updateTrackingMap();
+  }
+};
+
+function initTrackingMap() {
+  setTimeout(() => {
+    if (!trackMap) {
+      trackMap = L.map('tracking-map', { zoomControl: false }).setView([10.5105, 7.4165], 16);
+      L.control.zoom({ position: 'topright' }).addTo(trackMap);
+
+      // OpenStreetMap Tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(trackMap);
+
+      // Render 12 Campus Landmarks
+      mapLocationsLayer = L.layerGroup().addTo(trackMap);
+      Object.keys(AFIT_LOCATIONS).forEach(name => {
+        const loc = AFIT_LOCATIONS[name];
+        const iconHtml = '<div style="background:#0D47A1;color:white;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:700;white-space:nowrap;border:1.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)">' + name + '</div>';
+        const customIcon = L.divIcon({ html: iconHtml, className: 'campus-pin', iconSize: [80, 20], iconAnchor: [40, 10] });
+        L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(mapLocationsLayer);
+      });
+    } else {
+      trackMap.invalidateSize();
+    }
+    updateTrackingMap();
+  }, 200);
+}
+
+function updateTrackingMap() {
+  if (!trackMap) return;
+
+  const card = document.getElementById('map-status-card');
+  const routeText = document.getElementById('map-route-text');
+  const statusBadge = document.getElementById('map-status-badge');
+  const shuttleText = document.getElementById('map-shuttle-text');
+  const etaText = document.getElementById('map-eta-text');
+
+  if (activeRideData && (activeRideData.status === 0 || activeRideData.status === 1 || activeRideData.status === 2)) {
+    const pickupName = activeRideData.pickupLocation || 'AFIT Gates';
+    const destName = activeRideData.destination || 'Hall A';
+    const pLoc = AFIT_LOCATIONS[pickupName] || { lat: 10.5100, lng: 7.4130 };
+    const dLoc = AFIT_LOCATIONS[destName] || { lat: 10.5085, lng: 7.4170 };
+
+    routeText.innerHTML = pickupName + ' &rarr; ' + destName;
+    const isAssigned = activeRideData.status === 1 || activeRideData.status === 2;
+    statusBadge.textContent = isAssigned ? 'SHUTTLE ON THE WAY' : 'PENDING DISPATCH';
+    statusBadge.className = isAssigned ? 'badge badge-assigned' : 'badge badge-pending';
+    
+    const shId = activeRideData.shuttleId || activeRideData.shuttleIdFeedback || 'A002';
+    shuttleText.innerHTML = isAssigned 
+      ? ('&#128652; Shuttle <strong>' + shId + '</strong> &bull; Passenger ID: <strong>' + (activeRideData.pickupId||'---') + '</strong>')
+      : '&#128652; Awaiting driver acceptance &bull; ID: <strong>' + (activeRideData.pickupId||'---') + '</strong>';
+    etaText.textContent = isAssigned ? 'ETA ~3 mins' : 'Locating shuttle...';
+
+    // Remove existing markers
+    if (mapPickupMarker) trackMap.removeLayer(mapPickupMarker);
+    if (mapDestMarker) trackMap.removeLayer(mapDestMarker);
+    if (mapShuttleMarker) trackMap.removeLayer(mapShuttleMarker);
+    if (mapRouteLine) trackMap.removeLayer(mapRouteLine);
+
+    // 1. Pickup Marker (Green Pin)
+    const pIcon = L.divIcon({
+      html: '<div style="background:#2E7D32;color:white;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:3px solid white;box-shadow:0 4px 10px rgba(0,0,0,0.4)">&#128205;</div>',
+      className: '', iconSize: [30, 30], iconAnchor: [15, 30]
+    });
+    mapPickupMarker = L.marker([pLoc.lat, pLoc.lng], { icon: pIcon }).addTo(trackMap).bindPopup('<b>Pickup: ' + pickupName + '</b>');
+
+    // 2. Dest Marker (Red Pin)
+    const dIcon = L.divIcon({
+      html: '<div style="background:#C62828;color:white;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:3px solid white;box-shadow:0 4px 10px rgba(0,0,0,0.4)">&#127937;</div>',
+      className: '', iconSize: [30, 30], iconAnchor: [15, 30]
+    });
+    mapDestMarker = L.marker([dLoc.lat, dLoc.lng], { icon: dIcon }).addTo(trackMap).bindPopup('<b>Destination: ' + destName + '</b>');
+
+    // 3. Route Polyline
+    mapRouteLine = L.polyline([[pLoc.lat, pLoc.lng], [dLoc.lat, dLoc.lng]], {
+      color: '#1565C0',
+      weight: 5,
+      dashArray: '8, 8',
+      opacity: 0.8
+    }).addTo(trackMap);
+
+    // 4. Shuttle Marker (Simulated/Live Vehicle Location)
+    const sLat = (pLoc.lat * 0.7 + dLoc.lat * 0.3) + 0.0008;
+    const sLng = (pLoc.lng * 0.7 + dLoc.lng * 0.3) - 0.0005;
+    const sIcon = L.divIcon({
+      html: '<div style="background:#0D47A1;color:white;padding:5px 8px;border-radius:20px;font-size:12px;font-weight:900;border:2px solid #90CAF9;box-shadow:0 4px 14px rgba(10,46,110,0.5);display:flex;align-items:center;gap:4px">&#128652; ' + shId + '</div>',
+      className: '', iconSize: [80, 28], iconAnchor: [40, 14]
+    });
+    mapShuttleMarker = L.marker([sLat, sLng], { icon: sIcon }).addTo(trackMap).bindPopup('<b>' + shId + ' (En Route)</b>');
+
+    trackMap.fitBounds(L.latLngBounds([[pLoc.lat, pLoc.lng], [dLoc.lat, dLoc.lng], [sLat, sLng]]), { padding: [60, 60] });
+  } else {
+    routeText.textContent = 'AFIT Campus • No Active Hails';
+    statusBadge.textContent = 'CAMPUS FLEET ACTIVE';
+    statusBadge.className = 'badge badge-completed';
+    shuttleText.textContent = '5 active shuttles circulating on campus.';
+    etaText.textContent = 'Ready to Request';
+  }
+}
+
 // --- NOTIFICATIONS ---
 window.loadNotifications = async function() {
   if (!currentUser) return;
   const el = document.getElementById('notif-list');
   el.innerHTML = '';
   try {
-    const snap = await getDocs(query(collection(db,'notifications'), where('userId','==',currentUser.uid), orderBy('createdAt','desc')));
-    if (snap.empty) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128276;</div><div class="empty-title">No notifications</div></div>'; return; }
-    snap.forEach(d => {
-      const n = d.data();
+    const snap = await getDocs(query(collection(db, 'notifications'), where('userId', '==', currentUser.uid)));
+    if (snap.empty) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128276;</div><div class="empty-title">No notifications</div></div>';
+      return;
+    }
+    const list = [];
+    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+    list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    list.forEach(n => {
       const div = document.createElement('div');
-      div.className = 'notif-item' + (!n.read ? ' unread' : '');
-      div.innerHTML = '<div class="notif-title">' + (n.title||'Notification') + '</div><div class="notif-body">' + (n.body||'') + '</div><div class="notif-time">' + formatTime(n.createdAt) + '</div>';
+      div.className = 'card' + (!n.read ? ' style="border-left:4px solid var(--primary)"' : '');
+      div.innerHTML = '<div style="font-weight:800;font-size:0.95rem">' + escape(n.title||'Notification') + '</div><div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.25rem">' + escape(n.body||'') + '</div><div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.4rem">' + formatTime(n.createdAt) + '</div>';
       el.appendChild(div);
-      if (!n.read) updateDoc(doc(db,'notifications',d.id), {read:true}).catch(()=>{});
+      if (!n.read) updateDoc(doc(db, 'notifications', n.id), { read: true }).catch(()=>{});
     });
     document.getElementById('notif-badge').classList.add('hidden');
-  } catch(e) { el.innerHTML = '<div class="empty-state"><div class="empty-title">Error loading notifications</div></div>'; }
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-title">Could not load notifications</div></div>';
+  }
 };
 
 window.markAllRead = async function() {
   if (!currentUser) return;
   try {
-    const snap = await getDocs(query(collection(db,'notifications'), where('userId','==',currentUser.uid), where('read','==',false)));
-    snap.forEach(d => updateDoc(doc(db,'notifications',d.id), {read:true}).catch(()=>{}));
+    const snap = await getDocs(query(collection(db, 'notifications'), where('userId', '==', currentUser.uid), where('read', '==', false)));
+    snap.forEach(d => updateDoc(doc(db, 'notifications', d.id), { read: true }).catch(()=>{}));
     document.getElementById('notif-badge').classList.add('hidden');
     loadNotifications();
   } catch(e) {}
 };
 
-// --- LOST & FOUND ---
+// --- LOST & FOUND (Fixed Image Display) ---
+function resolveImg(val) {
+  if (!val) return '';
+  val = String(val).trim();
+  if (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image/')) return val;
+  if (val.length > 50) return 'data:image/jpeg;base64,' + val;
+  return '';
+}
+
 window.loadLostFound = async function() {
   const el = document.getElementById('lostfound-list');
   el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#8987;</div><div class="empty-title">Loading items...</div></div>';
@@ -1403,7 +1812,6 @@ window.loadLostFound = async function() {
     });
     renderLF('all');
   } catch(e) {
-    console.error('L&F load error:', e);
     el.innerHTML = '<div class="empty-state"><div class="empty-title">Could not load items</div><div class="empty-sub">' + e.message + '</div></div>';
   }
 };
@@ -1429,21 +1837,26 @@ function renderLF(filter) {
     const type = (item.itemType || item.type || item.status || 'Lost').toUpperCase();
     const isLost = type.includes('LOST');
     const typeClass = isLost ? 'lost' : 'found';
-    const name = item.itemName || item.category || item.description || 'Unknown Item';
+    const name = item.itemName || item.category || item.description || 'Item';
     const desc = item.description || item.itemName || '';
     const loc = item.locationName || item.location || 'AFIT Campus';
-    const contact = item.userName || item.contactName || '';
-    const imgUrl = item.imageUrl || '';
+    const contact = item.contactInfo || item.userName || item.contactName || '';
+    const imgUrl = resolveImg(item.imageUrl || item.image_url || item.image || item.photoUrl || item.photo_url);
 
-    const imgHtml = imgUrl
-      ? '<img class="lf-img" src="' + imgUrl + '" alt="' + escape(name) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'
-      : '';
-    const placeholder = '<div class="lf-img-placeholder" style="' + (imgUrl ? 'display:none;' : '') + '">&#128269;</div>';
+    let imgHtml = '';
+    if (imgUrl) {
+      imgHtml = '<div class="lf-thumb-wrap" data-img-src="' + encodeURI(imgUrl) + '" onclick="viewFullImage(decodeURI(this.dataset.imgSrc))">' +
+          '<img class="lf-thumb" src="' + imgUrl + '" alt="' + escape(name) + '" onerror="this.parentElement.classList.add(&quot;hidden&quot;)">' +
+          '<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.6);color:white;font-size:10px;padding:3px 8px;border-radius:4px">&#128065; Tap to expand</div>' +
+        '</div>';
+    }
 
-    div.innerHTML = imgHtml + placeholder +
+    div.innerHTML = imgHtml +
       '<div class="lf-body">' +
-        '<div class="lf-type-tag ' + typeClass + '">' + type + '</div>' +
-        '<div class="lf-name">' + escape(name) + '</div>' +
+        '<div class="lf-header-row">' +
+          '<div class="lf-name">' + escape(name) + '</div>' +
+          '<span class="lf-type-tag ' + typeClass + '">' + type + '</span>' +
+        '</div>' +
         (desc ? '<div class="lf-desc">' + escape(desc) + '</div>' : '') +
         '<div class="lf-meta">' +
           '<span>&#128205; ' + escape(loc) + '</span>' +
@@ -1479,9 +1892,23 @@ window.submitLFReport = async function() {
   const name = document.getElementById('lf-name').value.trim();
   const desc = document.getElementById('lf-desc').value.trim();
   const location = document.getElementById('lf-location').value.trim();
+  const photoInput = document.getElementById('lf-photo-input');
   const errEl = document.getElementById('lf-error');
   errEl.classList.remove('show');
   if (!name || !desc) { errEl.textContent = 'Please fill item name and description.'; errEl.classList.add('show'); return; }
+
+  let base64Photo = '';
+  if (photoInput && photoInput.files && photoInput.files[0]) {
+    try {
+      base64Photo = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = e => res(e.target.result);
+        reader.onerror = rej;
+        reader.readAsDataURL(photoInput.files[0]);
+      });
+    } catch(e) {}
+  }
+
   try {
     await addDoc(collection(db, 'lost_found'), {
       itemType: type === 'lost' ? 'Lost' : 'Found',
@@ -1495,7 +1922,7 @@ window.submitLFReport = async function() {
       contactName: currentUserData?.name || 'User',
       userName: currentUserData?.name || 'User',
       userId: currentUser.uid,
-      imageUrl: '',
+      imageUrl: base64Photo,
       is_active: true,
       timestamp: serverTimestamp(),
       createdAt: serverTimestamp()
@@ -1504,15 +1931,17 @@ window.submitLFReport = async function() {
     document.getElementById('lf-name').value = '';
     document.getElementById('lf-desc').value = '';
     document.getElementById('lf-location').value = '';
+    document.getElementById('lf-preview').style.display = 'none';
+    if (photoInput) photoInput.value = '';
     loadLostFound();
-    alert('Lost & Found item submitted successfully!');
+    alert('Lost & Found item posted successfully!');
   } catch(e) {
     errEl.textContent = 'Error: ' + e.message;
     errEl.classList.add('show');
   }
 };
 
-// --- REPORT / COMPLAINT ---
+// --- COMPLAINTS / REPORTS (Resilient in-memory sort) ---
 window.doReport = async function() {
   const subject = document.getElementById('report-subject').value.trim();
   const message = document.getElementById('report-message').value.trim();
@@ -1520,45 +1949,62 @@ window.doReport = async function() {
   errEl.classList.remove('show');
   if (!subject || !message) { errEl.textContent = 'Please fill in subject and message.'; errEl.classList.add('show'); return; }
   try {
-    await addDoc(collection(db,'complaints'), {
+    await addDoc(collection(db, 'complaints'), {
       userId: currentUser.uid,
       userName: currentUserData?.name || 'User',
-      subject, message, status: 'pending', adminReply:'',
+      subject: subject,
+      message: message,
+      status: 'pending',
+      adminReply: '',
       createdAt: serverTimestamp()
     });
-    document.getElementById('report-subject').value='';
-    document.getElementById('report-message').value='';
+    document.getElementById('report-subject').value = '';
+    document.getElementById('report-message').value = '';
     loadReports();
-    alert('Report submitted successfully!');
-  } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
+    alert('Feedback submitted successfully!');
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.classList.add('show');
+  }
 };
 
 async function loadReports() {
   if (!currentUser) return;
   const el = document.getElementById('reports-list');
   try {
-    const snap = await getDocs(query(collection(db,'complaints'), where('userId','==',currentUser.uid), orderBy('createdAt','desc')));
-    if (snap.empty) { el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128221;</div><div class="empty-title">No reports yet</div></div>'; return; }
-    el.innerHTML='';
-    snap.forEach(d => {
-      const r=d.data();
-      el.innerHTML += '<div class="card"><div class="card-title">'+r.subject+'</div><div style="font-size:0.82rem;color:var(--text-secondary)">'+r.message+'</div>'+(r.adminReply?'<div class="reply-bubble">Admin: '+r.adminReply+'</div>':'')+'</div>';
+    const snap = await getDocs(query(collection(db, 'complaints'), where('userId', '==', currentUser.uid)));
+    if (snap.empty) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128221;</div><div class="empty-title">No reports submitted yet</div></div>';
+      return;
+    }
+    const list = [];
+    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+    list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    el.innerHTML = '';
+    list.forEach(r => {
+      el.innerHTML += '<div class="card"><div class="card-title">' + escape(r.subject) + '</div><div style="font-size:0.85rem;color:var(--text-secondary)">' + escape(r.message) + '</div>' + (r.adminReply ? '<div style="margin-top:0.6rem;padding:0.6rem;background:var(--bg);border-radius:8px;font-size:0.8rem;border-left:3px solid var(--primary)"><b>Admin Reply:</b> ' + escape(r.adminReply) + '</div>' : '') + '</div>';
     });
-  } catch(e) {}
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-title">Error loading reports</div></div>';
+  }
 }
 
 // --- SETTINGS ---
 function loadSettings() {
   if (!currentUserData) return;
   const el = document.getElementById('settings-profile');
-  el.innerHTML = '<b>Name:</b> '+(currentUserData.name||'N/A')+'<br><b>Email:</b> '+(currentUser?.email||'N/A')+'<br><b>Pickup ID:</b> '+(currentUserData.pickupId||'N/A')+'<br><b>Role:</b> '+(currentUserData.role||'user');
+  const pid = currentUserData.pickupId || generatePickupId(currentUser?.uid);
+  el.innerHTML = '<b>Name:</b> ' + (currentUserData.name || 'N/A') +
+    '<br><b>Email:</b> ' + (currentUser?.email || 'N/A') +
+    '<br><b>Pickup ID:</b> <span style="font-weight:900;color:var(--primary);font-family:monospace;font-size:1.15rem">' + pid + '</span>' +
+    '<br><b>Role:</b> ' + (currentUserData.role || 'user').toUpperCase();
 }
 
 // --- GAME POINTS ---
 async function loadGamePoints() {
   if (!currentUser) return;
   try {
-    const snap = await getDoc(doc(db,'game_scores',currentUser.uid));
+    const snap = await getDoc(doc(db, 'game_scores', currentUser.uid));
     if (snap.exists()) {
       const d = snap.data();
       document.getElementById('pts-puzzle').textContent = d.puzzle_weeklyPoints || 0;
@@ -1573,19 +2019,18 @@ window.startPuzzle = async function(size) {
   puzzleSize = size;
   puzzleMoves = 0; puzzleSeconds = 0;
   clearInterval(puzzleTimer);
-  document.getElementById('puzzle-moves').textContent='0';
-  document.getElementById('puzzle-time').textContent='0s';
-  document.getElementById('puzzle-win').style.display='none';
+  document.getElementById('puzzle-moves').textContent = '0';
+  document.getElementById('puzzle-time').textContent = '0s';
+  document.getElementById('puzzle-win').style.display = 'none';
   showScreen('puzzle');
-  document.getElementById('puzzle-board').style.gridTemplateColumns = 'repeat('+size+',1fr)';
+  document.getElementById('puzzle-board').style.gridTemplateColumns = 'repeat(' + size + ',1fr)';
 
-  // Load puzzle image from Firestore
   puzzleImageUrl = '';
   try {
-    const snap = await getDocs(query(collection(db,'puzzle_images'), where('isActive','==',true), limit(5)));
+    const snap = await getDocs(query(collection(db, 'puzzle_images'), where('isActive', '==', true), limit(5)));
     const images = [];
     snap.forEach(d => { if(d.data().imageUrl) images.push(d.data().imageUrl); });
-    if (images.length > 0) puzzleImageUrl = images[Math.floor(Math.random()*images.length)];
+    if (images.length > 0) puzzleImageUrl = images[Math.floor(Math.random() * images.length)];
   } catch(e) {}
 
   initPuzzle();
@@ -1600,54 +2045,57 @@ function initPuzzle() {
 window.shufflePuzzle = function() {
   const n = puzzleSize * puzzleSize;
   puzzleTiles = Array.from({length:n}, (_,i) => i);
-  // Fisher-Yates shuffle, ensure solvable
   for (let i = n-1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i+1));
     [puzzleTiles[i], puzzleTiles[j]] = [puzzleTiles[j], puzzleTiles[i]];
   }
   if (!isPuzzleSolvable()) {
-    // Swap first two non-empty tiles
-    let a=-1,b=-1;
-    for(let i=0;i<puzzleTiles.length;i++){if(puzzleTiles[i]!==0){if(a===-1)a=i;else{b=i;break;}}}
-    if(a!==-1&&b!==-1)[puzzleTiles[a],puzzleTiles[b]]=[puzzleTiles[b],puzzleTiles[a]];
+    let a = -1, b = -1;
+    for(let i=0; i<puzzleTiles.length; i++) {
+      if (puzzleTiles[i] !== 0) {
+        if (a === -1) a = i;
+        else { b = i; break; }
+      }
+    }
+    if (a !== -1 && b !== -1) [puzzleTiles[a], puzzleTiles[b]] = [puzzleTiles[b], puzzleTiles[a]];
   }
   puzzleEmpty = puzzleTiles.indexOf(0);
   puzzleMoves = 0; puzzleSeconds = 0;
   clearInterval(puzzleTimer);
-  document.getElementById('puzzle-moves').textContent='0';
-  document.getElementById('puzzle-time').textContent='0s';
-  document.getElementById('puzzle-win').style.display='none';
+  document.getElementById('puzzle-moves').textContent = '0';
+  document.getElementById('puzzle-time').textContent = '0s';
+  document.getElementById('puzzle-win').style.display = 'none';
   renderPuzzle();
   puzzleTimer = setInterval(() => {
     puzzleSeconds++;
-    document.getElementById('puzzle-time').textContent = puzzleSeconds+'s';
+    document.getElementById('puzzle-time').textContent = puzzleSeconds + 's';
   }, 1000);
 };
 
 function isPuzzleSolvable() {
-  let inv=0;
-  const t=puzzleTiles.filter(x=>x!==0);
-  for(let i=0;i<t.length;i++) for(let j=i+1;j<t.length;j++) if(t[i]>t[j]) inv++;
-  if(puzzleSize%2===1) return inv%2===0;
-  const row = Math.floor(puzzleTiles.indexOf(0)/puzzleSize);
-  return (inv+row)%2===1;
+  let inv = 0;
+  const t = puzzleTiles.filter(x => x !== 0);
+  for(let i=0; i<t.length; i++) for(let j=i+1; j<t.length; j++) if(t[i] > t[j]) inv++;
+  if (puzzleSize % 2 === 1) return inv % 2 === 0;
+  const row = Math.floor(puzzleTiles.indexOf(0) / puzzleSize);
+  return (inv + row) % 2 === 1;
 }
 
 function renderPuzzle() {
   const board = document.getElementById('puzzle-board');
   board.innerHTML = '';
-  const tileSize = Math.floor(Math.min(window.innerWidth*0.8, 360) / puzzleSize);
+  const tileSize = Math.floor(Math.min(window.innerWidth * 0.8, 340) / puzzleSize);
   puzzleTiles.forEach((val, idx) => {
     const tile = document.createElement('div');
-    tile.className = 'puzzle-tile' + (val===0?' empty':'');
-    tile.style.width = tileSize+'px';
-    tile.style.height = tileSize+'px';
+    tile.className = 'puzzle-tile' + (val === 0 ? ' empty' : '');
+    tile.style.width = tileSize + 'px';
+    tile.style.height = tileSize + 'px';
     if (val !== 0) {
       if (puzzleImageUrl) {
         const img = document.createElement('img');
-        const row = Math.floor((val-1)/puzzleSize);
-        const col = (val-1)%puzzleSize;
-        img.style.cssText='width:'+tileSize*puzzleSize+'px;height:'+tileSize*puzzleSize+'px;object-fit:cover;margin-left:-'+(col*tileSize)+'px;margin-top:-'+(row*tileSize)+'px;';
+        const row = Math.floor((val - 1) / puzzleSize);
+        const col = (val - 1) % puzzleSize;
+        img.style.cssText = 'width:' + (tileSize * puzzleSize) + 'px;height:' + (tileSize * puzzleSize) + 'px;object-fit:cover;margin-left:-' + (col * tileSize) + 'px;margin-top:-' + (row * tileSize) + 'px;';
         img.src = puzzleImageUrl;
         tile.appendChild(img);
       } else {
@@ -1662,8 +2110,8 @@ function renderPuzzle() {
 function moveTile(idx) {
   const n = puzzleSize;
   const emptyIdx = puzzleEmpty;
-  const r1=Math.floor(idx/n), c1=idx%n, r2=Math.floor(emptyIdx/n), c2=emptyIdx%n;
-  if (Math.abs(r1-r2)+Math.abs(c1-c2) !== 1) return;
+  const r1 = Math.floor(idx/n), c1 = idx%n, r2 = Math.floor(emptyIdx/n), c2 = emptyIdx%n;
+  if (Math.abs(r1 - r2) + Math.abs(c1 - c2) !== 1) return;
   [puzzleTiles[idx], puzzleTiles[emptyIdx]] = [puzzleTiles[emptyIdx], puzzleTiles[idx]];
   puzzleEmpty = idx;
   puzzleMoves++;
@@ -1673,21 +2121,21 @@ function moveTile(idx) {
 }
 
 function isPuzzleSolved() {
-  for(let i=0;i<puzzleTiles.length-1;i++) if(puzzleTiles[i]!==i+1) return false;
-  return puzzleTiles[puzzleTiles.length-1]===0;
+  for(let i=0; i<puzzleTiles.length-1; i++) if(puzzleTiles[i] !== i+1) return false;
+  return puzzleTiles[puzzleTiles.length-1] === 0;
 }
 
 async function winPuzzle() {
   clearInterval(puzzleTimer);
   const pts = puzzleSize === 3 ? 10 : 20;
-  document.getElementById('puzzle-win-msg').textContent = 'Solved in '+puzzleMoves+' moves, '+puzzleSeconds+'s! +'+pts+' points';
+  document.getElementById('puzzle-win-msg').textContent = 'Solved in ' + puzzleMoves + ' moves, ' + puzzleSeconds + 's! +' + pts + ' points';
   document.getElementById('puzzle-win').style.display = 'block';
   if (currentUser) {
     try {
-      const ref = doc(db,'game_scores',currentUser.uid);
+      const ref = doc(db, 'game_scores', currentUser.uid);
       const snap = await getDoc(ref);
-      const prev = snap.exists() ? (snap.data().puzzle_weeklyPoints||0) : 0;
-      await setDoc(ref, {puzzle_weeklyPoints: prev+pts}, {merge:true});
+      const prev = snap.exists() ? (snap.data().puzzle_weeklyPoints || 0) : 0;
+      await setDoc(ref, { puzzle_weeklyPoints: prev + pts }, { merge: true });
     } catch(e) {}
   }
 }
@@ -1700,23 +2148,21 @@ window.startQuiz = async function() {
   const el = document.getElementById('quiz-container');
   el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#129504;</div><div class="empty-title">Loading questions...</div></div>';
   try {
-    const snap = await getDocs(query(collection(db,'game_questions'), where('isActive','==',true)));
+    const snap = await getDocs(query(collection(db, 'game_questions'), where('isActive', '==', true)));
     quizQuestions = [];
-    snap.forEach(d => quizQuestions.push({id:d.id,...d.data()}));
+    snap.forEach(d => quizQuestions.push({ id: d.id, ...d.data() }));
     if (quizQuestions.length === 0) {
-      // Fallback questions
       quizQuestions = [
-        {question:'What does AFIT stand for?', options:['Air Force Institute of Technology','Army Force Institute','Air Flight Institute','Armed Forces Institute'], answer:'Air Force Institute of Technology'},
-        {question:'What does ASSA stand for?', options:['AFIT Shuttle Service App','Army Shuttle System App','AFIT Student Service App','Academic Shuttle System App'], answer:'AFIT Shuttle Service App'},
-        {question:'What technology does ASSA use for offline requests?', options:['ESP32 IoT','Bluetooth','NFC','SMS Gateway'], answer:'ESP32 IoT'},
-        {question:'Which cloud platform powers ASSA?', options:['Firebase','AWS','Azure','Heroku'], answer:'Firebase'},
-        {question:'What programming language is the Android app written in?', options:['Dart','Kotlin','Java','Swift'], answer:'Dart'}
+        { question: 'What does AFIT stand for?', options: ['Air Force Institute of Technology', 'Army Force Institute', 'Air Flight Institute', 'Armed Forces Institute'], answer: 'Air Force Institute of Technology' },
+        { question: 'What does ASSA stand for?', options: ['AFIT Shuttle Service App', 'Army Shuttle System App', 'AFIT Student Service App', 'Academic Shuttle System App'], answer: 'AFIT Shuttle Service App' },
+        { question: 'What radio technology powers ASSA offline requests?', options: ['LoRa 433 MHz', 'Bluetooth Mesh', 'NFC', 'Satellite'], answer: 'LoRa 433 MHz' },
+        { question: 'Which cloud platform powers ASSA real-time sync?', options: ['Firebase', 'AWS', 'Azure', 'Heroku'], answer: 'Firebase' }
       ];
     }
-    quizQuestions = quizQuestions.sort(() => Math.random()-0.5).slice(0,10);
+    quizQuestions = quizQuestions.sort(() => Math.random() - 0.5).slice(0, 10);
     renderQuizQuestion();
   } catch(e) {
-    quizQuestions = [{question:'Error loading questions. What does ASSA stand for?',options:['AFIT Shuttle Service App','Army Shuttle System','AFIT Smart Shuttle','Academic Shuttle Service'],answer:'AFIT Shuttle Service App'}];
+    quizQuestions = [{ question: 'What does ASSA stand for?', options: ['AFIT Shuttle Service App', 'Army Shuttle System', 'AFIT Smart Shuttle'], answer: 'AFIT Shuttle Service App' }];
     renderQuizQuestion();
   }
 };
@@ -1724,84 +2170,90 @@ window.startQuiz = async function() {
 function renderQuizQuestion() {
   const el = document.getElementById('quiz-container');
   if (quizIndex >= quizQuestions.length) {
-    el.innerHTML = '<div style="text-align:center;padding:2rem"><div style="font-size:3rem">&#127881;</div><div style="font-size:1.2rem;font-weight:700;color:var(--success);margin-top:0.5rem">Quiz Complete!</div><div style="font-size:0.9rem;color:var(--text-secondary);margin-top:0.5rem">You scored '+quizScore+' points</div><button class="btn btn-primary" style="margin-top:1rem" onclick="startQuiz()">Play Again</button></div>';
+    el.innerHTML = '<div style="text-align:center;padding:2rem"><div style="font-size:3rem">&#127881;</div><div style="font-size:1.2rem;font-weight:800;color:var(--success);margin-top:0.4rem">Quiz Complete!</div><div style="font-size:0.9rem;color:var(--text-secondary);margin-top:0.4rem">You scored ' + quizScore + ' points</div><button class="btn btn-primary" style="margin-top:1.2rem" onclick="startQuiz()">Play Again</button></div>';
     saveQuizPoints();
     return;
   }
   const q = quizQuestions[quizIndex];
-  const pct = Math.round((quizIndex/quizQuestions.length)*100);
-  el.innerHTML = '<div class="quiz-progress"><div class="quiz-progress-bar" style="width:'+pct+'%"></div></div><div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.75rem">Question '+(quizIndex+1)+' of '+quizQuestions.length+'</div><div class="quiz-question">'+q.question+'</div><div class="quiz-options">' + q.options.map((opt,i) => '<button class="quiz-opt" onclick="answerQuiz(this,\''+opt.replace(/'/g,'&apos;')+'\',\''+q.answer.replace(/'/g,'&apos;')+'\')">'+opt+'</button>').join('') + '</div>';
+  const pct = Math.round((quizIndex / quizQuestions.length) * 100);
+  el.innerHTML = '<div style="height:6px;background:var(--border);border-radius:3px;margin-bottom:1rem;overflow:hidden"><div style="height:100%;background:var(--primary);width:' + pct + '%"></div></div>' +
+    '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.75rem">Question ' + (quizIndex + 1) + ' of ' + quizQuestions.length + '</div>' +
+    '<div class="quiz-question">' + escape(q.question) + '</div>' +
+    '<div class="quiz-options">' +
+      q.options.map(opt => '<button class="quiz-opt" data-opt="' + encodeURIComponent(opt) + '" data-ans="' + encodeURIComponent(q.answer) + '" onclick="answerQuiz(this, decodeURIComponent(this.dataset.opt), decodeURIComponent(this.dataset.ans))">' + escape(opt) + '</button>').join('') +
+    '</div>';
 }
 
 window.answerQuiz = function(btn, selected, correct) {
-  document.querySelectorAll('.quiz-opt').forEach(b => { b.disabled=true; b.classList.remove('correct','wrong'); });
+  document.querySelectorAll('.quiz-opt').forEach(b => { b.disabled = true; });
   if (selected === correct) {
-    btn.classList.add('correct'); quizScore+=5;
-    document.getElementById('quiz-score-top').textContent = quizScore+' pts';
+    btn.classList.add('correct');
+    quizScore += 5;
+    document.getElementById('quiz-score-top').textContent = quizScore + ' pts';
   } else {
     btn.classList.add('wrong');
-    document.querySelectorAll('.quiz-opt').forEach(b => { if(b.textContent.trim()===correct) b.classList.add('correct'); });
+    document.querySelectorAll('.quiz-opt').forEach(b => { if (b.textContent.trim() === correct) b.classList.add('correct'); });
   }
   quizIndex++;
   setTimeout(renderQuizQuestion, 1200);
 };
 
 async function saveQuizPoints() {
-  if (!currentUser || quizScore===0) return;
+  if (!currentUser || quizScore === 0) return;
   try {
-    const ref = doc(db,'game_scores',currentUser.uid);
+    const ref = doc(db, 'game_scores', currentUser.uid);
     const snap = await getDoc(ref);
-    const prev = snap.exists() ? (snap.data().quiz_weeklyPoints||0) : 0;
-    await setDoc(ref, {quiz_weeklyPoints: prev+quizScore}, {merge:true});
+    const prev = snap.exists() ? (snap.data().quiz_weeklyPoints || 0) : 0;
+    await setDoc(ref, { quiz_weeklyPoints: prev + quizScore }, { merge: true });
   } catch(e) {}
 }
 
-// --- TAP GAME ---
+// --- TAP CHALLENGE ---
 window.startTap = function() {
   showScreen('tap');
   resetTap();
 };
 
 window.resetTap = function() {
-  tapCount=0; tapSeconds=30; tapRunning=false;
+  tapCount = 0; tapSeconds = 30; tapRunning = false;
   clearInterval(tapTimer);
-  document.getElementById('tap-count').textContent='0';
-  document.getElementById('tap-timer').textContent='30s';
-  document.getElementById('tap-result').style.display='none';
-  document.getElementById('tap-status').textContent='Tap the button as fast as you can in 30 seconds!';
-  document.getElementById('tap-area').style.opacity='1';
+  document.getElementById('tap-count').textContent = '0';
+  document.getElementById('tap-timer').textContent = '30s';
+  document.getElementById('tap-result').style.display = 'none';
+  document.getElementById('tap-status').textContent = 'Tap the circle as fast as you can in 30 seconds!';
+  document.getElementById('tap-area').style.opacity = '1';
 };
 
 window.doTap = function() {
-  if (document.getElementById('tap-result').style.display!=='none') return;
+  if (document.getElementById('tap-result').style.display !== 'none') return;
   if (!tapRunning) {
-    tapRunning=true;
-    document.getElementById('tap-status').textContent='Go! Tap tap tap!';
+    tapRunning = true;
+    document.getElementById('tap-status').textContent = 'Go! Tap tap tap!';
     tapTimer = setInterval(() => {
       tapSeconds--;
-      document.getElementById('tap-timer').textContent=tapSeconds+'s';
-      if (tapSeconds<=0) {
+      document.getElementById('tap-timer').textContent = tapSeconds + 's';
+      if (tapSeconds <= 0) {
         clearInterval(tapTimer);
-        tapRunning=false;
-        const pts = Math.floor(tapCount/10);
-        document.getElementById('tap-result-msg').textContent = tapCount+' taps! +'+pts+' points earned!';
-        document.getElementById('tap-result').style.display='block';
-        document.getElementById('tap-area').style.opacity='0.5';
+        tapRunning = false;
+        const pts = Math.floor(tapCount / 10);
+        document.getElementById('tap-result-msg').textContent = tapCount + ' taps! +' + pts + ' points earned!';
+        document.getElementById('tap-result').style.display = 'block';
+        document.getElementById('tap-area').style.opacity = '0.5';
         saveTapPoints(pts);
       }
     }, 1000);
   }
   tapCount++;
-  document.getElementById('tap-count').textContent=tapCount;
+  document.getElementById('tap-count').textContent = tapCount;
 };
 
 async function saveTapPoints(pts) {
-  if (!currentUser || pts===0) return;
+  if (!currentUser || pts === 0) return;
   try {
-    const ref = doc(db,'game_scores',currentUser.uid);
+    const ref = doc(db, 'game_scores', currentUser.uid);
     const snap = await getDoc(ref);
-    const prev = snap.exists() ? (snap.data().tap_weeklyPoints||0) : 0;
-    await setDoc(ref, {tap_weeklyPoints: prev+pts}, {merge:true});
+    const prev = snap.exists() ? (snap.data().tap_weeklyPoints || 0) : 0;
+    await setDoc(ref, { tap_weeklyPoints: prev + pts }, { merge: true });
   } catch(e) {}
 }
 
@@ -1809,204 +2261,249 @@ async function saveTapPoints(pts) {
 window.loadLeaderboard = async function(type, btn) {
   lbCurrentType = type;
   if (btn && btn.tagName) {
-    document.querySelectorAll('#screen-leaderboard .admin-tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#screen-leaderboard .admin-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
   const el = document.getElementById('lb-list');
-  el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#8987;</div><div class="empty-title">Loading...</div></div>';
-  const weekKey = getWeekKey();
+  el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#8987;</div><div class="empty-title">Loading leaderboard...</div></div>';
   try {
-    const snap = await getDocs(query(collection(db,'game_leaderboard'), where('gameType','==',type), where('weekKey','==',weekKey), orderBy('points','desc'), limit(20)));
-    if (snap.empty) {
-      // Fallback: load from game_scores
-      const scoresSnap = await getDocs(collection(db,'game_scores'));
-      const scores = [];
-      scoresSnap.forEach(d => { const v = d.data(); const pts = v[type+'_weeklyPoints']||0; if(pts>0) scores.push({uid:d.id,pts,name:v.name||'User'}); });
-      scores.sort((a,b)=>b.pts-a.pts);
-      renderLeaderboard(el, scores.slice(0,20));
-      return;
-    }
-    const entries = [];
-    snap.forEach(d => entries.push(d.data()));
-    el.innerHTML='';
-    entries.forEach((e,i)=>{
-      const rankClass = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
-      el.innerHTML+='<div class="lb-item"><div class="lb-rank '+rankClass+'">'+(i<3?['&#129351;','&#129352;','&#129353;'][i]:i+1)+'</div><div class="lb-name">'+(e.userName||'User')+'</div><div class="lb-pts">'+(e.points||0)+' pts</div></div>';
+    const scoresSnap = await getDocs(collection(db, 'game_scores'));
+    const scores = [];
+    scoresSnap.forEach(d => {
+      const v = d.data();
+      const pts = v[type + '_weeklyPoints'] || 0;
+      if (pts > 0) scores.push({ uid: d.id, pts: pts, name: v.name || 'User' });
     });
-  } catch(e) { el.innerHTML='<div class="empty-state"><div class="empty-title">Error loading leaderboard</div></div>'; }
+    scores.sort((a, b) => b.pts - a.pts);
+    renderLeaderboard(el, scores.slice(0, 20));
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-title">Could not load leaderboard</div></div>';
+  }
 };
 
 function renderLeaderboard(el, scores) {
-  if (!scores.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">&#127942;</div><div class="empty-title">No scores yet. Play a game!</div></div>'; return; }
-  el.innerHTML='';
-  scores.forEach((s,i)=>{
-    const rankClass=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
-    el.innerHTML+='<div class="lb-item"><div class="lb-rank '+rankClass+'">'+(i<3?['&#129351;','&#129352;','&#129353;'][i]:i+1)+'</div><div class="lb-name">'+(s.name||'User')+'</div><div class="lb-pts">'+s.pts+' pts</div></div>';
+  if (!scores.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#127942;</div><div class="empty-title">No scores yet. Play a game!</div></div>';
+    return;
+  }
+  el.innerHTML = '';
+  scores.forEach((s, i) => {
+    const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+    el.innerHTML += '<div class="lb-item"><div class="lb-rank ' + rankClass + '">' + (i < 3 ? ['&#129351;','&#129352;','&#129353;'][i] : i + 1) + '</div><div class="lb-name">' + escape(s.name || 'User') + '</div><div class="lb-pts">' + s.pts + ' pts</div></div>';
   });
-}
-
-function getWeekKey() {
-  const d=new Date();
-  const jan1=new Date(d.getFullYear(),0,1);
-  const week=Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
-  return d.getFullYear()+'W'+week;
 }
 
 // --- ADMIN PANEL ---
 window.switchAdminTab = function(tab, btn) {
-  document.querySelectorAll('.admin-tab').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  const sec = document.getElementById('admin-'+tab);
-  if(sec) sec.classList.add('active');
-  if(tab==='drivers') loadAdminDrivers();
-  if(tab==='lostfound') loadAdminLF();
-  if(tab==='rides') loadAdminRides();
-  if(tab==='ads') loadAdminAds();
+  document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const sec = document.getElementById('admin-' + tab);
+  if (sec) sec.classList.add('active');
+  if (tab === 'drivers') loadAdminDrivers();
+  if (tab === 'lostfound') loadAdminLF();
+  if (tab === 'rides') loadAdminRides();
+  if (tab === 'ads') loadAdminAds();
 };
 
 async function loadAdminDrivers() {
   const el = document.getElementById('pending-drivers-list');
   try {
-    const snap = await getDocs(query(collection(db,'users'), where('role','==','driver_pending')));
-    if(snap.empty) { el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128100;</div><div class="empty-title">No pending drivers</div></div>'; return; }
-    el.innerHTML='';
-    snap.forEach(d=>{
-      const u=d.data();
-      el.innerHTML+='<div class="driver-card"><div><div class="driver-name">'+(u.name||'Unknown')+'</div><div class="driver-email">'+(u.email||'')+'</div></div><button class="btn btn-success btn-sm" onclick="approveDriver(\''+d.id+'\')">Approve</button><button class="btn btn-danger btn-sm" style="margin-left:0.5rem" onclick="rejectDriver(\''+d.id+'\')">Reject</button></div>';
+    const snap = await getDocs(query(collection(db, 'users'), where('role', '==', 'driver_pending')));
+    if (snap.empty) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128100;</div><div class="empty-title">No pending drivers</div></div>';
+      return;
+    }
+    el.innerHTML = '';
+    snap.forEach(d => {
+      const u = d.data();
+      el.innerHTML += '<div class="card" style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-weight:800">' + escape(u.name||'Unknown') + '</div><div style="font-size:0.8rem;color:var(--text-secondary)">' + escape(u.email||'') + '</div></div><div><button class="btn btn-success btn-sm" data-uid="' + d.id + '" onclick="approveDriver(this.dataset.uid)">Approve</button><button class="btn btn-danger btn-sm" style="margin-left:0.4rem" data-uid="' + d.id + '" onclick="rejectDriver(this.dataset.uid)">Reject</button></div></div>';
     });
-  } catch(e) { el.innerHTML='<div class="empty-state"><div class="empty-title">Error</div></div>'; }
+  } catch(e) { el.innerHTML = '<div class="empty-state"><div class="empty-title">Error</div></div>'; }
 }
 
 window.approveDriver = async function(uid) {
   try {
-    await updateDoc(doc(db,'users',uid), {role:'driver'});
+    await updateDoc(doc(db, 'users', uid), { role: 'driver', status: 'approved' });
     loadAdminDrivers();
-  } catch(e) { alert('Error: '+e.message); }
+    alert('Driver approved.');
+  } catch(e) { alert('Error: ' + e.message); }
 };
 
 window.rejectDriver = async function(uid) {
-  if(!confirm('Reject this driver?')) return;
+  if (!confirm('Reject this driver registration?')) return;
   try {
-    await updateDoc(doc(db,'users',uid), {role:'rejected'});
+    await updateDoc(doc(db, 'users', uid), { role: 'rejected', status: 'rejected' });
     loadAdminDrivers();
-  } catch(e) { alert('Error: '+e.message); }
+  } catch(e) { alert('Error: ' + e.message); }
 };
 
 async function loadAdminLF() {
   const el = document.getElementById('admin-lf-list');
   try {
-    const snap = await getDocs(query(collection(db,'lost_found'), orderBy('createdAt','desc')));
-    if(snap.empty) { el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div class="empty-title">No items</div></div>'; return; }
-    el.innerHTML='';
-    snap.forEach(d=>{
-      const item=d.data();
-      el.innerHTML+='<div class="lf-item">'+(item.imageUrl?'<img class="lf-img" src="'+item.imageUrl+'" onerror="this.style.display=\'none\'">':'<div class="lf-img-placeholder">&#128269;</div>')+'<div class="lf-body"><div class="lf-type-tag '+(item.type||'lost')+'">'+(item.type||'lost').toUpperCase()+'</div><div class="lf-name">'+(item.itemName||'Unknown')+'</div><div class="lf-desc">'+(item.description||'')+'</div><button class="btn btn-danger btn-sm" style="margin-top:0.5rem" onclick="deleteLFItem(\''+d.id+'\')">Delete</button></div></div>';
+    const snap = await getDocs(collection(db, 'lost_found'));
+    if (snap.empty) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128269;</div><div class="empty-title">No items found</div></div>';
+      return;
+    }
+    el.innerHTML = '';
+    snap.forEach(d => {
+      const item = d.data();
+      el.innerHTML += '<div class="card" style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-weight:800">' + escape(item.itemName || item.category || 'Item') + '</div><div style="font-size:0.8rem;color:var(--text-secondary)">' + escape(item.description||'') + '</div></div><button class="btn btn-danger btn-sm" data-id="' + d.id + '" onclick="deleteLFItem(this.dataset.id)">Delete</button></div>';
     });
   } catch(e) {}
 }
 
 window.deleteLFItem = async function(id) {
-  if(!confirm('Delete this item?')) return;
-  try { await deleteDoc(doc(db,'lost_found',id)); loadAdminLF(); } catch(e) { alert('Error: '+e.message); }
+  if (!confirm('Delete this item from Lost & Found?')) return;
+  try {
+    await deleteDoc(doc(db, 'lost_found', id));
+    loadAdminLF();
+  } catch(e) { alert('Error: ' + e.message); }
 };
 
 window.submitAdminLF = async function() {
-  const type=document.getElementById('admin-lf-type').value;
-  const name=document.getElementById('admin-lf-name').value.trim();
-  const desc=document.getElementById('admin-lf-desc').value.trim();
-  const location=document.getElementById('admin-lf-location').value.trim();
-  const contact=document.getElementById('admin-lf-contact').value.trim();
-  const imgUrl=document.getElementById('admin-lf-img').value.trim();
-  if(!name||!desc) { alert('Please fill item name and description.'); return; }
+  const type = document.getElementById('admin-lf-type').value;
+  const name = document.getElementById('admin-lf-name').value.trim();
+  const desc = document.getElementById('admin-lf-desc').value.trim();
+  const location = document.getElementById('admin-lf-location').value.trim();
+  const contact = document.getElementById('admin-lf-contact').value.trim();
+  const imgUrl = document.getElementById('admin-lf-img').value.trim();
+  if (!name || !desc) { alert('Please fill item name and description.'); return; }
   try {
-    await addDoc(collection(db,'lost_found'), {
-      type, itemName:name, description:desc, location, contactName:contact,
-      imageUrl:imgUrl, userId:currentUser?.uid||'admin', createdAt:serverTimestamp()
+    await addDoc(collection(db, 'lost_found'), {
+      itemType: type === 'lost' ? 'Lost' : 'Found',
+      type: type,
+      status: type === 'lost' ? 'Lost' : 'Found',
+      category: 'Other',
+      itemName: name,
+      description: desc,
+      locationName: location,
+      location: location,
+      contactName: contact,
+      userName: contact || 'Admin',
+      imageUrl: imgUrl,
+      userId: currentUser?.uid || 'admin',
+      is_active: true,
+      timestamp: serverTimestamp(),
+      createdAt: serverTimestamp()
     });
     closeModal('modal-admin-lf');
-    ['admin-lf-name','admin-lf-desc','admin-lf-location','admin-lf-contact','admin-lf-img'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    ['admin-lf-name','admin-lf-desc','admin-lf-location','admin-lf-contact','admin-lf-img'].forEach(id => {
+      const elem = document.getElementById(id);
+      if (elem) elem.value = '';
+    });
     loadAdminLF();
-  } catch(e) { alert('Error: '+e.message); }
+    alert('Item posted to Lost & Found!');
+  } catch(e) { alert('Error: ' + e.message); }
 };
 
 async function loadAdminRides() {
   const el = document.getElementById('admin-rides-list');
   try {
-    const snap = await getDocs(query(collection(db,'ride_requests'), orderBy('createdAt','desc'), limit(30)));
-    if(snap.empty) { el.innerHTML='<div class="empty-state"><div class="empty-icon">&#x1F68C;</div><div class="empty-title">No rides yet</div></div>'; return; }
-    el.innerHTML='';
-    const statusMap={0:'Pending',1:'Assigned',4:'Completed',5:'Cancelled'};
-    const badgeMap={0:'badge-pending',1:'badge-assigned',4:'badge-completed',5:'badge-cancelled'};
-    snap.forEach(d=>{
-      const r=d.data();
-      el.innerHTML+='<div class="request-item"><div class="request-route">'+(r.pickupLocation||'?')+' &rarr; '+(r.destination||'?')+'</div><div class="request-meta"><span class="badge '+(badgeMap[r.status]||'badge-pending')+'">'+(statusMap[r.status]||'?')+'</span><span>'+(r.userName||'User')+'</span>'+(r.shuttleId?'<span>Shuttle '+r.shuttleId+'</span>':'')+'</div></div>';
+    const snap = await getDocs(query(collection(db, 'ride_requests'), limit(30)));
+    if (snap.empty) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F68C;</div><div class="empty-title">No rides found</div></div>';
+      return;
+    }
+    const list = [];
+    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+    list.sort((a, b) => {
+      const ta = a.timestamp?.seconds || a.bookedAt?.seconds || a.createdAt?.seconds || 0;
+      const tb = b.timestamp?.seconds || b.bookedAt?.seconds || b.createdAt?.seconds || 0;
+      return tb - ta;
     });
-  } catch(e) { el.innerHTML='<div class="empty-state"><div class="empty-title">Error</div></div>'; }
+    el.innerHTML = '';
+    list.forEach(r => {
+      el.innerHTML += makeRequestCard(r, r.id, false);
+    });
+  } catch(e) { el.innerHTML = '<div class="empty-state"><div class="empty-title">Error loading rides</div></div>'; }
 }
 
 window.sendAdminNotif = async function() {
-  const title=document.getElementById('notif-title-admin').value.trim();
-  const body=document.getElementById('notif-body-admin').value.trim();
-  if(!title||!body) { alert('Please fill in title and message.'); return; }
+  const title = document.getElementById('notif-title-admin').value.trim();
+  const body = document.getElementById('notif-body-admin').value.trim();
+  if (!title || !body) { alert('Please fill in title and message.'); return; }
   try {
-    // Send to all users
-    const usersSnap = await getDocs(collection(db,'users'));
+    const usersSnap = await getDocs(collection(db, 'users'));
     const batch = [];
-    usersSnap.forEach(d=>{
-      if(d.data().role!=='admin')
-        batch.push(addDoc(collection(db,'notifications'), {userId:d.id, title, body, read:false, createdAt:serverTimestamp()}));
+    usersSnap.forEach(d => {
+      if (d.data().role !== 'admin') {
+        batch.push(addDoc(collection(db, 'notifications'), {
+          userId: d.id,
+          title: title,
+          body: body,
+          read: false,
+          createdAt: serverTimestamp()
+        }));
+      }
     });
     await Promise.all(batch);
-    document.getElementById('notif-title-admin').value='';
-    document.getElementById('notif-body-admin').value='';
-    alert('Notification sent to '+batch.length+' users!');
-  } catch(e) { alert('Error: '+e.message); }
+    document.getElementById('notif-title-admin').value = '';
+    document.getElementById('notif-body-admin').value = '';
+    alert('Broadcast notification sent to ' + batch.length + ' users!');
+  } catch(e) { alert('Error: ' + e.message); }
 };
 
 async function loadAdminAds() {
   const el = document.getElementById('admin-ads-list');
   try {
-    const snap = await getDocs(collection(db,'ads'));
-    if(snap.empty) { el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128226;</div><div class="empty-title">No ads yet</div></div>'; return; }
-    el.innerHTML='';
-    snap.forEach(d=>{
-      const ad=d.data();
-      el.innerHTML+='<div class="ad-card"><div style="font-weight:700">'+(ad.title||'Ad')+'</div><div style="font-size:0.82rem;color:var(--text-secondary)">'+(ad.body||'')+'</div>'+
-        (ad.imageUrl?'<img src="'+ad.imageUrl+'" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-top:0.5rem" onerror="this.style.display=\'none\'">':'')+'<div style="display:flex;gap:0.5rem;margin-top:0.75rem"><button class="btn btn-danger btn-sm" onclick="deleteAd(\''+d.id+'\')">Delete</button></div></div>';
+    const snap = await getDocs(collection(db, 'ads'));
+    if (snap.empty) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128226;</div><div class="empty-title">No ads posted</div></div>';
+      return;
+    }
+    el.innerHTML = '';
+    snap.forEach(d => {
+      const ad = d.data();
+      el.innerHTML += '<div class="card"><div style="font-weight:800">' + escape(ad.title||'Ad') + '</div><div style="font-size:0.82rem;color:var(--text-secondary)">' + escape(ad.body||'') + '</div>' + (ad.imageUrl ? '<img src="' + ad.imageUrl + '" style="width:100%;max-height:120px;object-fit:cover;border-radius:10px;margin-top:0.5rem" onerror="this.classList.add(&quot;hidden&quot;)">' : '') + '<div style="margin-top:0.75rem"><button class="btn btn-danger btn-sm" data-id="' + d.id + '" onclick="deleteAd(this.dataset.id)">Delete Ad</button></div></div>';
     });
   } catch(e) {}
 }
 
 window.postAd = async function() {
-  const title=document.getElementById('ad-title').value.trim();
-  const body=document.getElementById('ad-body').value.trim();
-  const imgUrl=document.getElementById('ad-img').value.trim();
-  const linkUrl=document.getElementById('ad-link').value.trim();
-  if(!title) { alert('Please enter ad title.'); return; }
+  const title = document.getElementById('ad-title').value.trim();
+  const body = document.getElementById('ad-body').value.trim();
+  const imgUrl = document.getElementById('ad-img').value.trim();
+  const linkUrl = document.getElementById('ad-link').value.trim();
+  if (!title) { alert('Please enter ad title.'); return; }
   try {
-    await addDoc(collection(db,'ads'), {title, body, imageUrl:imgUrl, linkUrl, isActive:true, createdAt:serverTimestamp()});
-    ['ad-title','ad-body','ad-img','ad-link'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    await addDoc(collection(db, 'ads'), {
+      title: title,
+      body: body,
+      imageUrl: imgUrl,
+      linkUrl: linkUrl,
+      isActive: true,
+      createdAt: serverTimestamp()
+    });
+    ['ad-title','ad-body','ad-img','ad-link'].forEach(id => {
+      const elem = document.getElementById(id);
+      if (elem) elem.value = '';
+    });
     loadAdminAds();
-    alert('Ad posted!');
-  } catch(e) { alert('Error: '+e.message); }
+    alert('Ad published!');
+  } catch(e) { alert('Error: ' + e.message); }
 };
 
 window.deleteAd = async function(id) {
-  if(!confirm('Delete this ad?')) return;
-  try { await deleteDoc(doc(db,'ads',id)); loadAdminAds(); } catch(e) {}
+  if (!confirm('Delete this ad banner?')) return;
+  try {
+    await deleteDoc(doc(db, 'ads', id));
+    loadAdminAds();
+  } catch(e) {}
 };
 
-// --- UTILITY ---
+// --- UTILITIES ---
 function formatTime(ts) {
-  if(!ts) return '';
-  const d = ts.toDate ? ts.toDate() : new Date(ts.seconds*1000);
-  return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts.seconds ? ts.seconds * 1000 : ts);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function escape(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escape(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
-// Expose to window for HTML onclick
 window.loadLeaderboard = window.loadLeaderboard;
 
 </script>
