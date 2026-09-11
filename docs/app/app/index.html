@@ -1242,55 +1242,55 @@
     
     <!-- ADMIN LIVE GPS MAP & PIN MANAGER -->
     <div class="admin-section active" id="admin-map">
-      <!-- Header with Live GPS indicator -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
+      <!-- Compact Header with Live GPS indicator -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.45rem">
         <div>
-          <div style="font-weight:900;font-size:1.05rem;color:var(--text-primary);display:flex;align-items:center;gap:6px">
-            <span>🗺️ Campus Map &amp; Pin Manager</span>
+          <div style="font-weight:800;font-size:0.88rem;color:var(--text-primary);display:flex;align-items:center;gap:5px">
+            <span>🗺️ Campus Map &amp; Spots</span>
           </div>
-          <div style="font-size:0.75rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px" id="admin-gps-status">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3B82F6"></span>
-            <span>Locating your GPS...</span>
+          <div style="font-size:0.68rem;color:var(--text-secondary);display:flex;align-items:center;gap:5px" id="admin-gps-status">
+            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#3B82F6"></span>
+            <span>Locating Kaduna GPS...</span>
           </div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="adminCenterOnGps(true)" style="font-weight:800;display:flex;align-items:center;gap:4px">
-          &#127919; My Live GPS
+        <button class="btn btn-primary btn-sm" onclick="adminCenterOnGps(true)" style="font-weight:800;font-size:0.72rem;padding:0.4rem 0.65rem;display:flex;align-items:center;gap:4px">
+          &#127919; My GPS
         </button>
       </div>
 
-      <!-- Multi-Action Toolbar -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0.75rem">
-        <button class="btn btn-success btn-sm" style="font-weight:800;font-size:0.78rem;padding:0.55rem 0.6rem;display:flex;align-items:center;justify-content:center;gap:5px" onclick="openTagCurrentLocationModal()">
-          <span>&#128205;</span> Pin My GPS Spot
+      <!-- Compact Action Toolbar -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:0.5rem">
+        <button class="btn btn-success btn-sm" style="font-weight:800;font-size:0.72rem;padding:0.45rem 0.5rem;display:flex;align-items:center;justify-content:center;gap:4px" onclick="openTagCurrentLocationModal()">
+          <span>📷</span> Pin GPS Spot + Photo
         </button>
-        <button class="btn btn-secondary btn-sm" id="btn-admin-pin-mode" style="font-weight:800;font-size:0.78rem;padding:0.55rem 0.6rem;display:flex;align-items:center;justify-content:center;gap:5px" onclick="pinCenterOfMap()">
-          <span>&#127919;</span> Pin Center of Map
+        <button class="btn btn-secondary btn-sm" id="btn-admin-pin-mode" style="font-weight:800;font-size:0.72rem;padding:0.45rem 0.5rem;display:flex;align-items:center;justify-content:center;gap:4px" onclick="pinCenterOfMap()">
+          <span>&#127919;</span> Pin Center + Photo
         </button>
       </div>
 
-      <!-- Instruction Tip Bar -->
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px 10px;margin-bottom:0.65rem;display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;color:var(--text-secondary)">
-        <span>&#128070; <strong>Tap anywhere</strong> on the map to add a pin, or tap a pin to <strong>edit or delete</strong>.</span>
-        <button onclick="toggleAdminPinMode()" id="btn-pin-toggle" style="background:none;border:none;color:var(--primary);font-weight:800;cursor:pointer;text-decoration:underline">Tap Mode</button>
+      <!-- Compact Tip Bar -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 8px;margin-bottom:0.5rem;display:flex;align-items:center;justify-content:space-between;font-size:0.68rem;color:var(--text-secondary)">
+        <span>&#128070; Tap anywhere on map to add location &amp; picture.</span>
+        <button onclick="toggleAdminPinMode()" id="btn-pin-toggle" style="background:none;border:none;color:var(--primary);font-weight:800;font-size:0.68rem;cursor:pointer;text-decoration:underline">Tap Mode</button>
       </div>
 
-      <!-- Map Container (440px height for clear touch interaction) -->
-      <div style="position:relative;height:440px;border-radius:18px;overflow:hidden;border:1.5px solid var(--border);box-shadow:0 6px 20px var(--shadow)">
+      <!-- Map Container (Clean 400px height with compact badges) -->
+      <div style="position:relative;height:400px;border-radius:16px;overflow:hidden;border:1.5px solid var(--border);box-shadow:0 4px 16px var(--shadow)">
         <div id="admin-live-map" style="width:100%;height:100%"></div>
       </div>
 
-      <!-- Quick Jump, Edit & Pin Deletion List -->
-      <div style="margin-top:1rem">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
-          <div style="font-size:0.85rem;font-weight:800;color:var(--text-primary)">
-            Campus Pins (<span id="admin-pin-count">0</span> Active)
+      <!-- Compact Quick Jump & Erase Chips List -->
+      <div style="margin-top:0.75rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+          <div style="font-size:0.75rem;font-weight:800;color:var(--text-primary)">
+            Active Spots (<span id="admin-pin-count">0</span>)
           </div>
-          <span style="font-size:0.72rem;color:var(--text-secondary)">Tap pin to jump &bull; Tap &#128465; to erase</span>
+          <span style="font-size:0.65rem;color:var(--text-secondary)">Tap to edit/photo &bull; Tap &#128465; to erase</span>
         </div>
-        <div id="admin-map-quick-chips" style="display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow-y:auto;padding:2px"></div>
+        <div id="admin-map-quick-chips" style="display:flex;flex-wrap:wrap;gap:4px;max-height:120px;overflow-y:auto;padding:2px"></div>
       </div>
     </div>
-
+    
     <div class="admin-section" id="admin-drivers">
       <div class="section-title">Pending Driver Approvals</div>
       <div id="pending-drivers-list"><div class="empty-state"><div class="empty-icon">&#128100;</div><div class="empty-title">No pending drivers</div></div></div>
@@ -1379,18 +1379,24 @@
 
 <!-- TAG LOCATION MODAL FOR ADMIN -->
 <div class="modal-overlay" id="modal-tag-spot">
-  <div class="modal-sheet">
-    <div class="modal-title">&#128205; Label Campus Location</div>
-    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.75rem">
-      Coordinates: <code id="tag-spot-coords" style="font-weight:700">0.000, 0.000</code>
+  <div class="modal-sheet" style="padding:1.15rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+      <div class="modal-title" style="font-size:0.95rem;margin-bottom:0" id="tag-spot-title">&#128205; Add / Edit Campus Location</div>
+      <button type="button" onclick="closeModal('modal-tag-spot')" style="background:none;border:none;font-size:20px;color:var(--text-secondary);cursor:pointer;line-height:1">&times;</button>
     </div>
-    <div class="form-group">
-      <label class="form-label">Location Name</label>
-      <input class="form-input" id="tag-spot-name" placeholder="e.g. Bukka Pot, Library, PT Gate..."/>
+    
+    <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:0.6rem">
+      Coordinates: <code id="tag-spot-coords" style="font-weight:700;font-size:0.7rem">0.000, 0.000</code>
     </div>
-    <div class="form-group">
-      <label class="form-label">Category</label>
-      <select class="form-input" id="tag-spot-category">
+    
+    <div class="form-group" style="margin-bottom:0.6rem">
+      <label class="form-label" style="font-size:0.75rem;margin-bottom:3px">Location Name for Students &amp; Drivers</label>
+      <input class="form-input" id="tag-spot-name" placeholder="e.g. Bukka Pot, Library, PT Gate..." style="padding:0.45rem 0.65rem;font-size:0.8rem"/>
+    </div>
+    
+    <div class="form-group" style="margin-bottom:0.6rem">
+      <label class="form-label" style="font-size:0.75rem;margin-bottom:3px">Category</label>
+      <select class="form-input" id="tag-spot-category" style="padding:0.45rem 0.65rem;font-size:0.8rem">
         <option value="Academic">Academic</option>
         <option value="Hostel">Hostel</option>
         <option value="Engineering">Engineering</option>
@@ -1402,25 +1408,42 @@
       </select>
     </div>
 
-    <!-- Building / Landmark Picture Upload -->
-    <div class="form-group">
-      <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
-        <span>📷 Building / Landmark Photo</span>
-        <span style="font-size:0.7rem;color:var(--text-secondary)">Visible to students &amp; drivers</span>
+    <!-- Prominent Building / Landmark Photo Section -->
+    <div class="form-group" style="background:var(--bg);border:1px dashed var(--border);border-radius:12px;padding:0.65rem;margin-bottom:0.75rem">
+      <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;margin-bottom:5px">
+        <span style="font-weight:800;color:var(--text-primary)">📷 Building / Landmark Picture</span>
+        <span style="font-size:0.65rem;color:var(--primary);font-weight:700">Visible to students</span>
       </label>
+      
+      <!-- Hidden file input triggered by button -->
       <input type="file" id="tag-spot-photo-file" accept="image/*" capture="environment" style="display:none" onchange="handleLocationPhotoSelect(this)"/>
-      <div style="display:flex;gap:6px;margin-bottom:6px">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('tag-spot-photo-file').click()" style="flex:1;font-weight:700;font-size:0.78rem;padding:0.5rem;display:flex;align-items:center;justify-content:center;gap:5px">
+      
+      <div style="display:flex;gap:6px;margin-bottom:5px">
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('tag-spot-photo-file').click()" style="flex:1;font-weight:800;font-size:0.72rem;padding:0.45rem;display:flex;align-items:center;justify-content:center;gap:4px">
           <span>📁</span> Take or Choose Photo
         </button>
       </div>
-      <div id="tag-spot-preview-wrap" style="display:none;position:relative;width:100%;height:130px;border-radius:12px;overflow:hidden;border:1.5px solid var(--border);margin-top:4px">
+
+      <div style="display:flex;gap:4px;align-items:center">
+        <input class="form-input" id="tag-spot-photo-url" placeholder="Or paste image link/URL..." style="font-size:0.7rem;padding:0.35rem 0.5rem" oninput="handlePhotoUrlInput(this.value)"/>
+      </div>
+
+      <!-- Visual Preview Box -->
+      <div id="tag-spot-preview-wrap" style="display:none;position:relative;width:100%;height:110px;border-radius:10px;overflow:hidden;border:1.5px solid #10B981;margin-top:6px">
         <img id="tag-spot-preview-img" src="" style="width:100%;height:100%;object-fit:cover" alt="Building preview"/>
-        <button type="button" onclick="clearLocationPhotoPreview()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.7);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:12px;font-weight:900;cursor:pointer">&times;</button>
+        <button type="button" onclick="clearLocationPhotoPreview()" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.75);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:11px;font-weight:900;cursor:pointer">&times;</button>
       </div>
     </div>
-    <button class="btn btn-success" style="width:100%;font-weight:800;padding:0.75rem" onclick="saveTaggedSpot()">&#128190; Save &amp; Sync to All Devices</button>
-    <button class="btn btn-secondary" style="width:100%;margin-top:0.5rem" onclick="closeModal('modal-tag-spot')">Cancel</button>
+
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-success" style="flex:1;font-weight:800;font-size:0.8rem;padding:0.6rem" onclick="saveTaggedSpot()">
+        &#128190; Save Location &amp; Picture
+      </button>
+      <button id="tag-spot-btn-erase" class="btn btn-danger" style="display:none;font-weight:800;font-size:0.8rem;padding:0.6rem;background:#DC2626;color:#fff;border:none;border-radius:8px" onclick="deleteEditingSpot()">
+        &#128465; Erase
+      </button>
+    </div>
+    <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:0.4rem;font-size:0.75rem;padding:0.4rem" onclick="closeModal('modal-tag-spot')">Cancel</button>
   </div>
 </div>
 
@@ -3974,41 +3997,36 @@ window.pinCenterOfMap = function() {
   handleAdminMapClick(center.lat, center.lng);
 };
 
+let adminEditingSpotKey = null;
+
 function handleAdminMapClick(lat, lng) {
-  if (!adminLiveMap) return;
-
-  if (adminTempClickMarker) {
-    adminLiveMap.removeLayer(adminTempClickMarker);
-  }
-
-  const tempIcon = L.divIcon({
-    html: '<div style="background:#10B981;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,0.4);border:2px solid #fff">&#10133;</div>',
-    className: '',
-    iconSize: [24, 24],
-    iconAnchor: [12, 12]
-  });
-  adminTempClickMarker = L.marker([lat, lng], { icon: tempIcon }).addTo(adminLiveMap);
-
-  const popupContent = '<div style="min-width:230px;padding:6px">' +
-    '<div style="font-weight:900;font-size:13px;color:#1E3A8A;margin-bottom:3px">&#10133; Label New Campus Spot</div>' +
-    '<div style="font-size:11px;color:#666;margin-bottom:8px">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</div>' +
-    '<label style="font-size:11px;font-weight:700;color:#333;display:block;margin-bottom:2px">Spot Name for Students &amp; Drivers:</label>' +
-    '<input id="pop-new-loc-name" placeholder="e.g. Bukka, Library, PT Gate..." style="width:100%;padding:7px;border:1.5px solid #2563EB;border-radius:6px;font-size:12px;font-weight:700;margin-bottom:8px;box-sizing:border-box" autofocus />' +
-    '<div style="display:flex;gap:6px">' +
-      '<button onclick="submitNewPinClick(' + lat + ',' + lng + ')" style="flex:1;background:#16a34a;color:#fff;border:none;padding:7px 10px;border-radius:6px;font-weight:800;font-size:11px;cursor:pointer">' +
-        '&#128190; Save &amp; Sync' +
-      '</button>' +
-      '<button onclick="adminLiveMap.closePopup()" style="background:#e5e7eb;color:#374151;border:none;padding:7px 10px;border-radius:6px;font-weight:700;font-size:11px;cursor:pointer">' +
-        'Cancel' +
-      '</button>' +
-    '</div>' +
-  '</div>';
-
-  L.popup()
-    .setLatLng([lat, lng])
-    .setContent(popupContent)
-    .openOn(adminLiveMap);
+  openTagModalWithCoords(lat, lng, null);
 }
+
+window.handlePhotoUrlInput = function(url) {
+  url = (url || '').trim();
+  if (url) {
+    pendingSpotPhotoBase64 = url;
+    const previewWrap = document.getElementById('tag-spot-preview-wrap');
+    const previewImg = document.getElementById('tag-spot-preview-img');
+    if (previewImg) previewImg.src = url;
+    if (previewWrap) previewWrap.style.display = 'block';
+  }
+};
+
+window.openEditModalForPin = function(key) {
+  const loc = AFIT_LOCATIONS[key];
+  if (!loc) return;
+  if (adminLiveMap) adminLiveMap.closePopup();
+  openTagModalWithCoords(loc.lat, loc.lng, key);
+};
+
+window.deleteEditingSpot = function() {
+  if (adminEditingSpotKey) {
+    deletePinFromMap(adminEditingSpotKey);
+    closeModal('modal-tag-spot');
+  }
+};
 
 window.submitNewPinClick = function(lat, lng) {
   const inp = document.getElementById('pop-new-loc-name');
@@ -4036,49 +4054,39 @@ function renderAdminMapPins() {
     const dName = getLocDisplayName(key);
     const photo = customLocationImages[key] || '';
 
-    const iconHtml = '<div style="background:#1E3A8A;color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,0.35);cursor:pointer;border:1.5px solid #fff">' +
-      (photo ? '📷 ' : '📍 ') + loc.code + '. ' + escape(dName) + '</div>';
-    const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [120, 22], iconAnchor: [60, 11] });
+    // Compact font & badge to avoid cluttering the map
+    const iconHtml = '<div style="background:#1E3A8A;color:#fff;padding:2px 5px;border-radius:6px;font-size:9px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.35);cursor:pointer;border:1px solid #fff;max-width:95px;overflow:hidden;text-overflow:ellipsis">' +
+      (photo ? '📷 ' : '') + loc.code + '. ' + escape(dName) + '</div>';
+    const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [95, 18], iconAnchor: [47, 9] });
     const m = L.marker([loc.lat, loc.lng], { icon: cIcon }).addTo(window.__adminPinsLayer);
 
-    const popupHtml = '<div style="min-width:240px;padding:6px">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
-        '<span style="font-weight:900;font-size:13px;color:#1E3A8A">📍 Pin #' + loc.code + '</span>' +
-        '<span style="font-size:10px;background:#E0E7FF;color:#3730A3;padding:2px 6px;border-radius:6px;font-weight:700">' + escape(loc.category) + '</span>' +
+    const popupHtml = '<div style="min-width:200px;max-width:230px;padding:4px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
+        '<span style="font-weight:800;font-size:11px;color:#1E3A8A">📍 Pin #' + loc.code + '</span>' +
+        '<span style="font-size:9px;background:#E0E7FF;color:#3730A3;padding:1px 5px;border-radius:4px;font-weight:700">' + escape(loc.category) + '</span>' +
       '</div>' +
-      '<div style="font-size:11px;color:#666;margin-bottom:6px">' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + '</div>' +
+      '<div style="font-size:9px;color:#666;margin-bottom:4px">' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + '</div>' +
       
-      // Landmark Building Photo Display with tap-to-enlarge
       (photo ? (
-        '<div style="position:relative;margin-bottom:8px;border-radius:10px;overflow:hidden;cursor:pointer;border:1.5px solid #CBD5E1" data-img="' + encodeURI(photo) + '" onclick="viewFullImage(decodeURI(this.dataset.img))">' +
-          '<img src="' + photo + '" style="width:100%;height:115px;object-fit:cover;display:block" alt="Building photo"/>' +
-          '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;font-weight:700;padding:4px 6px;text-align:center">' +
-            '🔍 Tap photo to view building full screen' +
+        '<div style="position:relative;margin-bottom:5px;border-radius:8px;overflow:hidden;cursor:pointer;border:1px solid #CBD5E1" data-img="' + encodeURI(photo) + '" onclick="viewFullImage(decodeURI(this.dataset.img))">' +
+          '<img src="' + photo + '" style="width:100%;height:90px;object-fit:cover;display:block" alt="Building photo"/>' +
+          '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.65);color:#fff;font-size:9px;font-weight:700;padding:2px 4px;text-align:center">' +
+            '🔍 Tap photo to view full screen' +
           '</div>' +
         '</div>'
       ) : '') +
 
-      '<label style="font-size:11px;font-weight:700;color:#333;display:block;margin-bottom:2px">Label for Students &amp; Drivers:</label>' +
-      '<input id="admin-pin-name-' + loc.code + '" value="' + escapeAttr(dName) + '" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:12px;font-weight:600;margin-bottom:6px;box-sizing:border-box" />' +
-      
-      // Photo Upload button on Pin Popup
-      '<div style="margin-bottom:8px">' +
-        '<label style="font-size:11px;font-weight:700;color:#2563EB;cursor:pointer;display:inline-flex;align-items:center;gap:4px">' +
-          '<span>📷</span> ' + (photo ? 'Change Building Photo' : 'Attach Building Photo') +
-          '<input type="file" accept="image/*" capture="environment" style="display:none" data-lockey="' + escapeAttr(key) + '" onchange="uploadPinPhoto(this, this.dataset.lockey)"/>' +
-        '</label>' +
-      '</div>' +
+      '<div style="font-size:11px;font-weight:800;color:#1E3A8A;margin-bottom:4px">' + escape(dName) + '</div>' +
 
-      '<div style="display:flex;gap:6px">' +
-        '<button data-code="' + loc.code + '" data-key="' + escapeAttr(key) + '" data-lat="' + loc.lat + '" data-lng="' + loc.lng + '" onclick="submitPinEdit(this.dataset.code, this.dataset.key, Number(this.dataset.lat), Number(this.dataset.lng))" style="flex:1;background:#16a34a;color:#fff;border:none;padding:7px;border-radius:6px;font-weight:800;font-size:11px;cursor:pointer">' +
-          '&#128190; Update' +
+      '<div style="display:flex;gap:4px">' +
+        '<button data-key="' + escapeAttr(key) + '" onclick="openEditModalForPin(this.dataset.key)" style="flex:1;background:#2563EB;color:#fff;border:none;padding:5px 8px;border-radius:6px;font-weight:800;font-size:10px;cursor:pointer">' +
+          '📷 Edit &amp; Photo' +
         '</button>' +
-        '<button data-key="' + escapeAttr(key) + '" onclick="deletePinFromMap(this.dataset.key)" style="background:#dc2626;color:#fff;border:none;padding:7px 10px;border-radius:6px;font-weight:800;font-size:11px;cursor:pointer" title="Remove pin from map">' +
-          '&#128465; Erase' +
+        '<button data-key="' + escapeAttr(key) + '" onclick="deletePinFromMap(this.dataset.key)" style="background:#DC2626;color:#fff;border:none;padding:5px 7px;border-radius:6px;font-weight:800;font-size:10px;cursor:pointer" title="Remove pin">' +
+          '&#128465;' +
         '</button>' +
       '</div>' +
     '</div>';
-
     m.bindPopup(popupHtml);
   });
 }
@@ -4412,19 +4420,84 @@ window.openTagCurrentLocationModal = function() {
   openTagModalWithCoords(adminGpsCoords[0], adminGpsCoords[1]);
 };
 
-function openTagModalWithCoords(lat, lng) {
+function openTagModalWithCoords(lat, lng, existingKey = null) {
   adminPendingTagCoords = [lat, lng];
+  adminEditingSpotKey = existingKey;
+
   const coordEl = document.getElementById('tag-spot-coords');
   if (coordEl) coordEl.textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+
+  const titleEl = document.getElementById('tag-spot-title');
   const nameInp = document.getElementById('tag-spot-name');
-  if (nameInp) nameInp.value = '';
+  const catSel = document.getElementById('tag-spot-category');
+  const eraseBtn = document.getElementById('tag-spot-btn-erase');
+  const urlInp = document.getElementById('tag-spot-photo-url');
+
+  if (existingKey && AFIT_LOCATIONS[existingKey]) {
+    const loc = AFIT_LOCATIONS[existingKey];
+    if (titleEl) titleEl.innerHTML = '✏️ Edit Spot #' + loc.code + ' &amp; Photo';
+    if (nameInp) nameInp.value = getLocDisplayName(existingKey);
+    if (catSel) catSel.value = loc.category || 'Academic';
+    if (eraseBtn) eraseBtn.style.display = 'block';
+
+    const photo = customLocationImages[existingKey] || '';
+    pendingSpotPhotoBase64 = photo;
+    if (urlInp) urlInp.value = (photo.startsWith('http') ? photo : '');
+
+    const previewWrap = document.getElementById('tag-spot-preview-wrap');
+    const previewImg = document.getElementById('tag-spot-preview-img');
+    if (photo) {
+      if (previewImg) previewImg.src = photo;
+      if (previewWrap) previewWrap.style.display = 'block';
+    } else {
+      if (previewWrap) previewWrap.style.display = 'none';
+    }
+  } else {
+    if (titleEl) titleEl.innerHTML = '➕ Add Campus Location &amp; Photo';
+    if (nameInp) nameInp.value = '';
+    if (eraseBtn) eraseBtn.style.display = 'none';
+    if (urlInp) urlInp.value = '';
+    clearLocationPhotoPreview();
+  }
+
   openModal('modal-tag-spot');
 }
 
 window.saveTaggedSpot = async function() {
   const nameInp = document.getElementById('tag-spot-name');
+  const catSel = document.getElementById('tag-spot-category');
   const name = nameInp ? nameInp.value.trim() : '';
+  const category = catSel ? catSel.value : 'Campus Spot';
+
   if (!name) { alert('Please enter a location name.'); return; }
+
+  if (adminEditingSpotKey) {
+    // Updating existing location & photo
+    const oldKey = adminEditingSpotKey;
+    customLocationNames[oldKey] = name;
+    if (AFIT_LOCATIONS[oldKey]) {
+      AFIT_LOCATIONS[oldKey].defaultName = name;
+      AFIT_LOCATIONS[oldKey].category = category;
+    }
+    localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+
+    if (pendingSpotPhotoBase64) {
+      customLocationImages[oldKey] = pendingSpotPhotoBase64;
+      localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
+      const safeKey = oldKey.replace(/[./]/g, '_');
+      setDoc(doc(db, 'settings', 'location_images'), { [safeKey]: pendingSpotPhotoBase64 }, { merge: true }).catch(() => {});
+    }
+
+    renderAdminMapPins();
+    renderAdminQuickChips();
+    if (typeof renderLocationChips === 'function') {
+      renderLocationChips('req-pickup-grid', 'pickup');
+      renderLocationChips('req-dest-grid', 'dest');
+    }
+    closeModal('modal-tag-spot');
+    alert('📷 Location "' + name + '" and picture updated! Students can now see this building.');
+    return;
+  }
 
   let coords = adminPendingTagCoords || adminGpsCoords;
   if (!coords && adminLiveMap) {
@@ -4437,7 +4510,7 @@ window.saveTaggedSpot = async function() {
     return;
   }
 
-  await saveNewPinFromMap(name, coords[0], coords[1], pendingSpotPhotoBase64);
+  await saveNewPinFromMap(name, coords[0], coords[1], pendingSpotPhotoBase64, category);
   clearLocationPhotoPreview();
   closeModal('modal-tag-spot');
 };
