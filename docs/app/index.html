@@ -1253,12 +1253,21 @@
           </div>
           <div style="font-size:0.68rem;color:var(--text-secondary);display:flex;align-items:center;gap:5px" id="admin-gps-status">
             <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#3B82F6"></span>
-            <span>Locating Kaduna GPS...</span>
+            <span>Locating your live position...</span>
           </div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="adminCenterOnGps(true)" style="font-weight:800;font-size:0.72rem;padding:0.4rem 0.65rem;display:flex;align-items:center;gap:4px">
-          &#127919; My GPS
-        </button>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-primary btn-sm" onclick="adminCenterOnGps(true)" style="font-weight:800;font-size:0.72rem;padding:0.4rem 0.65rem;display:flex;align-items:center;gap:4px" title="Track my real live position">
+            &#127919; My Live GPS
+          </button>
+        </div>
+      </div>
+
+      <!-- Satellite & Map Layer Switcher -->
+      <div style="display:flex;gap:4px;margin-bottom:0.45rem">
+        <button id="admin-layer-roads" class="btn btn-sm active" style="flex:1;font-size:0.68rem;font-weight:800;padding:0.3rem;background:#2563EB;color:#fff;border:none;border-radius:6px;cursor:pointer" onclick="setAdminMapLayer('roads')">🗺️ Google Roads</button>
+        <button id="admin-layer-sat" class="btn btn-sm" style="flex:1;font-size:0.68rem;font-weight:800;padding:0.3rem;background:var(--card);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;cursor:pointer" onclick="setAdminMapLayer('satellite')">🛰️ Satellite View</button>
+        <button id="admin-layer-osm" class="btn btn-sm" style="flex:1;font-size:0.68rem;font-weight:800;padding:0.3rem;background:var(--card);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;cursor:pointer" onclick="setAdminMapLayer('osm')">🌐 OpenStreet</button>
       </div>
 
       <!-- Compact Action Toolbar -->
@@ -4193,14 +4202,65 @@ function renderAdminQuickChips() {
   });
 }
 
+let adminCurrentTileLayer = null;
+
+window.setAdminMapLayer = function(type) {
+  if (!adminLiveMap) return;
+  if (adminCurrentTileLayer) adminLiveMap.removeLayer(adminCurrentTileLayer);
+
+  const btnRoads = document.getElementById('admin-layer-roads');
+  const btnSat = document.getElementById('admin-layer-sat');
+  const btnOsm = document.getElementById('admin-layer-osm');
+
+  const setBtn = (btn, active) => {
+    if (!btn) return;
+    if (active) {
+      btn.style.background = '#2563EB';
+      btn.style.color = '#fff';
+      btn.style.border = 'none';
+    } else {
+      btn.style.background = 'var(--card)';
+      btn.style.color = 'var(--text-primary)';
+      btn.style.border = '1px solid var(--border)';
+    }
+  };
+
+  setBtn(btnRoads, type === 'roads');
+  setBtn(btnSat, type === 'satellite');
+  setBtn(btnOsm, type === 'osm');
+
+  if (type === 'satellite') {
+    adminCurrentTileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      attribution: 'Google Satellite'
+    }).addTo(adminLiveMap);
+  } else if (type === 'osm') {
+    adminCurrentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: 'OpenStreetMap'
+    }).addTo(adminLiveMap);
+  } else {
+    adminCurrentTileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      attribution: 'Google Maps'
+    }).addTo(adminLiveMap);
+  }
+};
+
+let userHasRealLiveGps = false;
+
 function startAdminGpsWatch(autoCenter = false) {
-  const updateGpsView = (lat, lng, acc, label = 'Live GPS (Kaduna)') => {
+  const updateGpsView = (lat, lng, acc, label = 'Live GPS', isRealGps = true, areaName = '') => {
     adminGpsCoords = [lat, lng];
+    if (isRealGps) userHasRealLiveGps = true;
+
     const st = document.getElementById('admin-gps-status');
     if (st) {
-      st.innerHTML = '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#10B981;box-shadow:0 0 6px #10B981"></span>' +
-        '<span style="font-weight:800;color:var(--text-primary)">' + label + ':</span> ' +
-        lat.toFixed(5) + ', ' + lng.toFixed(5) + ' (±' + acc + 'm)';
+      const dotColor = isRealGps ? '#10B981' : '#3B82F6';
+      const locText = areaName ? (' (' + areaName + ')') : '';
+      st.innerHTML = '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + dotColor + ';box-shadow:0 0 6px ' + dotColor + '"></span>' +
+        '<span style="font-weight:800;color:var(--text-primary)">' + label + locText + ':</span> ' +
+        lat.toFixed(5) + ', ' + lng.toFixed(5) + (acc ? (' (±' + acc + 'm)') : '');
     }
 
     if (adminLiveMap) {
@@ -4212,22 +4272,30 @@ function startAdminGpsWatch(autoCenter = false) {
           iconAnchor: [14, 14]
         });
         adminGpsMarker = L.marker([lat, lng], { icon: gpsIcon, zIndexOffset: 1000 }).addTo(adminLiveMap);
-        adminGpsMarker.bindPopup('<div style="text-align:center;font-weight:800;color:#1E3A8A;padding:4px">&#128100; <strong>Your Live Location (Admin)</strong><br/><span style="font-size:11px;color:#555">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '<br/>AFIT Campus, Kaduna</span><br/><button onclick="openTagCurrentLocationModal()" style="margin-top:6px;background:#2563eb;color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">&#128205; Label This Spot</button></div>');
       } else {
         adminGpsMarker.setLatLng([lat, lng]);
       }
 
+      const statusBadge = isRealGps ? '<span style="background:#10b981;color:#fff;padding:2px 6px;border-radius:10px;font-size:10px">📡 Real Live Satellite/GPS Fix</span>' : '<span style="background:#3b82f6;color:#fff;padding:2px 6px;border-radius:10px;font-size:10px">📍 Network/Cell Location</span>';
+
+      adminGpsMarker.bindPopup('<div style="text-align:center;font-weight:800;color:#1E3A8A;padding:4px">' +
+        '&#128100; <strong>Your Live Location (Admin)</strong><br/>' +
+        '<div style="margin:4px 0">' + statusBadge + '</div>' +
+        '<span style="font-size:11px;color:#333">Lat: ' + lat.toFixed(5) + ', Lng: ' + lng.toFixed(5) + '<br/>' + (areaName || 'Live Location') + '</span><br/>' +
+        '<button onclick="openTagCurrentLocationModal()" style="margin-top:6px;background:#2563eb;color:#fff;border:none;padding:5px 9px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">&#128205; Label This Location</button>' +
+        '</div>');
+
       if (!adminGpsAccuracyCircle) {
         adminGpsAccuracyCircle = L.circle([lat, lng], {
-          radius: Math.max(acc, 20),
-          color: '#2563EB',
-          fillColor: '#3B82F6',
-          fillOpacity: 0.12,
+          radius: Math.max(acc || 30, 20),
+          color: isRealGps ? '#10B981' : '#2563EB',
+          fillColor: isRealGps ? '#34D399' : '#3B82F6',
+          fillOpacity: 0.15,
           weight: 1.5
         }).addTo(adminLiveMap);
       } else {
         adminGpsAccuracyCircle.setLatLng([lat, lng]);
-        adminGpsAccuracyCircle.setRadius(Math.max(acc, 20));
+        adminGpsAccuracyCircle.setRadius(Math.max(acc || 30, 20));
       }
 
       if (autoCenter) {
@@ -4236,62 +4304,129 @@ function startAdminGpsWatch(autoCenter = false) {
     }
   };
 
-  // Immediate Baseline: Calibrated Kaduna AFIT Live Location
-  const KADUNA_BASE = [10.61205, 7.44520];
-  updateGpsView(KADUNA_BASE[0], KADUNA_BASE[1], 15, 'Live GPS (Kaduna)');
-  if (autoCenter && adminLiveMap) {
-    adminLiveMap.setView(KADUNA_BASE, 16);
-  }
+  // Helper: Network / Cell Base Station IP Geolocation Fallback
+  const fetchCellNetworkLocation = async () => {
+    try {
+      const res = await fetch('https://ipwho.is/').catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data && data.success && data.latitude && data.longitude && !userHasRealLiveGps) {
+          const area = [data.city, data.region, data.country].filter(Boolean).join(', ');
+          updateGpsView(data.latitude, data.longitude, 1000, 'Cell/Network Location', false, area);
+          if (adminLiveMap && !userHasRealLiveGps) {
+            adminLiveMap.setView([data.latitude, data.longitude], 15);
+          }
+          return true;
+        }
+      }
+    } catch(e) {}
+    return false;
+  };
 
-  if (!navigator.geolocation) {
-    return;
-  }
-
-  // 1. Immediate single high-accuracy fix
-  navigator.geolocation.getCurrentPosition((pos) => {
-    updateGpsView(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy));
-  }, (err) => {
+  // 1. Initial Geolocation request with High Accuracy (Hardware Satellite GPS)
+  if (navigator.geolocation) {
     const st = document.getElementById('admin-gps-status');
     if (st) {
-      st.innerHTML = '<span style="color:#f59e0b">&#9888; GPS note:</span> <span style="font-size:11px">' + err.message + '</span> ' +
-        '<button onclick="adminCenterOnGps(true)" style="background:none;border:none;color:#2563eb;font-size:11px;font-weight:800;cursor:pointer;text-decoration:underline">Retry</button>';
+      st.innerHTML = '<span style="color:#2563eb">&#9203; Contacting GPS / Location Service...</span>';
     }
-  }, {
-    enableHighAccuracy: true,
-    maximumAge: 0,
-    timeout: 20000
-  });
 
-  // 2. Continuous watch position
-  if (adminGpsWatchId) navigator.geolocation.clearWatch(adminGpsWatchId);
-  adminGpsWatchId = navigator.geolocation.watchPosition((pos) => {
-    updateGpsView(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy));
-  }, null, {
-    enableHighAccuracy: true,
-    maximumAge: 5000,
-    timeout: 15000
-  });
+    navigator.geolocation.getCurrentPosition((pos) => {
+      userHasRealLiveGps = true;
+      updateGpsView(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy), 'Live Satellite GPS', true);
+      if (autoCenter && adminLiveMap) {
+        adminLiveMap.setView([pos.coords.latitude, pos.coords.longitude], 17);
+      }
+    }, (err) => {
+      console.warn('High accuracy GPS error:', err.message);
+      // Fallback A: Try low accuracy browser location (uses cell towers & WiFi access points)
+      navigator.geolocation.getCurrentPosition((lowPos) => {
+        userHasRealLiveGps = true;
+        updateGpsView(lowPos.coords.latitude, lowPos.coords.longitude, Math.round(lowPos.coords.accuracy), 'Network/Cell GPS', true);
+        if (autoCenter && adminLiveMap) {
+          adminLiveMap.setView([lowPos.coords.latitude, lowPos.coords.longitude], 16);
+        }
+      }, async (lowErr) => {
+        // Fallback B: Network IP / Cell Base Station Geolocation
+        const found = await fetchCellNetworkLocation();
+        if (!found && !userHasRealLiveGps) {
+          // Default Kaduna baseline if all network queries fail
+          updateGpsView(10.61205, 7.44520, 15, 'Kaduna AFIT Baseline', false, 'Kaduna');
+        }
+        const st = document.getElementById('admin-gps-status');
+        if (st) {
+          st.innerHTML += ' <button onclick="adminCenterOnGps(true)" style="background:none;border:none;color:#2563eb;font-size:11px;font-weight:800;cursor:pointer;text-decoration:underline">Retry GPS</button>';
+        }
+      }, {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 60000
+      });
+    }, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 15000
+    });
+
+    // 2. Continuous real-time position tracking (updates whenever your device moves)
+    if (adminGpsWatchId) navigator.geolocation.clearWatch(adminGpsWatchId);
+    adminGpsWatchId = navigator.geolocation.watchPosition((pos) => {
+      userHasRealLiveGps = true;
+      updateGpsView(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy), 'Live GPS', true);
+    }, (err) => {
+      console.warn('watchPosition error:', err);
+    }, {
+      enableHighAccuracy: true,
+      maximumAge: 3000,
+      timeout: 15000
+    });
+  } else {
+    fetchCellNetworkLocation();
+  }
 }
 
 window.adminCenterOnGps = function(showFeedback = true) {
-  if (adminGpsCoords && adminLiveMap) {
-    adminLiveMap.setView(adminGpsCoords, 17);
-    if (adminGpsMarker) adminGpsMarker.openPopup();
-  } else {
-    if (showFeedback) {
-      const st = document.getElementById('admin-gps-status');
-      if (st) st.innerHTML = '<span style="color:#2563eb">&#9203; Acquiring GPS position...</span>';
-      navigator.geolocation.getCurrentPosition((pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        adminGpsCoords = [lat, lng];
-        if (adminLiveMap) adminLiveMap.setView([lat, lng], 17);
-        startAdminGpsWatch(true);
-      }, (err) => {
-        alert('Could not acquire GPS position: ' + err.message + '. Please ensure location permission is allowed.');
-      }, { enableHighAccuracy: true, timeout: 15000 });
-    }
+  if (showFeedback) {
+    const st = document.getElementById('admin-gps-status');
+    if (st) st.innerHTML = '<span style="color:#2563eb">&#9203; Refreshing your live location...</span>';
   }
+
+  if (!navigator.geolocation) {
+    alert('Geolocation is not supported by your browser.');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition((pos) => {
+    userHasRealLiveGps = true;
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    adminGpsCoords = [lat, lng];
+    if (adminLiveMap) {
+      adminLiveMap.setView([lat, lng], 18);
+      if (adminGpsMarker) {
+        adminGpsMarker.setLatLng([lat, lng]);
+        adminGpsMarker.openPopup();
+      }
+    }
+    startAdminGpsWatch(false);
+  }, (err) => {
+    // If high-accuracy fails, try network/wifi
+    navigator.geolocation.getCurrentPosition((pos2) => {
+      userHasRealLiveGps = true;
+      const lat = pos2.coords.latitude;
+      const lng = pos2.coords.longitude;
+      adminGpsCoords = [lat, lng];
+      if (adminLiveMap) {
+        adminLiveMap.setView([lat, lng], 17);
+        if (adminGpsMarker) {
+          adminGpsMarker.setLatLng([lat, lng]);
+          adminGpsMarker.openPopup();
+        }
+      }
+      startAdminGpsWatch(false);
+    }, (err2) => {
+      alert('Could not acquire your live location: ' + err2.message + '. Please ensure Location is enabled in your device settings.');
+    }, { enableHighAccuracy: false, timeout: 10000 });
+  }, { enableHighAccuracy: true, timeout: 15000 });
 };
 
 window.openTagCurrentLocationModal = function() {
