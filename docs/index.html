@@ -1120,29 +1120,36 @@
     
     <!-- ADMIN LIVE GPS MAP & PIN TAGGER -->
     <div class="admin-section active" id="admin-map">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
         <div>
-          <div style="font-weight:800;font-size:0.95rem;color:var(--text-primary)">Live GPS Campus Map &amp; Tagger</div>
-          <div style="font-size:0.72rem;color:var(--text-secondary)" id="admin-gps-status">Tracking your live GPS location...</div>
+          <div style="font-weight:900;font-size:1.05rem;color:var(--text-primary)">🗺️ Interactive Campus Map &amp; Labeler</div>
+          <div style="font-size:0.75rem;color:var(--text-secondary)" id="admin-gps-status">Tap any pin or anywhere on the map to label it.</div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="adminCenterOnGps()">&#128205; My GPS</button>
+        <button class="btn btn-primary btn-sm" onclick="adminCenterOnGps()" style="font-weight:700">&#128205; My GPS</button>
       </div>
 
-      <!-- Tagger Actions -->
-      <div style="display:flex;gap:6px;margin-bottom:0.6rem">
-        <button class="btn btn-success btn-sm" style="flex:1;font-weight:700;font-size:0.78rem" onclick="openTagCurrentLocationModal()">
-          &#128205; Tag My Current Location
+      <!-- Action Bar -->
+      <div style="display:flex;gap:8px;margin-bottom:0.75rem">
+        <button class="btn btn-success btn-sm" style="flex:1;font-weight:800;font-size:0.8rem;padding:0.5rem" onclick="openTagCurrentLocationModal()">
+          &#128205; Label My Current GPS Spot
         </button>
-        <button class="btn btn-secondary btn-sm" style="flex:1;font-size:0.78rem" onclick="enableDropPinMode()">
-          &#128070; Drop Pin on Map
+        <button class="btn btn-primary btn-sm" style="flex:1;font-weight:800;font-size:0.8rem;padding:0.5rem" onclick="alert('Click anywhere on the map below to drop and label a new location!')">
+          &#128070; Click Map to Add Pin
         </button>
       </div>
 
-      <div style="position:relative;height:360px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 4px 14px var(--shadow)">
+      <!-- Map Container (420px height for clear editing) -->
+      <div style="position:relative;height:420px;border-radius:18px;overflow:hidden;border:1.5px solid var(--border);box-shadow:0 6px 20px var(--shadow)">
         <div id="admin-live-map" style="width:100%;height:100%"></div>
       </div>
-      <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:6px;text-align:center">
-        Tap anywhere on the map or use "Tag My Current Location" to name spots inside or outside AFIT. Changes sync to Users &amp; Drivers instantly.
+
+      <!-- Quick Jump & Label Chips Bar -->
+      <div style="margin-top:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+          <div style="font-size:0.85rem;font-weight:800;color:var(--text-primary)">Campus Pins (Tap to jump &amp; label)</div>
+          <span style="font-size:0.72rem;color:var(--text-secondary)">Syncs to User &amp; Driver side</span>
+        </div>
+        <div id="admin-map-quick-chips" style="display:flex;flex-wrap:wrap;gap:6px;max-height:140px;overflow-y:auto;padding:2px"></div>
       </div>
     </div>
 
@@ -3449,7 +3456,7 @@ window.saveAllLocationNames = async function() {
 
 
 // =============================================================================
-// ADMIN LIVE GPS MAP & PIN TAGGER
+// ADMIN LIVE GPS MAP & DIRECT PIN LABELER (Fully Synced with User & Driver Side)
 // =============================================================================
 let adminLiveMap = null;
 let adminGpsMarker = null;
@@ -3473,28 +3480,47 @@ function initAdminLiveMap() {
         attribution: 'Google Maps'
       }).addTo(adminLiveMap);
 
-      // Map click handler for dropping pins
+      // Map click handler: Click anywhere on map to label that location!
       adminLiveMap.on('click', (e) => {
-        if (!adminDropPinActive) return;
-        adminDropPinActive = false;
-        adminPendingTagCoords = [e.latlng.lat, e.latlng.lng];
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        const popupContent = '<div style="min-width:210px;padding:4px">' +
+          '<div style="font-weight:900;font-size:13px;color:#1E3A8A;margin-bottom:3px">➕ Label New Campus Spot</div>' +
+          '<div style="font-size:11px;color:#666;margin-bottom:8px">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</div>' +
+          '<label style="font-size:11px;font-weight:700;color:#333">Location Name for Students &amp; Drivers:</label>' +
+          '<input id="pop-new-loc-name" placeholder="e.g. Bukka Pot, Library..." style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-weight:600;margin:4px 0 8px;box-sizing:border-box" />' +
+          '<button onclick="submitNewPinClick(' + lat + ',' + lng + ')" style="width:100%;background:#16a34a;color:#fff;border:none;padding:7px 10px;border-radius:6px;font-weight:800;font-size:12px;cursor:pointer">' +
+            '💾 Save &amp; Sync to PWA' +
+          '</button>' +
+        '</div>';
 
-        if (adminDropMarker) adminLiveMap.removeLayer(adminDropMarker);
-        adminDropMarker = L.marker(e.latlng).addTo(adminLiveMap);
-
-        openTagModalWithCoords(e.latlng.lat, e.latlng.lng);
+        L.popup()
+          .setLatLng([lat, lng])
+          .setContent(popupContent)
+          .openOn(adminLiveMap);
       });
     }
 
     renderAdminMapPins();
+    renderAdminQuickChips();
     startAdminGpsWatch();
     adminLiveMap.invalidateSize();
   }, 200);
 }
 
+window.submitNewPinClick = function(lat, lng) {
+  const inp = document.getElementById('pop-new-loc-name');
+  if (inp) saveNewPinFromMap(inp.value, lat, lng);
+};
+
+window.submitPinEdit = function(code, key, lat, lng) {
+  const inp = document.getElementById('admin-pin-name-' + code);
+  if (inp) savePinFromMap(key, inp.value, lat, lng);
+};
+
 function renderAdminMapPins() {
   if (!adminLiveMap) return;
-  // Clear any existing custom pin layers
   if (window.__adminPinsLayer) {
     adminLiveMap.removeLayer(window.__adminPinsLayer);
   }
@@ -3503,13 +3529,134 @@ function renderAdminMapPins() {
   Object.keys(AFIT_LOCATIONS).forEach(key => {
     const loc = AFIT_LOCATIONS[key];
     const dName = getLocDisplayName(key);
-    const iconHtml = '<div style="background:var(--primary);color:#fff;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.3)">' +
-      '📍 ' + escape(dName) + '</div>';
-    const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [110, 20], iconAnchor: [55, 10] });
+
+    const iconHtml = '<div style="background:#1E3A8A;color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,0.35);cursor:pointer;border:1.5px solid #fff">' +
+      '📍 ' + loc.code + '. ' + escape(dName) + '</div>';
+    const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [120, 22], iconAnchor: [60, 11] });
     const m = L.marker([loc.lat, loc.lng], { icon: cIcon }).addTo(window.__adminPinsLayer);
-    m.bindPopup('<b>' + escape(dName) + '</b><br><small>Original: ' + escape(key) + '</small><br><small>' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + '</small>');
+
+    const popupHtml = '<div style="min-width:220px;padding:4px">' +
+      '<div style="font-weight:900;font-size:13px;color:#1E3A8A;margin-bottom:2px">📍 Pin #' + loc.code + '</div>' +
+      '<div style="font-size:11px;color:#666;margin-bottom:6px">Default: ' + escape(key) + ' (' + loc.category + ')</div>' +
+      '<label style="font-size:11px;font-weight:700;color:#333">Label for Students &amp; Drivers:</label>' +
+      '<input id="admin-pin-name-' + loc.code + '" value="' + escapeAttr(dName) + '" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-weight:600;margin:4px 0 8px;box-sizing:border-box" />' +
+      '<button data-code="' + loc.code + '" data-key="' + escapeAttr(key) + '" data-lat="' + loc.lat + '" data-lng="' + loc.lng + '" onclick="submitPinEdit(this.dataset.code, this.dataset.key, Number(this.dataset.lat), Number(this.dataset.lng))" style="width:100%;background:#16a34a;color:#fff;border:none;padding:7px 10px;border-radius:6px;font-weight:800;font-size:12px;cursor:pointer">' +
+        '💾 Save &amp; Sync Label' +
+      '</button>' +
+    '</div>';
+
+    m.bindPopup(popupHtml);
   });
 }
+
+function renderAdminQuickChips() {
+  const container = document.getElementById('admin-map-quick-chips');
+  if (!container) return;
+  container.innerHTML = '';
+
+  Object.keys(AFIT_LOCATIONS).forEach(key => {
+    const loc = AFIT_LOCATIONS[key];
+    const dName = getLocDisplayName(key);
+
+    const chip = document.createElement('button');
+    chip.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:4px 10px;font-size:0.75rem;font-weight:600;color:var(--text-primary);cursor:pointer;display:inline-flex;align-items:center;gap:4px';
+    chip.innerHTML = '<span style="color:var(--primary);font-weight:800">#' + loc.code + '</span> ' + escape(dName);
+    chip.onclick = () => {
+      if (adminLiveMap) {
+        adminLiveMap.setView([loc.lat, loc.lng], 18);
+        // Find marker and open popup
+        if (window.__adminPinsLayer) {
+          window.__adminPinsLayer.eachLayer(layer => {
+            const ll = layer.getLatLng();
+            if (Math.abs(ll.lat - loc.lat) < 0.0001 && Math.abs(ll.lng - loc.lng) < 0.0001) {
+              layer.openPopup();
+            }
+          });
+        }
+      }
+    };
+    container.appendChild(chip);
+  });
+}
+
+window.savePinFromMap = async function(key, newName, lat, lng) {
+  newName = (newName || '').trim();
+  if (!newName) { alert('Please enter a location name.'); return; }
+
+  customLocationNames[key] = newName;
+  if (AFIT_LOCATIONS[key]) {
+    AFIT_LOCATIONS[key].defaultName = newName;
+  }
+  localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+
+  try {
+    // 1. Save to settings/location_names
+    await setDoc(doc(db, 'settings', 'location_names'), { [key]: newName }, { merge: true });
+
+    // 2. Save full array to settings/locations (list array) for Flutter app compatibility
+    const onlineList = Object.keys(AFIT_LOCATIONS).map(k => customLocationNames[k] || AFIT_LOCATIONS[k].defaultName || k);
+    await setDoc(doc(db, 'settings', 'locations'), { list: onlineList }, { merge: true });
+
+    // 3. Immediately update all views across the PWA
+    renderAdminMapPins();
+    renderAdminQuickChips();
+    if (typeof renderCampusPins === 'function') renderCampusPins();
+    if (typeof updateDropdownNames === 'function') updateDropdownNames();
+    if (typeof renderLocationChips === 'function') {
+      renderLocationChips('req-pickup-grid', 'pickup');
+      renderLocationChips('req-dest-grid', 'dest');
+    }
+    alert('📍 Location "' + newName + '" saved to Firebase! User and Driver sides are now updated.');
+  } catch(e) {
+    alert('Error saving location: ' + e.message);
+  }
+};
+
+window.saveNewPinFromMap = async function(name, lat, lng) {
+  name = (name || '').trim();
+  if (!name) { alert('Please enter a location name.'); return; }
+
+  try {
+    const newCode = 100 + Object.keys(AFIT_LOCATIONS).length;
+    AFIT_LOCATIONS[name] = {
+      code: newCode,
+      lat: lat,
+      lng: lng,
+      category: 'Campus Spot',
+      defaultName: name
+    };
+    customLocationNames[name] = name;
+    localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
+
+    // 1. Save to settings/location_names
+    await setDoc(doc(db, 'settings', 'location_names'), { [name]: name }, { merge: true });
+
+    // 2. Save to settings/locations list
+    const locDocRef = doc(db, 'settings', 'locations');
+    const snap = await getDoc(locDocRef);
+    let curList = [];
+    if (snap.exists() && Array.isArray(snap.data()?.list)) {
+      curList = snap.data().list;
+    }
+    if (!curList.includes(name)) {
+      curList.push(name);
+      await setDoc(locDocRef, { list: curList }, { merge: true });
+    }
+
+    if (adminLiveMap) adminLiveMap.closePopup();
+    renderAdminMapPins();
+    renderAdminQuickChips();
+    if (typeof renderCampusPins === 'function') renderCampusPins();
+    if (typeof updateDropdownNames === 'function') updateDropdownNames();
+    if (typeof renderLocationChips === 'function') {
+      renderLocationChips('req-pickup-grid', 'pickup');
+      renderLocationChips('req-dest-grid', 'dest');
+    }
+    alert('📍 New location "' + name + '" tagged! It is now live on User & Driver sides.');
+  } catch(e) {
+    alert('Error saving location: ' + e.message);
+  }
+};
 
 function startAdminGpsWatch() {
   if (!navigator.geolocation) {
@@ -3559,14 +3706,9 @@ window.adminCenterOnGps = function() {
   }
 };
 
-window.enableDropPinMode = function() {
-  adminDropPinActive = true;
-  alert('Tap or click anywhere on the map to drop a pin and label that location.');
-};
-
 window.openTagCurrentLocationModal = function() {
   if (!adminGpsCoords) {
-    alert('GPS location not ready yet. You can also tap "Drop Pin on Map" to click any spot.');
+    alert('GPS location not ready yet. You can click anywhere on the map to label any spot.');
     return;
   }
   openTagModalWithCoords(adminGpsCoords[0], adminGpsCoords[1]);
@@ -3590,47 +3732,8 @@ window.saveTaggedSpot = async function() {
   if (!name) { alert('Please enter a location name.'); return; }
   if (!adminPendingTagCoords) { alert('No coordinates selected.'); return; }
 
-  const [lat, lng] = adminPendingTagCoords;
-
-  try {
-    // 1. Add to AFIT_LOCATIONS table
-    AFIT_LOCATIONS[name] = {
-      code: 200 + Object.keys(AFIT_LOCATIONS).length,
-      lat: lat,
-      lng: lng,
-      category: category,
-      defaultName: name
-    };
-    customLocationNames[name] = name;
-    localStorage.setItem('assa-custom-locs', JSON.stringify(customLocationNames));
-
-    // 2. Save to Firestore settings/location_names
-    await setDoc(doc(db, 'settings', 'location_names'), { [name]: name }, { merge: true });
-
-    // 3. Save to Firestore settings/locations list for Flutter app compatibility
-    const locDocRef = doc(db, 'settings', 'locations');
-    const snap = await getDoc(locDocRef);
-    let curList = [];
-    if (snap.exists() && Array.isArray(snap.data()?.list)) {
-      curList = snap.data().list;
-    }
-    if (!curList.includes(name)) {
-      curList.push(name);
-      await setDoc(locDocRef, { list: curList }, { merge: true });
-    }
-
-    closeModal('modal-tag-spot');
-    renderAdminMapPins();
-    if (typeof renderCampusPins === 'function') renderCampusPins();
-    if (typeof updateDropdownNames === 'function') updateDropdownNames();
-    if (typeof renderLocationChips === 'function') {
-      renderLocationChips('req-pickup-grid', 'pickup');
-      renderLocationChips('req-dest-grid', 'dest');
-    }
-    alert('📍 Location "' + name + '" saved! It is now live on both the User and Driver sides.');
-  } catch(e) {
-    alert('Error saving location: ' + e.message);
-  }
+  await saveNewPinFromMap(name, adminPendingTagCoords[0], adminPendingTagCoords[1]);
+  closeModal('modal-tag-spot');
 };
 
 // =============================================================================
