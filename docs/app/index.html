@@ -776,12 +776,25 @@
       </div>
     </div>
     <div class="screen-content" style="padding-top:0.75rem">
+      <!-- Active Feedback Banner: Live Request Status -->
+      <div id="req-active-status-bar" style="display:none;background:linear-gradient(135deg,#1E3A8A,#0284C7);color:#fff;border-radius:14px;padding:12px 14px;margin-bottom:1rem;box-shadow:0 4px 14px rgba(2,132,199,0.35)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:0.72rem;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:12px;font-weight:800;letter-spacing:0.5px" id="req-active-badge">ACTIVE REQUEST</span>
+          <span style="font-family:monospace;font-size:0.8rem;font-weight:900" id="req-active-pid">ID: ---</span>
+        </div>
+        <div style="font-size:0.95rem;font-weight:900;margin-bottom:2px" id="req-active-route">AFIT Gates &rarr; Hall A</div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.85);display:flex;justify-content:space-between;align-items:center">
+          <span id="req-active-feedback">⏳ Awaiting driver acceptance...</span>
+          <button onclick="openLiveTracking()" style="background:#fff;color:#0284C7;border:none;padding:3px 10px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer">&#128506;&#65039; Track Live</button>
+        </div>
+      </div>
+
       <!-- Mode Indicator -->
-      <div id="req-mode-banner" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:1rem">
-        <div style="width:40px;height:40px;border-radius:50%;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem">✅</div>
-        <div>
-          <div style="font-size:0.85rem;font-weight:700;color:#16a34a" id="req-mode-title">Online Mode</div>
-          <div style="font-size:0.72rem;color:var(--text-secondary)" id="req-mode-desc">All campus locations available.</div>
+      <div id="req-mode-banner" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem">✅</div>
+        <div style="flex:1">
+          <div style="font-size:0.85rem;font-weight:700;color:#16a34a" id="req-mode-title">Online Request Mode</div>
+          <div style="font-size:0.72rem;color:var(--text-secondary)" id="req-mode-desc">Select pickup &amp; destination below to dispatch your shuttle.</div>
         </div>
       </div>
 
@@ -856,15 +869,36 @@
       <button class="btn btn-primary" onclick="doRequest()" id="req-btn" style="width:100%;font-size:1rem;padding:0.85rem">&#x1F68C; Send Request</button>
       <div style="height:1.5rem"></div>
     </div>
-    <!-- Success panel -->
-    <div id="req-success" style="display:none;position:absolute;inset:0;background:var(--bg);z-index:10;display:none;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center">
-      <div style="font-size:3rem;margin-bottom:0.75rem">✅</div>
-      <div style="font-size:1.2rem;font-weight:800;color:var(--success)">Request Dispatched!</div>
-      <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.4rem" id="req-shuttle-info">Waiting for available campus shuttle...</div>
-      <div style="display:flex;gap:0.6rem;margin-top:1.5rem;width:100%;max-width:320px">
-        <button class="btn btn-primary btn-sm" style="flex:1" onclick="openLiveTracking()">&#128506;&#65039; Track Live</button>
-        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="showScreen('dashboard')">&#127968; Dashboard</button>
-        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="showScreen('myrequests')">My Rides</button>
+    <!-- Success feedback overlay -->
+    <div id="req-success" style="display:none;position:absolute;inset:0;background:var(--bg);z-index:10;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center;animation:fadeIn 0.25s">
+      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#DCFCE7,#BBF7D0);display:flex;align-items:center;justify-content:center;font-size:2.4rem;margin-bottom:1rem;box-shadow:0 8px 20px rgba(34,197,94,0.25);border:3px solid #22C55E">
+        &#128077;
+      </div>
+      <div style="font-size:1.35rem;font-weight:900;color:var(--text-primary)">Ride Request Sent!</div>
+      <div style="font-size:0.88rem;color:var(--success);font-weight:800;margin-top:0.3rem" id="req-shuttle-info">&#9203; Live Dispatch Broadcasted to Campus Drivers</div>
+      
+      <div style="background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:12px;margin:1.2rem 0;width:100%;max-width:320px;text-align:left;font-size:0.82rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="color:var(--text-secondary)">Your Passenger ID:</span>
+          <strong id="req-feedback-pid" style="font-family:monospace;color:var(--primary);font-size:0.9rem">---</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="color:var(--text-secondary)">Pickup Spot:</span>
+          <strong id="req-feedback-pickup" style="color:var(--text-primary)">...</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--text-secondary)">Destination:</span>
+          <strong id="req-feedback-dest" style="color:var(--text-primary)">...</strong>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:320px">
+        <button class="btn btn-primary" onclick="openLiveTracking()" style="font-weight:800;padding:0.85rem;font-size:0.95rem;display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#2563EB,#1D4ED8);border:none;box-shadow:0 6px 18px rgba(37,99,235,0.35)">
+          <span>&#128506;&#65039;</span> View Live Shuttle Map
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="closeRequestFeedback()" style="font-weight:700">
+          Done &amp; Return to Dashboard
+        </button>
       </div>
     </div>
   </div>
@@ -1483,10 +1517,10 @@
     <!-- Close button -->
     <button onclick="closeModal('modal-driver-accepted')" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:22px;color:var(--text-secondary);cursor:pointer;line-height:1">&times;</button>
     
-    <!-- Large Driver Person Avatar Circle -->
-    <div class="driver-large-avatar-wrap">
-      <img id="modal-driver-img" class="driver-large-avatar-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240&auto=format&fit=crop&q=80" alt="Assigned Driver"/>
-      <div style="position:absolute;bottom:2px;right:2px;background:#10B981;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.25)">&#10003;</div>
+    <!-- Person Emoji Avatar with Thumbs-up (Friendly & Universal) -->
+    <div class="driver-large-avatar-wrap" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);display:flex;align-items:center;justify-content:center;border:3.5px solid #F59E0B;box-shadow:0 8px 24px rgba(245,158,11,0.35);position:relative">
+      <div style="font-size:52px;line-height:1;filter:drop-shadow(0 4px 6px rgba(0,0,0,0.15))">&#128104;&#8205;&#127979;</div>
+      <div style="position:absolute;bottom:-4px;right:-4px;background:#10B981;color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,0.3);animation:bounce 1.2s infinite">&#128077;</div>
     </div>
 
     <!-- Status pill -->
@@ -2428,13 +2462,55 @@ function initRequestScreen() {
   selectRideType('Shared');
   selectPax(1);
   updateRequestSummary();
+  
   const errEl = document.getElementById('req-error');
   if (errEl) { errEl.textContent = ''; errEl.classList.remove('show'); }
   const sucEl = document.getElementById('req-success');
   if (sucEl) sucEl.style.display = 'none';
   const btn = document.getElementById('req-btn');
   if (btn) { btn.textContent = '🚌 Send Request'; btn.disabled = false; }
+
+  // Check if user already has an active ride and show feedback banner
+  updateRequestScreenFeedbackBanner();
 }
+
+function updateRequestScreenFeedbackBanner() {
+  const bar = document.getElementById('req-active-status-bar');
+  if (!bar) return;
+  if (activeRideData && (activeRideData.status === 0 || activeRideData.status === 1 || activeRideData.status === 2 || activeRideData.status === 3)) {
+    bar.style.display = 'block';
+    const badge = document.getElementById('req-active-badge');
+    const pid = document.getElementById('req-active-pid');
+    const route = document.getElementById('req-active-route');
+    const feedback = document.getElementById('req-active-feedback');
+
+    const statusMap = {
+      0: 'PENDING ACCEPTANCE',
+      1: 'SHUTTLE ON THE WAY',
+      2: 'IN TRANSIT',
+      3: 'SHUTTLE ARRIVED'
+    };
+    if (badge) badge.textContent = statusMap[activeRideData.status] || 'ACTIVE RIDE';
+    if (pid) pid.textContent = 'ID: ' + (activeRideData.pickupId || '---');
+    if (route) route.innerHTML = escape(getLocDisplayName(activeRideData.pickupLocation || '?')) + ' &rarr; ' + escape(getLocDisplayName(activeRideData.destination || '?'));
+    if (feedback) {
+      if (activeRideData.status >= 1) {
+        const sh = activeRideData.shuttleId || activeRideData.shuttleIdFeedback || '2';
+        feedback.innerHTML = '&#128077; Shuttle <strong>' + sh + '</strong> accepted! Heading to pickup.';
+      } else {
+        feedback.innerHTML = '&#9203; Waiting for available campus shuttle...';
+      }
+    }
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+window.closeRequestFeedback = function() {
+  const sucEl = document.getElementById('req-success');
+  if (sucEl) sucEl.style.display = 'none';
+  showScreen('dashboard');
+};
 
 function renderLocationChips(gridId, type) {
   const grid = document.getElementById(gridId);
@@ -2647,7 +2723,15 @@ window.doRequest = async function() {
     } catch(e) {}
 
     const sucEl = document.getElementById('req-success');
-    if (sucEl) { sucEl.style.display = 'flex'; }
+    if (sucEl) {
+      const pIdEl = document.getElementById('req-feedback-pid');
+      const pLocEl = document.getElementById('req-feedback-pickup');
+      const dLocEl = document.getElementById('req-feedback-dest');
+      if (pIdEl) pIdEl.textContent = pid;
+      if (pLocEl) pLocEl.textContent = getLocDisplayName(pickup);
+      if (dLocEl) dLocEl.textContent = getLocDisplayName(dest);
+      sucEl.style.display = 'flex';
+    }
     btn.textContent = '🚌 Send Request';
     btn.disabled = false;
     if (notesEl) notesEl.value = '';
@@ -2657,6 +2741,7 @@ window.doRequest = async function() {
     listenForAcceptance(bookingId);
     loadRecentRequests();
     checkActiveRide();
+    updateRequestScreenFeedbackBanner();
   } catch(e) {
     errEl.textContent = 'Error submitting request: ' + e.message;
     errEl.classList.add('show');
@@ -3987,7 +4072,7 @@ window.showDriverAcceptedModal = function(ride) {
   const dName = getLocDisplayName(ride.destination || 'Campus Spot');
 
   const headlineEl = document.getElementById('modal-driver-headline');
-  if (headlineEl) headlineEl.textContent = 'Driver ' + driverName + ' is Coming!';
+  if (headlineEl) headlineEl.innerHTML = '👍 Driver ' + escape(driverName) + ' Accepted Your Ride!';
 
   const shuttleNameEl = document.getElementById('modal-driver-shuttle-name');
   if (shuttleNameEl) shuttleNameEl.textContent = shuttleDisplay;
