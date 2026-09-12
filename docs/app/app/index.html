@@ -2882,19 +2882,46 @@ function startLiveTelemetryListener() {
   try {
     const q = query(collection(db, 'shuttle_status'));
     activeShuttleListener = onSnapshot(q, snap => {
-      if (activeRideData) {
-        snap.forEach(docSnap => {
-          const d = docSnap.data();
-          const targetShuttle = activeRideData.shuttleId || activeRideData.shuttleIdFeedback || 'A002';
-          if (docSnap.id === targetShuttle && d.lat && d.lng) {
+      const targetShuttle = activeRideData?.shuttleId || activeRideData?.shuttleIdFeedback || driverShuttleId || '2';
+      snap.forEach(docSnap => {
+        const d = docSnap.data();
+        if (String(docSnap.id) === String(targetShuttle)) {
+          activeShuttleLiveStatus = d;
+          if (activeRideData) {
             activeRideData.liveLat = d.lat;
             activeRideData.liveLng = d.lng;
+          }
+          if (trackMap && typeof updateTrackingMap === 'function') {
             updateTrackingMap();
           }
-        });
+        }
+      });
+    });
+
+    // Also listen for multi-passenger ride requests on this shuttle to build full passenger list
+    const qRides = query(collection(db, 'ride_requests'), where('status', 'in', [1, 2, 3]));
+    onSnapshot(qRides, snap => {
+      const targetShuttle = activeRideData?.shuttleId || activeRideData?.shuttleIdFeedback || driverShuttleId || '2';
+      const pax = [];
+      snap.forEach(d => {
+        const r = d.data();
+        if (String(r.shuttleId) === String(targetShuttle) || String(r.shuttleIdFeedback) === String(targetShuttle)) {
+          pax.push({
+            name: r.userName || 'Passenger',
+            pickup: getLocDisplayName(r.pickupLocation || '?'),
+            dest: getLocDisplayName(r.destination || '?'),
+            id: r.pickupId || '---'
+          });
+        }
+      });
+      window.__activeShuttlePaxList = pax;
+      if (trackMap && typeof updateTrackingMap === 'function') {
+        updateTrackingMap();
       }
     });
-  } catch(e) {}
+  } catch(e) {
+    console.warn('Telemetry listener error:', e);
+  }
 }
 
 function updateTrackingMap() {
@@ -2906,66 +2933,139 @@ function updateTrackingMap() {
   const shuttleText = document.getElementById('map-shuttle-text');
   const etaText = document.getElementById('map-eta-text');
 
-  if (activeRideData && (activeRideData.status === 0 || activeRideData.status === 1 || activeRideData.status === 2)) {
+  // Clear existing tracking layers
+  if (mapPickupMarker) { trackMap.removeLayer(mapPickupMarker); mapPickupMarker = null; }
+  if (mapDestMarker) { trackMap.removeLayer(mapDestMarker); mapDestMarker = null; }
+  if (mapShuttleMarker) { trackMap.removeLayer(mapShuttleMarker); mapShuttleMarker = null; }
+  if (mapRouteLine) { trackMap.removeLayer(mapRouteLine); mapRouteLine = null; }
+  if (currentTrackingRouteLine) { trackMap.removeLayer(currentTrackingRouteLine); currentTrackingRouteLine = null; }
+  currentWaypointsMarkers.forEach(m => trackMap.removeLayer(m));
+  currentWaypointsMarkers = [];
+
+  const shId = activeRideData?.shuttleId || activeRideData?.shuttleIdFeedback || 'A002';
+  const liveShuttle = activeShuttleLiveStatus;
+
+  if (activeRideData && (activeRideData.status === 0 || activeRideData.status === 1 || activeRideData.status === 2 || activeRideData.status === 3)) {
     const pickupName = activeRideData.pickupLocation || 'AFIT Gates';
     const destName = activeRideData.destination || 'Hall A';
-    const pLoc = AFIT_LOCATIONS[pickupName] || { lat: 10.5100, lng: 7.4130 };
-    const dLoc = AFIT_LOCATIONS[destName] || { lat: 10.5085, lng: 7.4170 };
+    const pLoc = AFIT_LOCATIONS[pickupName] || { lat: 10.6120, lng: 7.4452 };
+    const dLoc = AFIT_LOCATIONS[destName] || { lat: 10.6080, lng: 7.4420 };
 
     routeText.innerHTML = getLocDisplayName(pickupName) + ' &rarr; ' + getLocDisplayName(destName);
-    const isAssigned = activeRideData.status === 1 || activeRideData.status === 2;
-    statusBadge.textContent = isAssigned ? 'SHUTTLE ON THE WAY' : 'PENDING DISPATCH';
-    statusBadge.className = isAssigned ? 'badge badge-assigned' : 'badge badge-pending';
+    const isAssigned = activeRideData.status >= 1;
     
-    const shId = activeRideData.shuttleId || activeRideData.shuttleIdFeedback || 'A002';
-    shuttleText.innerHTML = isAssigned 
-      ? ('&#128652; Shuttle <strong>' + shId + '</strong> &bull; Passenger ID: <strong>' + (activeRideData.pickupId||'---') + '</strong>')
-      : '&#128652; Awaiting driver acceptance &bull; ID: <strong>' + (activeRideData.pickupId||'---') + '</strong>';
-    etaText.textContent = isAssigned ? 'ETA ~3 mins' : 'Locating shuttle...';
+    if (activeRideData.status === 3) {
+      statusBadge.textContent = 'SHUTTLE ARRIVED';
+      statusBadge.className = 'badge badge-assigned';
+    } else if (activeRideData.status === 2) {
+      statusBadge.textContent = 'IN TRANSIT TO DESTINATION';
+      statusBadge.className = 'badge badge-assigned';
+    } else if (activeRideData.status === 1) {
+      statusBadge.textContent = 'SHUTTLE ON THE WAY';
+      statusBadge.className = 'badge badge-assigned';
+    } else {
+      statusBadge.textContent = 'PENDING DRIVER ACCEPT';
+      statusBadge.className = 'badge badge-pending';
+    }
 
-    // Remove existing markers
-    if (mapPickupMarker) trackMap.removeLayer(mapPickupMarker);
-    if (mapDestMarker) trackMap.removeLayer(mapDestMarker);
-    if (mapShuttleMarker) trackMap.removeLayer(mapShuttleMarker);
-    if (mapRouteLine) trackMap.removeLayer(mapRouteLine);
+    const paxList = (window.__activeShuttlePaxList && window.__activeShuttlePaxList.length > 0) 
+      ? window.__activeShuttlePaxList 
+      : [{ name: activeRideData.userName || 'You', pickup: pickupName, dest: destName, id: activeRideData.pickupId || '---' }];
 
-    // 1. Pickup Marker (Green Pin)
+    const paxHtml = paxList.map((p, idx) => 
+      '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.06);padding:3px 6px;border-radius:6px;margin-top:2px;font-size:0.75rem">' +
+        '<span>#' + (idx + 1) + ' <strong>' + escape(p.name) + '</strong> (' + escape(p.pickup) + ')</span>' +
+        '<span style="font-family:monospace;color:var(--primary);font-weight:800">' + escape(p.id) + '</span>' +
+      '</div>'
+    ).join('');
+
+    shuttleText.innerHTML = '<div style="margin-bottom:3px">' +
+      '&#128652; Shuttle <strong>' + shId + '</strong> &bull; ' + 
+      (liveShuttle ? '<span style="color:#10B981;font-weight:800">● LIVE BROADCASTING</span>' : 'Fleet Active') +
+      '</div>' +
+      '<div style="font-size:0.72rem;color:var(--text-secondary)">Passengers on this shuttle (' + paxList.length + '):</div>' +
+      paxHtml;
+
+    // 1. Pickup Marker (Green)
     const pIcon = L.divIcon({
-      html: '<div style="background:#2E7D32;color:white;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:3px solid white;box-shadow:0 4px 10px rgba(0,0,0,0.4)">&#128205;</div>',
-      className: '', iconSize: [30, 30], iconAnchor: [15, 30]
+      html: '<div style="background:#16A34A;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.4)">📍</div>',
+      className: '', iconSize: [28, 28], iconAnchor: [14, 28]
     });
-    mapPickupMarker = L.marker([pLoc.lat, pLoc.lng], { icon: pIcon }).addTo(trackMap).bindPopup('<b>Pickup: ' + pickupName + '</b>');
+    mapPickupMarker = L.marker([pLoc.lat, pLoc.lng], { icon: pIcon }).addTo(trackMap).bindPopup('<b>Pickup Spot: ' + pickupName + '</b>');
 
-    // 2. Dest Marker (Red Pin)
+    // 2. Destination Marker (Red)
     const dIcon = L.divIcon({
-      html: '<div style="background:#C62828;color:white;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:3px solid white;box-shadow:0 4px 10px rgba(0,0,0,0.4)">&#127937;</div>',
-      className: '', iconSize: [30, 30], iconAnchor: [15, 30]
+      html: '<div style="background:#DC2626;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.4)">🏁</div>',
+      className: '', iconSize: [28, 28], iconAnchor: [14, 28]
     });
     mapDestMarker = L.marker([dLoc.lat, dLoc.lng], { icon: dIcon }).addTo(trackMap).bindPopup('<b>Destination: ' + destName + '</b>');
 
-    // 3. Route Polyline
-    mapRouteLine = L.polyline([[pLoc.lat, pLoc.lng], [dLoc.lat, dLoc.lng]], {
-      color: '#1565C0',
-      weight: 5,
-      dashArray: '8, 8',
-      opacity: 0.8
-    }).addTo(trackMap);
+    // 3. Live Shuttle Location
+    let sLat = liveShuttle?.lat || activeRideData.liveLat;
+    let sLng = liveShuttle?.lng || activeRideData.liveLng;
+    if (!sLat || !sLng) {
+      // Default to slightly offset from pickup before driver moves
+      sLat = pLoc.lat + 0.0018;
+      sLng = pLoc.lng + 0.0015;
+    }
 
-    // 4. Shuttle Marker (Live GPS Telemetry or Intelligent Route Interpolation)
-    const sLat = activeRideData.liveLat || ((pLoc.lat * 0.65 + dLoc.lat * 0.35) + 0.0006);
-    const sLng = activeRideData.liveLng || ((pLoc.lng * 0.65 + dLoc.lng * 0.35) - 0.0004);
     const sIcon = L.divIcon({
-      html: '<div style="background:#0D47A1;color:white;padding:5px 8px;border-radius:20px;font-size:12px;font-weight:900;border:2px solid #90CAF9;box-shadow:0 4px 14px rgba(10,46,110,0.5);display:flex;align-items:center;gap:4px">&#128652; ' + shId + '</div>',
-      className: '', iconSize: [80, 28], iconAnchor: [40, 14]
+      html: '<div style="background:linear-gradient(135deg,#1E3A8A,#2563EB);color:white;padding:5px 9px;border-radius:20px;font-size:11px;font-weight:900;border:2px solid #93C5FD;box-shadow:0 4px 14px rgba(37,99,235,0.5);display:flex;align-items:center;gap:4px;white-space:nowrap">&#128652; Shuttle ' + shId + ' <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4ADE80;box-shadow:0 0 5px #4ADE80"></span></div>',
+      className: '', iconSize: [95, 28], iconAnchor: [47, 14]
     });
-    mapShuttleMarker = L.marker([sLat, sLng], { icon: sIcon }).addTo(trackMap).bindPopup('<b>' + shId + ' (En Route)</b>');
+    mapShuttleMarker = L.marker([sLat, sLng], { icon: sIcon, zIndexOffset: 2000 }).addTo(trackMap).bindPopup('<b>Shuttle ' + shId + '</b><br>Live GPS Telemetry active');
 
-    trackMap.fitBounds(L.latLngBounds([[pLoc.lat, pLoc.lng], [dLoc.lat, dLoc.lng], [sLat, sLng]]), { padding: [60, 60] });
+    // 4. Follow Real Road Route via OSRM (Shuttle -> Pickup -> Destination)
+    const waypoints = [[sLat, sLng], [pLoc.lat, pLoc.lng], [dLoc.lat, dLoc.lng]];
+    
+    // Fit bounds immediately to make sure whole journey is in view
+    trackMap.fitBounds(L.latLngBounds(waypoints), { padding: [55, 55] });
+
+    etaText.textContent = 'Calculating road route...';
+
+    fetchRealRoadRoute(waypoints).then(routeData => {
+      if (!routeData) return;
+
+      // Draw real road polyline with glowing border
+      if (currentTrackingRouteLine) trackMap.removeLayer(currentTrackingRouteLine);
+      currentTrackingRouteLine = L.layerGroup().addTo(trackMap);
+
+      // Outer glow / casing
+      L.polyline(routeData.latLngs, {
+        color: '#1E40AF',
+        weight: 7,
+        opacity: 0.6
+      }).addTo(currentTrackingRouteLine);
+
+      // Inner bright road path
+      L.polyline(routeData.latLngs, {
+        color: '#3B82F6',
+        weight: 4.5,
+        opacity: 0.95
+      }).addTo(currentTrackingRouteLine);
+
+      // Update ETA and Distance
+      etaText.innerHTML = '⏱️ <strong>' + routeData.durationMin + ' min</strong> (' + routeData.distanceKm + ' km away)';
+    });
+
+  } else if (liveShuttle && liveShuttle.lat && liveShuttle.lng) {
+    // No personal ride, but shuttle is circulating on campus
+    routeText.textContent = 'AFIT Campus • Fleet Online';
+    statusBadge.textContent = 'SHUTTLE ' + shId + ' ACTIVE';
+    statusBadge.className = 'badge badge-assigned';
+    shuttleText.innerHTML = '&#128652; Shuttle <strong>' + shId + '</strong> is online and circulating in Kaduna.<br><span style="font-size:0.75rem;color:var(--text-secondary)">Tap "Request Shuttle" to hail a ride.</span>';
+    etaText.textContent = 'Ready to Request';
+
+    const sIcon = L.divIcon({
+      html: '<div style="background:#1E3A8A;color:white;padding:4px 8px;border-radius:18px;font-size:10.5px;font-weight:900;border:1.5px solid #93C5FD;box-shadow:0 3px 10px rgba(0,0,0,0.35);display:flex;align-items:center;gap:4px">&#128652; Shuttle ' + shId + '</div>',
+      className: '', iconSize: [85, 26], iconAnchor: [42, 13]
+    });
+    mapShuttleMarker = L.marker([liveShuttle.lat, liveShuttle.lng], { icon: sIcon, zIndexOffset: 2000 }).addTo(trackMap).bindPopup('<b>Shuttle ' + shId + '</b><br>Live Telemetry Online');
   } else {
-    routeText.textContent = 'AFIT Campus • No Active Hails';
-    statusBadge.textContent = 'CAMPUS FLEET ACTIVE';
+    routeText.textContent = 'AFIT Campus • Fleet Monitoring';
+    statusBadge.textContent = 'CAMPUS FLEET READY';
     statusBadge.className = 'badge badge-completed';
-    shuttleText.textContent = '5 active shuttles circulating on campus.';
+    shuttleText.textContent = 'Shuttles standing by for dispatch in Kaduna AFIT.';
     etaText.textContent = 'Ready to Request';
   }
 }
@@ -4003,6 +4103,7 @@ function initAdminLiveMap() {
 
     renderAdminMapPins();
     renderAdminQuickChips();
+    adminLiveMap.on('zoomend', renderAdminMapPins);
     startAdminGpsWatch(true);
     adminLiveMap.invalidateSize();
   }, 200);
@@ -4168,18 +4269,36 @@ function renderAdminMapPins() {
   const countEl = document.getElementById('admin-pin-count');
   if (countEl) countEl.textContent = keys.length;
 
-  keys.forEach(key => {
+  const currentZoom = adminLiveMap.getZoom() || 15;
+  // Hierarchical display: if zoomed out (<16), show ultra-clean compact dot so the top is uncluttered
+  const isZoomedOut = currentZoom < 16;
+
+  keys.forEach((key, idx) => {
     const loc = AFIT_LOCATIONS[key];
     const dName = getLocDisplayName(key);
     const photo = customLocationImages[key] || '';
 
-    // Sleek, compact 8px pin badge (takes minimal map space)
-    const iconHtml = '<div style="background:#0D47A1;color:#fff;padding:1.5px 5px;border-radius:5px;font-size:8px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.35);cursor:pointer;border:1px solid #fff;max-width:85px;overflow:hidden;text-overflow:ellipsis">' +
-      (photo ? '📷 ' : '📍 ') + loc.code + '. ' + escape(dName) + '</div>';
-    const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [85, 16], iconAnchor: [42, 8] });
+    let iconHtml = '';
+    let iconSize = [85, 16];
+    let iconAnchor = [42, 8];
+
+    if (isZoomedOut) {
+      // Clean, uncrowded badge for high-level view
+      iconHtml = '<div style="background:#0D47A1;color:#fff;padding:1px 4px;border-radius:4px;font-size:7.5px;font-weight:700;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:pointer;border:1px solid #fff;max-width:65px;overflow:hidden;text-overflow:ellipsis">' +
+        (photo ? '📷 ' : '📍 ') + loc.code + '</div>';
+      iconSize = [35, 14];
+      iconAnchor = [17, 7];
+    } else {
+      // Zoomed in: full visible spot name with photo icon
+      iconHtml = '<div style="background:#0D47A1;color:#fff;padding:1.5px 5px;border-radius:5px;font-size:8.5px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.35);cursor:pointer;border:1px solid #fff;max-width:110px;overflow:hidden;text-overflow:ellipsis">' +
+        (photo ? '📷 ' : '📍 ') + loc.code + '. ' + escape(dName) + '</div>';
+      iconSize = [105, 18];
+      iconAnchor = [52, 9];
+    }
+
+    const cIcon = L.divIcon({ html: iconHtml, className: '', iconSize: iconSize, iconAnchor: iconAnchor });
     const m = L.marker([loc.lat, loc.lng], { icon: cIcon }).addTo(window.__adminPinsLayer);
 
-    // Clicking pin opens in-map popup allowing direct photo edit & name edit
     m.on('click', (e) => {
       L.DomEvent.stopPropagation(e);
       openInMapPhotoPrompt(loc.lat, loc.lng, key);
@@ -4699,7 +4818,45 @@ let driverShuttleId = '2';
 let driverRequestsUnsub = null;
 let driverActiveTripUnsub = null;
 
+
+// --- DRIVER REAL-TIME GPS TELEMETRY BROADCASTER ---
+let driverGpsWatchId = null;
+
+function startDriverTelemetryBroadcast() {
+  if (!navigator.geolocation) return;
+  if (driverGpsWatchId) navigator.geolocation.clearWatch(driverGpsWatchId);
+
+  const updateTelemetry = async (lat, lng, acc) => {
+    if (!driverShuttleId) return;
+    try {
+      await setDoc(doc(db, 'shuttle_status', String(driverShuttleId)), {
+        shuttleId: String(driverShuttleId),
+        lat: Number(lat),
+        lng: Number(lng),
+        accuracy: acc || 10,
+        updatedAt: serverTimestamp(),
+        driverName: currentUserData?.name || 'Driver',
+        driverId: currentUser?.uid || '',
+        online: true
+      }, { merge: true });
+    } catch(e) {
+      console.warn('Driver telemetry broadcast error:', e);
+    }
+  };
+
+  // Immediate fix
+  navigator.geolocation.getCurrentPosition(pos => {
+    updateTelemetry(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy));
+  }, null, { enableHighAccuracy: true, timeout: 10000 });
+
+  // Continuous broadcast as driver moves
+  driverGpsWatchId = navigator.geolocation.watchPosition(pos => {
+    updateTelemetry(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy));
+  }, null, { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 });
+}
+
 function initDriverPanel() {
+  startDriverTelemetryBroadcast();
   const sel = document.getElementById('driver-shuttle-select');
   if (sel) sel.value = driverShuttleId;
   const title = document.getElementById('driver-shuttle-title');
