@@ -1803,6 +1803,9 @@ deletedLocationKeys.forEach(k => {
   delete customLocationNames[k];
 });
 
+// Start real-time Firestore listeners immediately
+setTimeout(loadLocationNamesFromFirestore, 50);
+
 async function loadLocationNamesFromFirestore() {
   try {
     // Listen to settings/location_images for building landmark photos
@@ -1852,6 +1855,7 @@ async function loadLocationNamesFromFirestore() {
               };
             }
           });
+          if (typeof renderAdminMapPins === 'function') renderAdminMapPins();
           if (typeof renderCampusPins === 'function') renderCampusPins();
           if (typeof updateDropdownNames === 'function') updateDropdownNames();
           if (typeof renderLocationChips === 'function') {
@@ -1861,7 +1865,50 @@ async function loadLocationNamesFromFirestore() {
         }
       }
     });
+
+    // 3. Listen to settings/location_details for custom coordinates & categories
+    onSnapshot(doc(db, 'settings', 'location_details'), (snap) => {
+      if (snap.exists()) {
+        const details = snap.data() || {};
+        for (const k in details) {
+          const item = details[k];
+          if (item && item.name) {
+            AFIT_LOCATIONS[item.name] = {
+              code: item.code || (100 + Object.keys(AFIT_LOCATIONS).length),
+              lat: Number(item.lat || 10.6120),
+              lng: Number(item.lng || 7.4452),
+              category: item.category || 'Campus Spot',
+              defaultName: item.name
+            };
+            customLocationNames[item.name] = item.name;
+            if (item.photo) {
+              customLocationImages[item.name] = item.photo;
+            }
+          }
+        }
+        if (typeof renderAdminMapPins === 'function') renderAdminMapPins();
+        if (typeof renderCampusPins === 'function') renderCampusPins();
+        if (typeof updateDropdownNames === 'function') updateDropdownNames();
+        if (typeof renderLocationChips === 'function') {
+          renderLocationChips('req-pickup-grid', 'pickup');
+          renderLocationChips('req-dest-grid', 'dest');
+        }
+      }
+    });
   } catch(e) { /* offline — fallback to existing */ }
+}
+
+
+function getLocPhoto(key) {
+  if (!key) return '';
+  if (customLocationImages[key]) return customLocationImages[key];
+  const safeKey = key.replace(/[/.]/g, '_');
+  if (customLocationImages[safeKey]) return customLocationImages[safeKey];
+  // Also check if any key in customLocationImages matches when normalized
+  for (const k in customLocationImages) {
+    if (k.replace(/[/.]/g, '_') === safeKey) return customLocationImages[k];
+  }
+  return '';
 }
 
 function getLocDisplayName(locKey) {
@@ -2518,7 +2565,7 @@ function renderLocationChips(gridId, type) {
   grid.innerHTML = '';
   Object.keys(AFIT_LOCATIONS).filter(k => !deletedLocationKeys.has(k)).forEach(key => {
     const dName = getLocDisplayName(key);
-    const hasPhoto = !!customLocationImages[key];
+    const hasPhoto = !!getLocPhoto(key);
     const chip = document.createElement('div');
     chip.className = 'loc-chip';
     chip.id = 'chip-' + type + '-' + key.replace(/s+/g,'-');
@@ -2544,7 +2591,7 @@ function updateLandmarkPreview(type) {
     grid.parentNode.insertBefore(card, grid.nextSibling);
   }
 
-  const photo = customLocationImages[selectedKey];
+  const photo = getLocPhoto(selectedKey);
   if (photo) {
     card.style.display = 'flex';
     card.innerHTML = '<img src="' + photo + '" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid var(--border);flex-shrink:0" alt="Building Landmark"/>' +
@@ -4324,9 +4371,21 @@ window.submitPopupPin = async function(lat, lng, existingKey) {
 
     if (adminPopupPhotoData) {
       customLocationImages[existingKey] = adminPopupPhotoData;
-      localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
       const safeKey = existingKey.replace(/[./]/g, '_');
-      setDoc(doc(db, 'settings', 'location_images'), { [safeKey]: adminPopupPhotoData }, { merge: true }).catch(() => {});
+      customLocationImages[safeKey] = adminPopupPhotoData;
+      localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
+      setDoc(doc(db, 'settings', 'location_images'), { [safeKey]: adminPopupPhotoData, [existingKey]: adminPopupPhotoData }, { merge: true }).catch(() => {});
+      
+      setDoc(doc(db, 'settings', 'location_details'), {
+        [safeKey]: {
+          name: name,
+          code: AFIT_LOCATIONS[existingKey]?.code || 100,
+          lat: Number(lat || AFIT_LOCATIONS[existingKey]?.lat),
+          lng: Number(lng || AFIT_LOCATIONS[existingKey]?.lng),
+          photo: adminPopupPhotoData,
+          updatedAt: Date.now()
+        }
+      }, { merge: true }).catch(() => {});
     }
 
     if (adminLiveMap) adminLiveMap.closePopup();
@@ -4361,7 +4420,7 @@ function renderAdminMapPins() {
   keys.forEach((key, idx) => {
     const loc = AFIT_LOCATIONS[key];
     const dName = getLocDisplayName(key);
-    const photo = customLocationImages[key] || '';
+    const photo = getLocPhoto(key) || '';
 
     let iconHtml = '';
     let iconSize = [85, 16];
@@ -4787,10 +4846,25 @@ window.saveNewPinFromMap = async function(name, lat, lng, photoData = '', catego
 
   if (photoData) {
     customLocationImages[name] = photoData;
-    localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
     const safeKey = name.replace(/[./]/g, '_');
-    setDoc(doc(db, 'settings', 'location_images'), { [safeKey]: photoData }, { merge: true }).catch(() => {});
+    customLocationImages[safeKey] = photoData;
+    localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
+    setDoc(doc(db, 'settings', 'location_images'), { [safeKey]: photoData, [name]: photoData }, { merge: true }).catch(() => {});
   }
+
+  // Also sync rich spot data (coordinates, code, name, category, photo) to settings/location_details
+  const safeDocKey = name.replace(/[./]/g, '_');
+  setDoc(doc(db, 'settings', 'location_details'), {
+    [safeDocKey]: {
+      name: name,
+      code: newCode,
+      lat: Number(lat),
+      lng: Number(lng),
+      category: category || 'Campus Spot',
+      photo: photoData || '',
+      updatedAt: Date.now()
+    }
+  }, { merge: true }).catch(() => {});
 
   // 2. Immediately close popups and update map pins and dropdowns
   if (adminLiveMap) adminLiveMap.closePopup();
