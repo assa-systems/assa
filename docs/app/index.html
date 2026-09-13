@@ -913,16 +913,24 @@
       </div>
     </div>
     
-    <!-- Map Layer Switcher Bar -->
-    <div class="map-controls-bar">
+    <!-- Map Layer & Student Spot Addition Bar -->
+    <div class="map-controls-bar" style="flex-wrap:wrap;gap:6px">
       <div class="map-pill-group">
         <button class="map-pill-btn active" id="btn-map-groads" onclick="setMapBaseLayer(&quot;google_roads&quot;)">🗺️ Google Maps</button>
         <button class="map-pill-btn" id="btn-map-gsat" onclick="setMapBaseLayer(&quot;google_sat&quot;)">🛰️ Satellite</button>
         <button class="map-pill-btn" id="btn-map-osm" onclick="setMapBaseLayer(&quot;osm&quot;)">🌐 Street</button>
       </div>
-      <div class="map-pill-group">
-        <button class="map-pill-btn" style="color:var(--primary)" onclick="alert(&quot;Tap any campus location pin on the map to rename it to how students know it!&quot;)">✏️ Tap Pin to Rename</button>
+      <div class="map-pill-group" style="display:flex;gap:4px">
+        <button class="map-pill-btn" id="btn-student-add-spot" style="background:#10B981;color:#fff;font-weight:800;border:none;box-shadow:0 2px 6px rgba(16,185,129,0.35)" onclick="toggleStudentAddSpotMode()">
+          ➕ Add Location &amp; Picture
+        </button>
       </div>
+    </div>
+
+    <!-- Student Tap Banner Alert (hidden by default) -->
+    <div id="student-tap-hint-bar" style="display:none;background:#ECFDF5;border:1.5px dashed #10B981;color:#065F46;padding:7px 12px;font-size:0.75rem;font-weight:800;text-align:center;position:relative;z-index:10;box-shadow:0 2px 8px rgba(16,185,129,0.2)">
+      <span>📍 Tap anywhere on the campus map to tag a building or spot &amp; attach a picture!</span>
+      <button onclick="toggleStudentAddSpotMode(false)" style="margin-left:8px;background:none;border:none;color:#065F46;font-size:12px;font-weight:900;cursor:pointer">&times;</button>
     </div>
 
     <div id="tracking-map"></div>
@@ -2972,17 +2980,80 @@ function updateDropdownNames() {
   });
 }
 
+let studentAddSpotMode = false;
+
+window.toggleStudentAddSpotMode = function(forceVal) {
+  if (typeof forceVal === 'boolean') {
+    studentAddSpotMode = forceVal;
+  } else {
+    studentAddSpotMode = !studentAddSpotMode;
+  }
+
+  const btn = document.getElementById('btn-student-add-spot');
+  const hint = document.getElementById('student-tap-hint-bar');
+  const mapEl = document.getElementById('tracking-map');
+
+  if (btn) {
+    btn.style.background = studentAddSpotMode ? '#059669' : '#10B981';
+    btn.innerHTML = studentAddSpotMode ? 'Active: Tap Map Below' : '➕ Add Location &amp; Picture';
+  }
+  if (hint) {
+    hint.style.display = studentAddSpotMode ? 'block' : 'none';
+  }
+  if (mapEl) {
+    mapEl.style.cursor = studentAddSpotMode ? 'crosshair' : '';
+  }
+};
+
 function renderCampusPins() {
   if (!trackMap || !mapLocationsLayer) return;
   mapLocationsLayer.clearLayers();
-  Object.keys(AFIT_LOCATIONS).forEach(key => {
+
+  const currentZoom = trackMap.getZoom() || 15;
+  const isZoomedOut = currentZoom < 16;
+
+  Object.keys(AFIT_LOCATIONS).filter(k => !deletedLocationKeys.has(k)).forEach(key => {
     const loc = AFIT_LOCATIONS[key];
     const dName = getLocDisplayName(key);
-    const iconHtml = '<div class="campus-pin-inner">' +
-      '<span>📍</span> ' + escape(dName) + '</div>';
-    const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [130, 24], iconAnchor: [65, 12] });
+    const photo = getLocPhoto(key) || '';
+
+    let iconHtml = '';
+    let iconSize = [95, 18];
+    let iconAnchor = [47, 9];
+
+    if (isZoomedOut) {
+      iconHtml = '<div class="campus-pin-inner" style="font-size:7.5px;padding:1px 4px;max-width:65px">' +
+        (photo ? '📷 ' : '📍 ') + loc.code + '</div>';
+      iconSize = [35, 14];
+      iconAnchor = [17, 7];
+    } else {
+      iconHtml = '<div class="campus-pin-inner" style="font-size:8.5px;padding:1.5px 5px;max-width:115px">' +
+        (photo ? '📷 ' : '📍 ') + loc.code + '. ' + escape(dName) + '</div>';
+      iconSize = [110, 18];
+      iconAnchor = [55, 9];
+    }
+
+    const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: iconSize, iconAnchor: iconAnchor });
     const marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(mapLocationsLayer);
-    marker.bindPopup('<b>' + escape(dName) + '</b><br><small style="color:#888">Code: ' + loc.code + ' | ' + (loc.category||'') + '</small>');
+
+    // Clicking pin on user map:
+    // Shows building photo thumbnail + info + allows adding/editing photo
+    const photoPreviewHtml = photo 
+      ? ('<div style="margin:4px 0;width:100%;height:85px;border-radius:8px;overflow:hidden;border:1px solid #10B981;cursor:pointer" data-img="' + escapeAttr(photo) + '" onclick="viewFullImage(this.dataset.img)"><img src="' + photo + '" style="width:100%;height:100%;object-fit:cover" alt="Building Landmark"/><div style="font-size:8px;color:#10B981;text-align:center;font-weight:700">🔍 Tap image to view full screen</div></div>')
+      : ('<div style="margin:4px 0;padding:6px;background:rgba(0,0,0,0.03);border-radius:6px;font-size:9.5px;color:#666">No building picture uploaded yet.</div>');
+
+    const popupHtml = '<div style="min-width:190px;max-width:230px;padding:3px">' +
+      '<div style="font-weight:800;font-size:11.5px;color:#1E3A8A;display:flex;align-items:center;gap:4px">' +
+        '<span>🏛️</span> <span>' + loc.code + '. ' + escape(dName) + '</span>' +
+      '</div>' +
+      photoPreviewHtml +
+      '<div style="display:flex;gap:4px;margin-top:5px">' +
+        '<button data-lat="' + loc.lat + '" data-lng="' + loc.lng + '" data-key="' + escapeAttr(key) + '" onclick="openInMapPhotoPrompt(Number(this.dataset.lat), Number(this.dataset.lng), this.dataset.key, trackMap)" style="flex:1;background:#2563EB;color:#fff;border:none;padding:5px 8px;border-radius:6px;font-size:9.5px;font-weight:800;cursor:pointer">&#128247; ' + (photo ? 'Update Picture' : 'Add Picture') + '</button>' +
+        '<button onclick="trackMap.closePopup()" style="background:#e5e7eb;color:#374151;border:none;padding:5px 8px;border-radius:6px;font-size:9.5px;font-weight:700;cursor:pointer">Close</button>' +
+      '</div>' +
+    '</div>';
+
+    marker.bindPopup(popupHtml, { autoPan: true });
   });
 }
 
@@ -3000,6 +3071,15 @@ function initTrackingMap() {
       mapLocationsLayer = L.layerGroup().addTo(trackMap);
       renderCampusPins();
       updateDropdownNames();
+
+      // Zoom listener for hierarchical pin decluttering
+      trackMap.on('zoomend', renderCampusPins);
+
+      // Student / Rider Map Tap Listener to add new spots directly!
+      trackMap.on('click', (e) => {
+        openInMapPhotoPrompt(e.latlng.lat, e.latlng.lng, null, trackMap);
+        toggleStudentAddSpotMode(false);
+      });
     } else {
       trackMap.invalidateSize();
       renderCampusPins();
@@ -4182,7 +4262,7 @@ window.uploadPinPhoto = async function(input, key) {
     customLocationImages[key] = base64;
     localStorage.setItem('assa-loc-images', JSON.stringify(customLocationImages));
 
-    if (adminLiveMap) adminLiveMap.closePopup();
+    closeActiveMapPopup();
     renderAdminMapPins();
     if (typeof renderLocationChips === 'function') {
       renderLocationChips('req-pickup-grid', 'pickup');
@@ -4261,34 +4341,37 @@ window.pinCenterOfMap = function() {
 };
 
 // Open In-Map Popup with Name & Photo Uploader
-function openInMapPhotoPrompt(lat, lng, existingKey = null) {
-  if (!adminLiveMap) return;
+function openInMapPhotoPrompt(lat, lng, existingKey = null, targetMap = null) {
+  const activeMap = targetMap || (typeof adminLiveMap !== 'undefined' && adminLiveMap ? adminLiveMap : trackMap);
+  if (!activeMap) return;
+  window.__activePopupMap = activeMap;
 
   const loc = existingKey ? AFIT_LOCATIONS[existingKey] : null;
   const currentName = loc ? (customLocationNames[existingKey] || loc.defaultName || existingKey) : '';
-  const existingPhoto = (existingKey && customLocationImages[existingKey]) ? customLocationImages[existingKey] : '';
+  const existingPhoto = (existingKey && getLocPhoto(existingKey)) ? getLocPhoto(existingKey) : '';
   adminPopupPhotoData = existingPhoto;
 
-  const popupContent = '<div style="min-width:215px;max-width:245px;padding:3px">' +
-    '<div style="font-weight:800;font-size:11px;color:#1E3A8A;display:flex;align-items:center;gap:4px;margin-bottom:2px">' +
-      '<span>' + (existingKey ? '✏️' : '➕') + '</span> ' +
-      '<span>' + (existingKey ? ('Edit Spot #' + loc.code) : 'Label New Campus Spot') + '</span>' +
+  const isExisting = !!existingKey;
+  const popupContent = '<div style="min-width:220px;max-width:255px;padding:3px">' +
+    '<div style="font-weight:800;font-size:11.5px;color:#1E3A8A;display:flex;align-items:center;gap:4px;margin-bottom:2px">' +
+      '<span>' + (isExisting ? '✏️' : '➕') + '</span> ' +
+      '<span>' + (isExisting ? ('Edit Spot #' + loc.code) : 'Add New Campus Spot') + '</span>' +
     '</div>' +
     '<div style="font-size:9px;color:#666;margin-bottom:5px">' + Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5) + '</div>' +
     
-    '<label style="font-size:9.5px;font-weight:700;color:#333;display:block;margin-bottom:2px">Spot Name for Students &amp; Drivers:</label>' +
-    '<input id="pop-new-loc-name" value="' + escapeAttr(currentName) + '" placeholder="e.g. Bukka, Library, PT Gate..." style="width:100%;padding:5px 7px;border:1.5px solid #2563EB;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:5px;box-sizing:border-box" autofocus />' +
+    '<label style="font-size:9.5px;font-weight:700;color:#333;display:block;margin-bottom:2px">Location / Building Name:</label>' +
+    '<input id="pop-new-loc-name" value="' + escapeAttr(currentName) + '" placeholder="e.g. Bukka, Faculty of Science, PT Gate..." style="width:100%;padding:5px 7px;border:1.5px solid #2563EB;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:5px;box-sizing:border-box" autofocus />' +
 
     // Picture of Location / Building
     '<label style="font-size:9.5px;font-weight:700;color:#1E3A8A;display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">' +
-      '<span>📷 Add Building Picture:</span>' +
-      '<span style="font-size:8.5px;color:#10B981;font-weight:800">Visible to users</span>' +
+      '<span>📷 Building Picture:</span>' +
+      '<span style="font-size:8.5px;color:#10B981;font-weight:800">Visible to everyone</span>' +
     '</label>' +
     
     // File Input button
     '<input type="file" id="pop-photo-input-file" accept="image/*" capture="environment" style="display:none" onchange="handlePopupPhotoFile(this)"/>' +
     '<div style="display:flex;gap:4px;margin-bottom:3px">' +
-      '<button type="button" onclick="triggerPhotoPick()" style="flex:1;background:#2563EB;color:#fff;border:none;padding:4px 6px;border-radius:5px;font-size:9.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px">' +
+      '<button type="button" onclick="triggerPhotoPick()" style="flex:1;background:#2563EB;color:#fff;border:none;padding:5px 6px;border-radius:5px;font-size:9.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px">' +
         '<span>📁</span> Choose / Take Photo' +
       '</button>' +
     '</div>' +
@@ -4305,10 +4388,10 @@ function openInMapPhotoPrompt(lat, lng, existingKey = null) {
     // Action Buttons
     '<div style="display:flex;gap:4px">' +
       '<button data-lat="' + lat + '" data-lng="' + lng + '" data-key="' + escapeAttr(existingKey || '') + '" onclick="submitPopupPin(Number(this.dataset.lat), Number(this.dataset.lng), this.dataset.key)" style="flex:1;background:#16a34a;color:#fff;border:none;padding:6px;border-radius:6px;font-weight:800;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px">' +
-        '<span>💾</span> Save &amp; Sync' +
+        '<span>💾</span> Save &amp; Sync PWA' +
       '</button>' +
-      (existingKey ? ('<button data-key="' + escapeAttr(existingKey) + '" onclick="deletePinFromMap(this.dataset.key)" style="background:#dc2626;color:#fff;border:none;padding:6px 8px;border-radius:6px;font-weight:800;font-size:10px;cursor:pointer" title="Erase Pin">&#128465;</button>') : '') +
-      '<button onclick="adminLiveMap.closePopup()" style="background:#e5e7eb;color:#374151;border:none;padding:6px 8px;border-radius:6px;font-weight:700;font-size:10px;cursor:pointer">' +
+      (isExisting ? ('<button data-key="' + escapeAttr(existingKey) + '" onclick="deletePinFromMap(this.dataset.key)" style="background:#dc2626;color:#fff;border:none;padding:6px 8px;border-radius:6px;font-weight:800;font-size:10px;cursor:pointer" title="Erase Pin">&#128465;</button>') : '') +
+      '<button onclick="closeActiveMapPopup()" style="background:#e5e7eb;color:#374151;border:none;padding:6px 8px;border-radius:6px;font-weight:700;font-size:10px;cursor:pointer">' +
         'Cancel' +
       '</button>' +
     '</div>' +
@@ -4317,8 +4400,15 @@ function openInMapPhotoPrompt(lat, lng, existingKey = null) {
   L.popup({ closeButton: true, autoPan: true })
     .setLatLng([lat, lng])
     .setContent(popupContent)
-    .openOn(adminLiveMap);
+    .openOn(activeMap);
 }
+
+
+window.closeActiveMapPopup = function() {
+  if (window.__activePopupMap) window.__activePopupMap.closePopup();
+  if (typeof adminLiveMap !== 'undefined' && adminLiveMap) adminLiveMap.closePopup();
+  if (typeof trackMap !== 'undefined' && trackMap) trackMap.closePopup();
+};
 
 window.handlePopupPhotoFile = async function(input) {
   const file = input.files && input.files[0];
