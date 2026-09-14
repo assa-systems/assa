@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/services/esp32_service.dart';
+import 'package:assa/services/offline_request_store.dart';
 
 class RatingDialog extends StatefulWidget {
   final String shuttleId; // The shuttleId / public ID
@@ -47,7 +48,22 @@ class _RatingDialogState extends State<RatingDialog> {
 
     try {
       if (widget.isOffline) {
-        // Offline requests are now local-only — just dismiss
+        // ── OFFLINE COMPLETION & RATING ────────────────────────────────────
+        await OfflineRequestStore.instance.updateStatus(
+          widget.requestId,
+          OfflineStatus.completed,
+          shuttleId: publicShuttle,
+        );
+
+        // Notify ESP32 AP if connected over WiFi
+        try {
+          await Esp32Service.instance.sendOfflineStatusUpdateToEsp32(
+            bookingId: widget.requestId,
+            status: 6, // Completed
+            shuttleId: publicShuttle,
+          );
+        } catch (_) {}
+
         if (mounted) Navigator.pop(context, true);
         return;
       }

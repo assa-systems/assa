@@ -1,3 +1,6 @@
+import 'package:assa/services/connectivity_service.dart';
+import 'package:assa/services/esp32_service.dart';
+import 'package:assa/services/offline_request_store.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +33,12 @@ class UserDashboard extends StatefulWidget {
 
 class _UserDashboardState extends State<UserDashboard> {
   final _auth = AuthService();
+  final _connectivity = ConnectivityService();
+  bool _isOnline = true;
+  bool _isEsp32Reachable = false;
+  OfflineRequest? _offlinePending;
+  Timer? _offlinePoller;
+
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
   int _unreadNotifications = 0;
@@ -46,11 +55,63 @@ class _UserDashboardState extends State<UserDashboard> {
   void initState() {
     super.initState();
     _loadUserData();
+    _listenConnectivity();
+    _startOfflinePoller();
   }
+
+  void _listenConnectivity() {
+    _connectivity.checkConnectivity().then((v) {
+      if (mounted) setState(() {
+        _isOnline = _connectivity.hasInternet;
+        _isEsp32Reachable = _connectivity.isEsp32Reachable;
+      });
+    });
+    _connectivity.connectionStream.listen((online) {
+      if (mounted) setState(() {
+        _isOnline = _connectivity.hasInternet;
+        _isEsp32Reachable = _connectivity.isEsp32Reachable;
+      });
+    });
+  }
+
+  void _startOfflinePoller() {
+    _offlinePoller = Timer.periodic(const Duration(seconds: 3), (_) => _pollOfflineStatus());
+    _pollOfflineStatus();
+  }
+
+  Future<void> _pollOfflineStatus() async {
+    try {
+      final reqs = await OfflineRequestStore.instance.getAll();
+      final pending = reqs.where((r) =>
+        r.status == OfflineStatus.pending ||
+        r.status == OfflineStatus.accepted ||
+        r.status == OfflineStatus.confirmed
+      ).toList();
+      if (mounted) {
+        setState(() {
+          _offlinePending = pending.isNotEmpty ? pending.first : null;
+        });
+      }
+      if (_offlinePending != null && _offlinePending!.status == OfflineStatus.pending) {
+        final res = await Esp32Service.instance.pollRequestStatus(_offlinePending!.pid);
+        final st = res['status'] as String? ?? 'PENDING';
+        final sh = res['shuttle'] as String? ?? '';
+        if (st == 'ACCEPTED') {
+          await OfflineRequestStore.instance.updateStatus(_offlinePending!.pid, OfflineStatus.accepted, shuttleId: sh);
+          if (mounted) _pollOfflineStatus();
+        } else if (st == 'REJECTED') {
+          await OfflineRequestStore.instance.updateStatus(_offlinePending!.pid, OfflineStatus.rejected);
+          if (mounted) _pollOfflineStatus();
+        }
+      }
+    } catch (_) {}
+  }
+
 
   @override
   void dispose() {
     _activeSub?.cancel();
+    _offlinePoller?.cancel();
     super.dispose();
   }
 
@@ -192,8 +253,9 @@ class _UserDashboardState extends State<UserDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(name),
-                if (_activeRide != null) _buildActiveRideBanner(uid),
+                                _buildHeader(name),
+                if (_offlinePending != null) _buildOfflineBookingBanner(),
+                if (_activeRide != null && _offlinePending == null) _buildActiveRideBanner(uid),
                 if (_availableCredits > 0) _buildCreditsStrip(),
                 if (_lostFoundNotif != null && !_lostFoundBannerDismissed)
                   _buildLostFoundBanner(),
@@ -282,6 +344,32 @@ class _UserDashboardState extends State<UserDashboard> {
             ],
           ),
           const SizedBox(height: 16),
+          // Connection Mode Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8, height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _isOnline ? const Color(0xFF10B981) : (_isEsp32Reachable ? const Color(0xFF0EA5E9) : const Color(0xFFF59E0B)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _isOnline ? 'Online • Cloud Active' : (_isEsp32Reachable ? 'ASSA-AP • Offline Active' : 'Offline Mode'),
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           // Pickup ID badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -330,6 +418,89 @@ class _UserDashboardState extends State<UserDashboard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOfflineBookingBanner() {
+    final r = _offlinePending!;
+    final isAccepted = r.status == OfflineStatus.accepted || r.status == OfflineStatus.confirmed;
+    final publicShuttle = r.shuttleId.isNotEmpty ? Esp32Service.getPublicShuttleId(r.shuttleId) : '';
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRequestsScreen())),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF0EA5E9).withOpacity(0.3), width: 1.5),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0EA5E9).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.wifi_rounded, size: 12, color: Color(0xFF0284C7)),
+                      SizedBox(width: 4),
+                      Text('ASSA-AP (Offline)', style: TextStyle(color: Color(0xFF0284C7), fontSize: 10, fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('PID: ${r.pid}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isAccepted ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isAccepted ? 'ACCEPTED' : 'WAITING SHUTTLE',
+                    style: TextStyle(
+                      color: isAccepted ? const Color(0xFF065F46) : const Color(0xFF92400E),
+                      fontSize: 10, fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.circle, color: Color(0xFF10B981), size: 10),
+                const SizedBox(width: 6),
+                Expanded(child: Text(r.pickupLocation, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13), overflow: TextOverflow.ellipsis)),
+                const Padding(padding: EdgeInsets.symmetric(horizontal: 6), child: Icon(Icons.arrow_forward, size: 14, color: Colors.grey)),
+                const Icon(Icons.location_on_rounded, color: Color(0xFFEF4444), size: 14),
+                const SizedBox(width: 6),
+                Expanded(child: Text(r.destination, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13), overflow: TextOverflow.ellipsis)),
+              ],
+            ),
+            if (publicShuttle.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('🚌 Assigned Shuttle: $publicShuttle',
+                  style: const TextStyle(color: Color(0xFF0284C7), fontWeight: FontWeight.w800, fontSize: 12)),
+            ],
+          ],
+        ),
       ),
     );
   }
