@@ -527,6 +527,77 @@
       background: #ef4444;
       color: #ffffff;
     }
+  
+    /* Chess Game Styles */
+    #chess-board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      width: min(88vw, 360px);
+      height: min(88vw, 360px);
+      border: 3px solid #1E293B;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      margin: 0 auto;
+    }
+    .chess-sq {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: min(8vw, 32px);
+      cursor: pointer;
+      position: relative;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .chess-sq.sq-light { background: #E2E8F0; }
+    .chess-sq.sq-dark { background: #64748B; }
+    .chess-sq.sq-selected { background: #FDE047 !important; }
+    .chess-sq.sq-valid::after {
+      content: "";
+      width: 14px;
+      height: 14px;
+      background: rgba(16,185,129,0.75);
+      border-radius: 50%;
+      position: absolute;
+    }
+    .chess-sq.sq-valid-capture {
+      box-shadow: inset 0 0 0 4px #EF4444 !important;
+    }
+    .chess-piece-white { color: #FFFFFF; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.9)); }
+    .chess-piece-black { color: #0F172A; filter: drop-shadow(0 1px 2px rgba(255,255,255,0.4)); }
+
+    /* Block Arrange Styles */
+    #block-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: min(88vw, 340px);
+      height: min(88vw, 340px);
+      margin: 0 auto;
+    }
+    .block-tile {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #00897B, #004D40);
+      color: #FFFFFF;
+      font-size: 1.35rem;
+      font-weight: 900;
+      border-radius: 14px;
+      border: 2px solid rgba(255,255,255,0.2);
+      box-shadow: 0 4px 10px rgba(0,77,64,0.3);
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .block-tile:active { transform: scale(0.95); }
+    .block-tile.block-selected {
+      border: 2.5px solid #F59E0B !important;
+      box-shadow: 0 0 16px rgba(245,158,11,0.8) !important;
+      transform: scale(1.06);
+    }
+
   </style>
 </head>
 <body>
@@ -1048,114 +1119,164 @@
     <div class="topbar">
       <div class="topbar-row">
         <button class="topbar-icon" onclick="showScreen('dashboard')">&#8592;</button>
-        <div class="topbar-name" style="flex:1;text-align:center">&#127918; Campus Games</div>
+        <div class="topbar-name" style="flex:1;text-align:center">&#127918; Game Hub</div>
         <button class="topbar-icon" onclick="showScreen('leaderboard')">&#127942;</button>
       </div>
     </div>
     <div class="screen-content">
-      <div class="card" style="background:linear-gradient(135deg,var(--primary),var(--accent));border:none;margin-bottom:1rem">
-        <div style="color:rgba(255,255,255,0.85);font-size:0.8rem;font-weight:700">Your Weekly Points</div>
-        <div style="display:flex;gap:2rem;margin-top:0.6rem">
-          <div><div style="color:white;font-size:1.6rem;font-weight:900" id="pts-puzzle">0</div><div style="color:rgba(255,255,255,0.75);font-size:0.75rem">Puzzle</div></div>
-          <div><div style="color:white;font-size:1.6rem;font-weight:900" id="pts-quiz">0</div><div style="color:rgba(255,255,255,0.75);font-size:0.75rem">Quiz</div></div>
-          <div><div style="color:white;font-size:1.6rem;font-weight:900" id="pts-tap">0</div><div style="color:rgba(255,255,255,0.75);font-size:0.75rem">Tap</div></div>
+      <div class="card" style="background:linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);border:none;margin-bottom:1.15rem;color:white;box-shadow:0 6px 18px rgba(15,23,42,0.35)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="color:rgba(255,255,255,0.8);font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em">Weekly Points</div>
+          <span style="font-size:0.75rem;background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:12px;font-weight:700">Play For Fun</span>
+        </div>
+        <div style="display:flex;justify-content:space-around;margin-top:0.85rem">
+          <div style="text-align:center">
+            <div style="color:#A855F7;font-size:1.55rem;font-weight:900" id="pts-puzzle">0</div>
+            <div style="color:rgba(255,255,255,0.75);font-size:0.75rem;font-weight:700;margin-top:2px">&#129513; Puzzle</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,0.15)"></div>
+          <div style="text-align:center">
+            <div style="color:#60A5FA;font-size:1.55rem;font-weight:900" id="pts-chess">0</div>
+            <div style="color:rgba(255,255,255,0.75);font-size:0.75rem;font-weight:700;margin-top:2px">&#9823; Chess</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,0.15)"></div>
+          <div style="text-align:center">
+            <div style="color:#34D399;font-size:1.55rem;font-weight:900" id="pts-block">0</div>
+            <div style="color:rgba(255,255,255,0.75);font-size:0.75rem;font-weight:700;margin-top:2px">&#9638; Block Arrange</div>
+          </div>
         </div>
       </div>
-      <div class="game-card" onclick="startPuzzle(3)">
-        <div class="game-icon">&#129513;</div>
+
+      <div class="section-title">Choose a Game</div>
+
+      <!-- GAME 1: PUZZLE -->
+      <div class="game-card" style="border-left:5px solid #6A1B9A;background:var(--card)" onclick="startPuzzle(4)">
+        <div class="game-icon" style="background:rgba(106,27,154,0.12);color:#6A1B9A">&#129513;</div>
         <div class="game-info">
-          <div class="game-name">Slide Puzzle (3x3)</div>
-          <div class="game-desc">Arrange 8 tiles in order. Quick campus challenge.</div>
+          <div class="game-name">Puzzle</div>
+          <div class="game-desc">Slide tiles to restore campus photo or numbers.</div>
         </div>
-        <div class="game-points">+10 pts</div>
+        <div class="game-points" style="background:rgba(106,27,154,0.12);color:#6A1B9A">Play &#9654;</div>
       </div>
-      <div class="game-card" onclick="startPuzzle(4)">
-        <div class="game-icon">&#129513;</div>
+
+      <!-- GAME 2: CHESS -->
+      <div class="game-card" style="border-left:5px solid #37474F;background:var(--card)" onclick="startChess()">
+        <div class="game-icon" style="background:rgba(55,71,79,0.12);color:#37474F">&#9823;</div>
         <div class="game-info">
-          <div class="game-name">Slide Puzzle (4x4)</div>
-          <div class="game-desc">Arrange 15 tiles in order. Master challenge.</div>
+          <div class="game-name">Chess</div>
+          <div class="game-desc">Classic chess duel vs smart AI or pass-and-play.</div>
         </div>
-        <div class="game-points">+20 pts</div>
+        <div class="game-points" style="background:rgba(55,71,79,0.12);color:#37474F">Play &#9654;</div>
       </div>
-      <div class="game-card" onclick="startQuiz()">
-        <div class="game-icon">&#129504;</div>
+
+      <!-- GAME 3: BLOCK ARRANGE -->
+      <div class="game-card" style="border-left:5px solid #00897B;background:var(--card)" onclick="startBlockArrange()">
+        <div class="game-icon" style="background:rgba(0,137,123,0.12);color:#00897B">&#9638;</div>
         <div class="game-info">
-          <div class="game-name">Campus Quiz</div>
-          <div class="game-desc">Test your AFIT knowledge with trivia questions.</div>
+          <div class="game-name">Block Arrange</div>
+          <div class="game-desc">Tap two blocks to swap. Arrange 1 to 16 in order!</div>
         </div>
-        <div class="game-points">+5 pts each</div>
-      </div>
-      <div class="game-card" onclick="startTap()">
-        <div class="game-icon">&#128070;</div>
-        <div class="game-info">
-          <div class="game-name">Tap Challenge</div>
-          <div class="game-desc">Tap as fast as you can in 30 seconds!</div>
-        </div>
-        <div class="game-points">+1 pt/10 taps</div>
+        <div class="game-points" style="background:rgba(0,137,123,0.12);color:#00897B">Play &#9654;</div>
       </div>
     </div>
   </div>
 
-  <!-- PUZZLE -->
+  <!-- PUZZLE SCREEN -->
   <div class="screen" id="screen-puzzle">
     <div class="topbar">
       <div class="topbar-row">
         <button class="topbar-icon" onclick="showScreen('gamehub')">&#8592;</button>
-        <div class="topbar-name" style="flex:1;text-align:center">&#129513; Slide Puzzle</div>
-        <button class="topbar-icon" onclick="shufflePuzzle()">&#x1F500;</button>
+        <div class="topbar-name" style="flex:1;text-align:center">&#129513; Puzzle</div>
+        <button class="topbar-icon" onclick="shufflePuzzle()" title="Shuffle">&#x1F500;</button>
       </div>
     </div>
     <div class="screen-content" style="display:flex;flex-direction:column;align-items:center">
-      <div style="text-align:center;margin:0.5rem 0;font-size:0.85rem;color:var(--text-secondary)">
+      <div style="display:flex;gap:12px;margin:0.5rem 0 0.9rem">
+        <button class="btn btn-sm" id="btn-puz-3" style="font-weight:700" onclick="startPuzzle(3)">3x3 Grid</button>
+        <button class="btn btn-sm btn-primary" id="btn-puz-4" style="font-weight:700" onclick="startPuzzle(4)">4x4 Grid</button>
+      </div>
+      <div style="text-align:center;margin-bottom:0.75rem;font-size:0.85rem;color:var(--text-secondary)">
         Moves: <strong id="puzzle-moves" style="color:var(--primary)">0</strong>
-        &nbsp;&nbsp; Time: <strong id="puzzle-time" style="color:var(--primary)">0s</strong>
+        &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+        Time: <strong id="puzzle-time" style="color:var(--primary)">0s</strong>
       </div>
       <div id="puzzle-board"></div>
-      <div id="puzzle-win" style="display:none;text-align:center;margin-top:1rem">
+      <div id="puzzle-win" style="display:none;text-align:center;margin-top:1.25rem;background:var(--card);padding:1.25rem;border-radius:16px;border:1px solid var(--border);box-shadow:0 4px 14px rgba(0,0,0,0.06);max-width:320px;width:100%">
         <div style="font-size:2.5rem">&#127881;</div>
-        <div style="font-size:1.1rem;font-weight:800;color:var(--success);margin-top:0.3rem">Puzzle Solved!</div>
-        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.2rem" id="puzzle-win-msg"></div>
-        <button class="btn btn-primary btn-sm" style="margin:0.75rem auto 0" onclick="shufflePuzzle()">Play Again</button>
+        <div style="font-size:1.15rem;font-weight:800;color:var(--success);margin-top:0.3rem">Puzzle Solved!</div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.25rem" id="puzzle-win-msg"></div>
+        <button class="btn btn-primary btn-sm" style="margin:0.85rem auto 0" onclick="shufflePuzzle()">Play Again</button>
       </div>
     </div>
   </div>
 
-  <!-- QUIZ -->
-  <div class="screen" id="screen-quiz">
+  <!-- CHESS SCREEN -->
+  <div class="screen" id="screen-chess">
     <div class="topbar">
       <div class="topbar-row">
         <button class="topbar-icon" onclick="showScreen('gamehub')">&#8592;</button>
-        <div class="topbar-name" style="flex:1;text-align:center">&#129504; Campus Quiz</div>
-        <div style="color:var(--primary);font-size:0.85rem;font-weight:800" id="quiz-score-top">0 pts</div>
+        <div class="topbar-name" style="flex:1;text-align:center">&#9823; Chess Duel</div>
+        <button class="topbar-icon" onclick="resetChess()" title="New Game">&#x1F504;</button>
       </div>
     </div>
-    <div class="screen-content">
-      <div id="quiz-container">
-        <div class="empty-state"><div class="empty-icon">&#129504;</div><div class="empty-title">Loading quiz...</div></div>
+    <div class="screen-content" style="display:flex;flex-direction:column;align-items:center">
+      <!-- Mode Toggle -->
+      <div style="display:flex;gap:8px;margin:0.5rem 0 0.85rem">
+        <button class="btn btn-sm btn-primary" id="btn-chess-ai" onclick="setChessMode(true)">🤖 vs Computer</button>
+        <button class="btn btn-sm btn-secondary" id="btn-chess-2p" onclick="setChessMode(false)">👥 2-Player</button>
+      </div>
+
+      <!-- Turn & Status Bar -->
+      <div style="display:flex;justify-content:space-between;align-items:center;width:min(88vw,360px);margin-bottom:0.5rem;font-size:0.85rem;font-weight:700">
+        <span id="chess-turn-status" style="color:var(--text-primary)">⚪ White's Turn</span>
+        <span id="chess-mode-label" style="font-size:0.75rem;color:var(--text-secondary)">AI Mode</span>
+      </div>
+
+      <!-- Board -->
+      <div id="chess-board"></div>
+
+      <!-- Captured Pieces -->
+      <div style="width:min(88vw,360px);display:flex;justify-content:space-between;margin-top:0.75rem;font-size:1.1rem;min-height:26px">
+        <div id="chess-captured-w" title="White Captures"></div>
+        <div id="chess-captured-b" title="Black Captures"></div>
+      </div>
+
+      <!-- Win / Game Over Dialog -->
+      <div id="chess-win" style="display:none;text-align:center;margin-top:1rem;background:var(--card);padding:1.25rem;border-radius:16px;border:1px solid var(--border);box-shadow:0 4px 14px rgba(0,0,0,0.06);max-width:320px;width:100%">
+        <div style="font-size:2.5rem">&#127942;</div>
+        <div style="font-size:1.15rem;font-weight:800;color:var(--success);margin-top:0.3rem" id="chess-win-title">Victory!</div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.25rem" id="chess-win-msg"></div>
+        <button class="btn btn-primary btn-sm" style="margin:0.85rem auto 0" onclick="resetChess()">Play Again</button>
       </div>
     </div>
   </div>
 
-  <!-- TAP CHALLENGE -->
-  <div class="screen" id="screen-tap">
+  <!-- BLOCK ARRANGE SCREEN -->
+  <div class="screen" id="screen-block">
     <div class="topbar">
       <div class="topbar-row">
         <button class="topbar-icon" onclick="showScreen('gamehub')">&#8592;</button>
-        <div class="topbar-name" style="flex:1;text-align:center">&#128070; Tap Challenge</div>
-        <div style="width:38px"></div>
+        <div class="topbar-name" style="flex:1;text-align:center">&#9638; Block Arrange</div>
+        <button class="topbar-icon" onclick="startBlockArrange()" title="Shuffle">&#x1F504;</button>
       </div>
     </div>
-    <div class="screen-content" style="display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div id="tap-status" style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:1.5rem;text-align:center">Tap the circle as fast as you can in 30 seconds!</div>
-      <div id="tap-area" onclick="doTap()">
-        <div class="tap-count" id="tap-count">0</div>
-        <div class="tap-label">TAPS</div>
-        <div class="tap-timer" id="tap-timer">30s</div>
+    <div class="screen-content" style="display:flex;flex-direction:column;align-items:center">
+      <div style="text-align:center;margin:0.4rem 0 0.8rem;font-size:0.85rem;color:var(--text-secondary)">
+        Swaps: <strong id="block-swaps" style="color:var(--primary);font-size:1rem">0</strong>
+        &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+        Time: <strong id="block-time" style="color:var(--primary);font-size:1rem">0s</strong>
       </div>
-      <div id="tap-result" style="display:none;text-align:center;margin-top:1.5rem">
+      <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin-bottom:0.85rem;max-width:320px">
+        💡 Tap a block to select, then tap another block to swap! Arrange 1 to 16 in order.
+      </div>
+
+      <div id="block-board"></div>
+
+      <div id="block-win" style="display:none;text-align:center;margin-top:1.25rem;background:var(--card);padding:1.25rem;border-radius:16px;border:1px solid var(--border);box-shadow:0 4px 14px rgba(0,0,0,0.06);max-width:320px;width:100%">
         <div style="font-size:2.5rem">&#127881;</div>
-        <div style="font-size:1.1rem;font-weight:800;color:var(--success);margin-top:0.3rem" id="tap-result-msg"></div>
-        <button class="btn btn-primary btn-sm" style="margin:0.75rem auto 0" onclick="resetTap()">Play Again</button>
+        <div style="font-size:1.15rem;font-weight:800;color:var(--success);margin-top:0.3rem">Blocks Arranged!</div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.25rem" id="block-win-msg"></div>
+        <button class="btn btn-primary btn-sm" style="margin:0.85rem auto 0" onclick="startBlockArrange()">Play Again</button>
       </div>
     </div>
   </div>
@@ -1171,8 +1292,8 @@
     </div>
     <div style="display:flex;gap:0.5rem;padding:0.75rem 1rem;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0">
       <button class="admin-tab active" onclick="loadLeaderboard('puzzle',this)">&#129513; Puzzle</button>
-      <button class="admin-tab" onclick="loadLeaderboard('quiz',this)">&#129504; Quiz</button>
-      <button class="admin-tab" onclick="loadLeaderboard('tap',this)">&#128070; Tap</button>
+      <button class="admin-tab" onclick="loadLeaderboard('chess',this)">&#9823; Chess</button>
+      <button class="admin-tab" onclick="loadLeaderboard('block',this)">&#9638; Block Arrange</button>
     </div>
     <div class="screen-content" id="lb-list">
       <div class="empty-state"><div class="empty-icon">&#127942;</div><div class="empty-title">Loading leaderboard...</div></div>
@@ -1969,6 +2090,8 @@ window.showScreen = function(name) {
   if (name === 'lostfound') loadLostFound();
   if (name === 'report') loadReports();
   if (name === 'gamehub') loadGamePoints();
+  if (name === 'chess') { if(!chessBoard.length) resetChess(); }
+  if (name === 'block') { if(!blockItems.length) startBlockArrange(); }
   if (name === 'settings') loadSettings();
   if (name === 'leaderboard') loadLeaderboard(lbCurrentType);
   if (name === 'tracking') initTrackingMap();
@@ -3520,23 +3643,36 @@ async function loadGamePoints() {
     const snap = await getDoc(doc(db, 'game_scores', currentUser.uid));
     if (snap.exists()) {
       const d = snap.data();
-      document.getElementById('pts-puzzle').textContent = d.puzzle_weeklyPoints || 0;
-      document.getElementById('pts-quiz').textContent = d.quiz_weeklyPoints || 0;
-      document.getElementById('pts-tap').textContent = d.tap_weeklyPoints || 0;
+      const puzEl = document.getElementById('pts-puzzle');
+      const cheEl = document.getElementById('pts-chess');
+      const blkEl = document.getElementById('pts-block');
+      if (puzEl) puzEl.textContent = d.puzzle_weeklyPoints || 0;
+      if (cheEl) cheEl.textContent = d.chess_weeklyPoints || 0;
+      if (blkEl) blkEl.textContent = d.block_weeklyPoints || 0;
     }
   } catch(e) {}
 }
 
 // --- PUZZLE GAME ---
 window.startPuzzle = async function(size) {
-  puzzleSize = size;
+  puzzleSize = size || 4;
   puzzleMoves = 0; puzzleSeconds = 0;
   clearInterval(puzzleTimer);
-  document.getElementById('puzzle-moves').textContent = '0';
-  document.getElementById('puzzle-time').textContent = '0s';
-  document.getElementById('puzzle-win').style.display = 'none';
+  const btn3 = document.getElementById('btn-puz-3');
+  const btn4 = document.getElementById('btn-puz-4');
+  if (btn3 && btn4) {
+    if (size === 3) { btn3.classList.add('btn-primary'); btn3.classList.remove('btn-secondary'); btn4.classList.remove('btn-primary'); btn4.classList.add('btn-secondary'); }
+    else { btn4.classList.add('btn-primary'); btn4.classList.remove('btn-secondary'); btn3.classList.remove('btn-primary'); btn3.classList.add('btn-secondary'); }
+  }
+  const movEl = document.getElementById('puzzle-moves');
+  const timEl = document.getElementById('puzzle-time');
+  const winEl = document.getElementById('puzzle-win');
+  if (movEl) movEl.textContent = '0';
+  if (timEl) timEl.textContent = '0s';
+  if (winEl) winEl.style.display = 'none';
   showScreen('puzzle');
-  document.getElementById('puzzle-board').style.gridTemplateColumns = 'repeat(' + size + ',1fr)';
+  const pBoard = document.getElementById('puzzle-board');
+  if (pBoard) pBoard.style.gridTemplateColumns = 'repeat(' + puzzleSize + ',1fr)';
 
   puzzleImageUrl = '';
   try {
@@ -3575,13 +3711,17 @@ window.shufflePuzzle = function() {
   puzzleEmpty = puzzleTiles.indexOf(0);
   puzzleMoves = 0; puzzleSeconds = 0;
   clearInterval(puzzleTimer);
-  document.getElementById('puzzle-moves').textContent = '0';
-  document.getElementById('puzzle-time').textContent = '0s';
-  document.getElementById('puzzle-win').style.display = 'none';
+  const movEl = document.getElementById('puzzle-moves');
+  const timEl = document.getElementById('puzzle-time');
+  const winEl = document.getElementById('puzzle-win');
+  if (movEl) movEl.textContent = '0';
+  if (timEl) timEl.textContent = '0s';
+  if (winEl) winEl.style.display = 'none';
   renderPuzzle();
   puzzleTimer = setInterval(() => {
     puzzleSeconds++;
-    document.getElementById('puzzle-time').textContent = puzzleSeconds + 's';
+    const t = document.getElementById('puzzle-time');
+    if (t) t.textContent = puzzleSeconds + 's';
   }, 1000);
 };
 
@@ -3596,6 +3736,7 @@ function isPuzzleSolvable() {
 
 function renderPuzzle() {
   const board = document.getElementById('puzzle-board');
+  if (!board) return;
   board.innerHTML = '';
   const tileSize = Math.floor(Math.min(window.innerWidth * 0.8, 340) / puzzleSize);
   puzzleTiles.forEach((val, idx) => {
@@ -3628,7 +3769,8 @@ function moveTile(idx) {
   [puzzleTiles[idx], puzzleTiles[emptyIdx]] = [puzzleTiles[emptyIdx], puzzleTiles[idx]];
   puzzleEmpty = idx;
   puzzleMoves++;
-  document.getElementById('puzzle-moves').textContent = puzzleMoves;
+  const m = document.getElementById('puzzle-moves');
+  if (m) m.textContent = puzzleMoves;
   renderPuzzle();
   if (isPuzzleSolved()) winPuzzle();
 }
@@ -3641,133 +3783,421 @@ function isPuzzleSolved() {
 async function winPuzzle() {
   clearInterval(puzzleTimer);
   const pts = puzzleSize === 3 ? 10 : 20;
-  document.getElementById('puzzle-win-msg').textContent = 'Solved in ' + puzzleMoves + ' moves, ' + puzzleSeconds + 's! +' + pts + ' points';
-  document.getElementById('puzzle-win').style.display = 'block';
+  const msg = document.getElementById('puzzle-win-msg');
+  if (msg) msg.textContent = 'Solved in ' + puzzleMoves + ' moves, ' + puzzleSeconds + 's! +' + pts + ' points';
+  const winEl = document.getElementById('puzzle-win');
+  if (winEl) winEl.style.display = 'block';
   if (currentUser) {
     try {
       const ref = doc(db, 'game_scores', currentUser.uid);
       const snap = await getDoc(ref);
       const prev = snap.exists() ? (snap.data().puzzle_weeklyPoints || 0) : 0;
-      await setDoc(ref, { puzzle_weeklyPoints: prev + pts }, { merge: true });
+      await setDoc(ref, { puzzle_weeklyPoints: prev + pts, name: currentUserData?.name || 'User' }, { merge: true });
+      loadGamePoints();
     } catch(e) {}
   }
 }
 
-// --- QUIZ GAME ---
-window.startQuiz = async function() {
-  showScreen('quiz');
-  quizScore = 0; quizIndex = 0;
-  document.getElementById('quiz-score-top').textContent = '0 pts';
-  const el = document.getElementById('quiz-container');
-  el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#129504;</div><div class="empty-title">Loading questions...</div></div>';
-  try {
-    const snap = await getDocs(query(collection(db, 'game_questions'), where('isActive', '==', true)));
-    quizQuestions = [];
-    snap.forEach(d => quizQuestions.push({ id: d.id, ...d.data() }));
-    if (quizQuestions.length === 0) {
-      quizQuestions = [
-        { question: 'What does AFIT stand for?', options: ['Air Force Institute of Technology', 'Army Force Institute', 'Air Flight Institute', 'Armed Forces Institute'], answer: 'Air Force Institute of Technology' },
-        { question: 'What does ASSA stand for?', options: ['AFIT Shuttle Service App', 'Army Shuttle System App', 'AFIT Student Service App', 'Academic Shuttle System App'], answer: 'AFIT Shuttle Service App' },
-        { question: 'What radio technology powers ASSA offline requests?', options: ['LoRa 433 MHz', 'Bluetooth Mesh', 'NFC', 'Satellite'], answer: 'LoRa 433 MHz' },
-        { question: 'Which cloud platform powers ASSA real-time sync?', options: ['Firebase', 'AWS', 'Azure', 'Heroku'], answer: 'Firebase' }
-      ];
-    }
-    quizQuestions = quizQuestions.sort(() => Math.random() - 0.5).slice(0, 10);
-    renderQuizQuestion();
-  } catch(e) {
-    quizQuestions = [{ question: 'What does ASSA stand for?', options: ['AFIT Shuttle Service App', 'Army Shuttle System', 'AFIT Smart Shuttle'], answer: 'AFIT Shuttle Service App' }];
-    renderQuizQuestion();
-  }
+// ════════════════════════════════════════════════════════════════════
+// CHESS GAME (Matches Flutter chess_screen.dart)
+// ════════════════════════════════════════════════════════════════════
+let chessBoard = [];
+let chessWhiteTurn = true;
+let chessSelRow = null, chessSelCol = null;
+let chessValidMoves = [];
+let chessGameOver = false;
+let chessVsAi = true;
+let chessAiThinking = false;
+let chessCapturedWhite = [];
+let chessCapturedBlack = [];
+
+const CHESS_UNICODE = {
+  'wK': '&#9812;', 'wQ': '&#9813;', 'wR': '&#9814;', 'wB': '&#9815;', 'wN': '&#9816;', 'wP': '&#9817;',
+  'bK': '&#9818;', 'bQ': '&#9819;', 'bR': '&#9820;', 'bB': '&#9821;', 'bN': '&#9822;', 'bP': '&#9823;'
 };
 
-function renderQuizQuestion() {
-  const el = document.getElementById('quiz-container');
-  if (quizIndex >= quizQuestions.length) {
-    el.innerHTML = '<div style="text-align:center;padding:2rem"><div style="font-size:3rem">&#127881;</div><div style="font-size:1.2rem;font-weight:800;color:var(--success);margin-top:0.4rem">Quiz Complete!</div><div style="font-size:0.9rem;color:var(--text-secondary);margin-top:0.4rem">You scored ' + quizScore + ' points</div><button class="btn btn-primary" style="margin-top:1.2rem" onclick="startQuiz()">Play Again</button></div>';
-    saveQuizPoints();
+window.startChess = function() {
+  showScreen('chess');
+  resetChess();
+};
+
+window.setChessMode = function(vsAi) {
+  chessVsAi = vsAi;
+  const bAi = document.getElementById('btn-chess-ai');
+  const b2p = document.getElementById('btn-chess-2p');
+  const lbl = document.getElementById('chess-mode-label');
+  if (vsAi) {
+    if (bAi) { bAi.className = 'btn btn-sm btn-primary'; }
+    if (b2p) { b2p.className = 'btn btn-sm btn-secondary'; }
+    if (lbl) lbl.textContent = 'AI Mode';
+  } else {
+    if (bAi) { bAi.className = 'btn btn-sm btn-secondary'; }
+    if (b2p) { b2p.className = 'btn btn-sm btn-primary'; }
+    if (lbl) lbl.textContent = '2-Player Local';
+  }
+  resetChess();
+};
+
+window.resetChess = function() {
+  chessBoard = Array.from({length: 8}, () => Array(8).fill(''));
+  const backRank = ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'];
+  for (let c = 0; c < 8; c++) {
+    chessBoard[0][c] = 'b' + backRank[c];
+    chessBoard[1][c] = 'bP';
+    chessBoard[6][c] = 'wP';
+    chessBoard[7][c] = 'w' + backRank[c];
+  }
+  chessWhiteTurn = true;
+  chessSelRow = null; chessSelCol = null;
+  chessValidMoves = [];
+  chessGameOver = false;
+  chessAiThinking = false;
+  chessCapturedWhite = [];
+  chessCapturedBlack = [];
+  const winCard = document.getElementById('chess-win');
+  if (winCard) winCard.style.display = 'none';
+  updateChessHeader();
+  renderChessBoard();
+  renderCapturedPieces();
+};
+
+function updateChessHeader() {
+  const el = document.getElementById('chess-turn-status');
+  if (!el) return;
+  if (chessGameOver) {
+    el.innerHTML = '&#127942; Game Over!';
+  } else if (chessAiThinking) {
+    el.innerHTML = '&#9203; Black is thinking...';
+  } else {
+    el.innerHTML = chessWhiteTurn ? '&#9898; White's Turn' : '&#9899; Black's Turn';
+  }
+}
+
+function renderCapturedPieces() {
+  const wEl = document.getElementById('chess-captured-w');
+  const bEl = document.getElementById('chess-captured-b');
+  if (wEl) wEl.innerHTML = chessCapturedWhite.map(p => CHESS_UNICODE[p] || '').join(' ');
+  if (bEl) bEl.innerHTML = chessCapturedBlack.map(p => CHESS_UNICODE[p] || '').join(' ');
+}
+
+function getChessMoves(board, r, c) {
+  const piece = board[r][c];
+  if (!piece) return [];
+  const color = piece[0];
+  const type = piece[1];
+  const opp = color === 'w' ? 'b' : 'w';
+  const moves = [];
+  const inBounds = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8;
+
+  if (type === 'P') {
+    const fwd = color === 'w' ? -1 : 1;
+    const startRow = color === 'w' ? 6 : 1;
+    if (inBounds(r + fwd, c) && board[r + fwd][c] === '') {
+      moves.push([r + fwd, c]);
+      if (r === startRow && board[r + 2 * fwd][c] === '') {
+        moves.push([r + 2 * fwd, c]);
+      }
+    }
+    for (const dc of [-1, 1]) {
+      const nr = r + fwd, nc = c + dc;
+      if (inBounds(nr, nc) && board[nr][nc] && board[nr][nc][0] === opp) {
+        moves.push([nr, nc]);
+      }
+    }
+  } else if (type === 'N') {
+    const diffs = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+    for (const [dr, dc] of diffs) {
+      const nr = r + dr, nc = c + dc;
+      if (inBounds(nr, nc) && (!board[nr][nc] || board[nr][nc][0] === opp)) {
+        moves.push([nr, nc]);
+      }
+    }
+  } else if (type === 'B' || type === 'R' || type === 'Q') {
+    const dirs = [];
+    if (type !== 'R') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
+    if (type !== 'B') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
+    for (const [dr, dc] of dirs) {
+      let nr = r + dr, nc = c + dc;
+      while (inBounds(nr, nc)) {
+        if (board[nr][nc] === '') {
+          moves.push([nr, nc]);
+        } else {
+          if (board[nr][nc][0] === opp) moves.push([nr, nc]);
+          break;
+        }
+        nr += dr; nc += dc;
+      }
+    }
+  } else if (type === 'K') {
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const nr = r + dr, nc = c + dc;
+        if (inBounds(nr, nc) && (!board[nr][nc] || board[nr][nc][0] === opp)) {
+          moves.push([nr, nc]);
+        }
+      }
+    }
+  }
+  return moves;
+}
+
+function renderChessBoard() {
+  const container = document.getElementById('chess-board');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = document.createElement('div');
+      const isLight = (r + c) % 2 === 0;
+      sq.className = 'chess-sq ' + (isLight ? 'sq-light' : 'sq-dark');
+      if (chessSelRow === r && chessSelCol === c) sq.classList.add('sq-selected');
+
+      const isValid = chessValidMoves.some(([vr, vc]) => vr === r && vc === c);
+      if (isValid) {
+        if (chessBoard[r][c] !== '') sq.classList.add('sq-valid-capture');
+        else sq.classList.add('sq-valid');
+      }
+
+      const p = chessBoard[r][c];
+      if (p) {
+        const pieceSpan = document.createElement('span');
+        pieceSpan.className = p[0] === 'w' ? 'chess-piece-white' : 'chess-piece-black';
+        pieceSpan.innerHTML = CHESS_UNICODE[p] || '';
+        sq.appendChild(pieceSpan);
+      }
+
+      sq.onclick = () => onChessSquareClick(r, c);
+      container.appendChild(sq);
+    }
+  }
+}
+
+function onChessSquareClick(r, c) {
+  if (chessGameOver || chessAiThinking) return;
+  const currentTurnColor = chessWhiteTurn ? 'w' : 'b';
+
+  // If a square is already selected, check if clicking a valid move target
+  if (chessSelRow !== null && chessSelCol !== null) {
+    const isMove = chessValidMoves.some(([vr, vc]) => vr === r && vc === c);
+    if (isMove) {
+      executeChessMove(chessSelRow, chessSelCol, r, c);
+      return;
+    }
+  }
+
+  // Otherwise select piece of current turn's color
+  const p = chessBoard[r][c];
+  if (p && p[0] === currentTurnColor) {
+    chessSelRow = r;
+    chessSelCol = c;
+    chessValidMoves = getChessMoves(chessBoard, r, c);
+    renderChessBoard();
+  } else {
+    chessSelRow = null; chessSelCol = null;
+    chessValidMoves = [];
+    renderChessBoard();
+  }
+}
+
+function executeChessMove(fromR, fromC, toR, toC) {
+  const p = chessBoard[fromR][fromC];
+  const target = chessBoard[toR][toC];
+
+  // Capture
+  if (target) {
+    if (target[0] === 'w') chessCapturedBlack.push(target);
+    else chessCapturedWhite.push(target);
+  }
+
+  chessBoard[toR][toC] = p;
+  chessBoard[fromR][fromC] = '';
+
+  // Auto-promote Pawn
+  if (p === 'wP' && toR === 0) chessBoard[toR][toC] = 'wQ';
+  if (p === 'bP' && toR === 7) chessBoard[toR][toC] = 'bQ';
+
+  chessSelRow = null; chessSelCol = null;
+  chessValidMoves = [];
+  renderCapturedPieces();
+
+  // King capture check
+  if (target === 'bK' || target === 'wK') {
+    endChessGame(target === 'bK' ? 'White' : 'Black');
     return;
   }
-  const q = quizQuestions[quizIndex];
-  const pct = Math.round((quizIndex / quizQuestions.length) * 100);
-  el.innerHTML = '<div style="height:6px;background:var(--border);border-radius:3px;margin-bottom:1rem;overflow:hidden"><div style="height:100%;background:var(--primary);width:' + pct + '%"></div></div>' +
-    '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.75rem">Question ' + (quizIndex + 1) + ' of ' + quizQuestions.length + '</div>' +
-    '<div class="quiz-question">' + escape(q.question) + '</div>' +
-    '<div class="quiz-options">' +
-      q.options.map(opt => '<button class="quiz-opt" data-opt="' + encodeURIComponent(opt) + '" data-ans="' + encodeURIComponent(q.answer) + '" onclick="answerQuiz(this, decodeURIComponent(this.dataset.opt), decodeURIComponent(this.dataset.ans))">' + escape(opt) + '</button>').join('') +
-    '</div>';
-}
 
-window.answerQuiz = function(btn, selected, correct) {
-  document.querySelectorAll('.quiz-opt').forEach(b => { b.disabled = true; });
-  if (selected === correct) {
-    btn.classList.add('correct');
-    quizScore += 5;
-    document.getElementById('quiz-score-top').textContent = quizScore + ' pts';
-  } else {
-    btn.classList.add('wrong');
-    document.querySelectorAll('.quiz-opt').forEach(b => { if (b.textContent.trim() === correct) b.classList.add('correct'); });
+  chessWhiteTurn = !chessWhiteTurn;
+  updateChessHeader();
+  renderChessBoard();
+
+  // Trigger AI move if vs AI and now Black's turn
+  if (!chessWhiteTurn && chessVsAi && !chessGameOver) {
+    chessAiThinking = true;
+    updateChessHeader();
+    setTimeout(executeAiChessMove, 450);
   }
-  quizIndex++;
-  setTimeout(renderQuizQuestion, 1200);
-};
-
-async function saveQuizPoints() {
-  if (!currentUser || quizScore === 0) return;
-  try {
-    const ref = doc(db, 'game_scores', currentUser.uid);
-    const snap = await getDoc(ref);
-    const prev = snap.exists() ? (snap.data().quiz_weeklyPoints || 0) : 0;
-    await setDoc(ref, { quiz_weeklyPoints: prev + quizScore }, { merge: true });
-  } catch(e) {}
 }
 
-// --- TAP CHALLENGE ---
-window.startTap = function() {
-  showScreen('tap');
-  resetTap();
-};
-
-window.resetTap = function() {
-  tapCount = 0; tapSeconds = 30; tapRunning = false;
-  clearInterval(tapTimer);
-  document.getElementById('tap-count').textContent = '0';
-  document.getElementById('tap-timer').textContent = '30s';
-  document.getElementById('tap-result').style.display = 'none';
-  document.getElementById('tap-status').textContent = 'Tap the circle as fast as you can in 30 seconds!';
-  document.getElementById('tap-area').style.opacity = '1';
-};
-
-window.doTap = function() {
-  if (document.getElementById('tap-result').style.display !== 'none') return;
-  if (!tapRunning) {
-    tapRunning = true;
-    document.getElementById('tap-status').textContent = 'Go! Tap tap tap!';
-    tapTimer = setInterval(() => {
-      tapSeconds--;
-      document.getElementById('tap-timer').textContent = tapSeconds + 's';
-      if (tapSeconds <= 0) {
-        clearInterval(tapTimer);
-        tapRunning = false;
-        const pts = Math.floor(tapCount / 10);
-        document.getElementById('tap-result-msg').textContent = tapCount + ' taps! +' + pts + ' points earned!';
-        document.getElementById('tap-result').style.display = 'block';
-        document.getElementById('tap-area').style.opacity = '0.5';
-        saveTapPoints(pts);
+function executeAiChessMove() {
+  if (chessGameOver) return;
+  // Collect all legal moves for Black
+  const blackMoves = [];
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (chessBoard[r][c] && chessBoard[r][c][0] === 'b') {
+        const moves = getChessMoves(chessBoard, r, c);
+        for (const [tr, tc] of moves) {
+          blackMoves.push({ fromR: r, fromC: c, toR: tr, toC: tc, target: chessBoard[tr][tc] });
+        }
       }
-    }, 1000);
+    }
   }
-  tapCount++;
-  document.getElementById('tap-count').textContent = tapCount;
+
+  chessAiThinking = false;
+  if (!blackMoves.length) {
+    endChessGame('White');
+    return;
+  }
+
+  // Prioritize King capture, then Queen, then other captures, then random
+  blackMoves.sort((a, b) => {
+    const val = p => p === 'wK' ? 1000 : p === 'wQ' ? 90 : p === 'wR' ? 50 : p === 'wB' || p === 'wN' ? 30 : p === 'wP' ? 10 : 0;
+    return val(b.target) - val(a.target);
+  });
+
+  const bestMove = blackMoves[0];
+  executeChessMove(bestMove.fromR, bestMove.fromC, bestMove.toR, bestMove.toC);
+}
+
+async function endChessGame(winner) {
+  chessGameOver = true;
+  updateChessHeader();
+  renderChessBoard();
+  const winTitle = document.getElementById('chess-win-title');
+  const winMsg = document.getElementById('chess-win-msg');
+  const winCard = document.getElementById('chess-win');
+
+  const userWon = (winner === 'White');
+  if (winTitle) winTitle.textContent = userWon ? 'Victory!' : 'Game Over';
+  if (winMsg) winMsg.textContent = userWon ? 'White wins the chess match! +50 weekly points.' : 'Black wins this match. Try again!';
+  if (winCard) winCard.style.display = 'block';
+
+  if (userWon && currentUser) {
+    try {
+      const ref = doc(db, 'game_scores', currentUser.uid);
+      const snap = await getDoc(ref);
+      const prev = snap.exists() ? (snap.data().chess_weeklyPoints || 0) : 0;
+      await setDoc(ref, { chess_weeklyPoints: prev + 50, name: currentUserData?.name || 'User' }, { merge: true });
+      loadGamePoints();
+    } catch(e) {}
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// BLOCK ARRANGE GAME (Matches Flutter block_arrange_screen.dart)
+// ════════════════════════════════════════════════════════════════════
+let blockItems = [];
+let blockSelected = null;
+let blockSwaps = 0;
+let blockSeconds = 0;
+let blockTimer = null;
+let blockSolved = false;
+
+window.startBlockArrange = function() {
+  showScreen('block');
+  blockSwaps = 0;
+  blockSeconds = 0;
+  blockSelected = null;
+  blockSolved = false;
+  clearInterval(blockTimer);
+
+  const swEl = document.getElementById('block-swaps');
+  const tmEl = document.getElementById('block-time');
+  const wnEl = document.getElementById('block-win');
+  if (swEl) swEl.textContent = '0';
+  if (tmEl) tmEl.textContent = '0s';
+  if (wnEl) wnEl.style.display = 'none';
+
+  // Generate shuffled 1 to 16 blocks (guaranteed not pre-solved)
+  do {
+    blockItems = Array.from({length: 16}, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+  } while (isBlockSolved());
+
+  renderBlockBoard();
+
+  blockTimer = setInterval(() => {
+    blockSeconds++;
+    const t = document.getElementById('block-time');
+    if (t) t.textContent = blockSeconds + 's';
+  }, 1000);
 };
 
-async function saveTapPoints(pts) {
-  if (!currentUser || pts === 0) return;
-  try {
-    const ref = doc(db, 'game_scores', currentUser.uid);
-    const snap = await getDoc(ref);
-    const prev = snap.exists() ? (snap.data().tap_weeklyPoints || 0) : 0;
-    await setDoc(ref, { tap_weeklyPoints: prev + pts }, { merge: true });
-  } catch(e) {}
+function isBlockSolved() {
+  return blockItems.every((v, i) => v === i + 1);
+}
+
+function renderBlockBoard() {
+  const container = document.getElementById('block-board');
+  if (!container) return;
+  container.innerHTML = '';
+
+  blockItems.forEach((val, idx) => {
+    const tile = document.createElement('div');
+    tile.className = 'block-tile' + (blockSelected === idx ? ' block-selected' : '');
+    tile.textContent = val;
+    tile.onclick = () => onBlockTileClick(idx);
+    container.appendChild(tile);
+  });
+}
+
+function onBlockTileClick(idx) {
+  if (blockSolved) return;
+
+  if (blockSelected === null) {
+    blockSelected = idx;
+    renderBlockBoard();
+  } else if (blockSelected === idx) {
+    blockSelected = null;
+    renderBlockBoard();
+  } else {
+    // Swap tiles
+    const prev = blockSelected;
+    [blockItems[prev], blockItems[idx]] = [blockItems[idx], blockItems[prev]];
+    blockSelected = null;
+    blockSwaps++;
+    const swEl = document.getElementById('block-swaps');
+    if (swEl) swEl.textContent = blockSwaps;
+    renderBlockBoard();
+
+    if (isBlockSolved()) {
+      winBlockArrange();
+    }
+  }
+}
+
+async function winBlockArrange() {
+  blockSolved = true;
+  clearInterval(blockTimer);
+
+  // Score formula matching Flutter block_arrange_screen.dart
+  const pts = Math.max(100, 1000 - blockSwaps * 10 - blockSeconds);
+  const winMsg = document.getElementById('block-win-msg');
+  if (winMsg) {
+    winMsg.textContent = 'Arranged in ' + blockSwaps + ' swaps, ' + blockSeconds + 's! +' + pts + ' points earned!';
+  }
+  const winCard = document.getElementById('block-win');
+  if (winCard) winCard.style.display = 'block';
+
+  if (currentUser) {
+    try {
+      const ref = doc(db, 'game_scores', currentUser.uid);
+      const snap = await getDoc(ref);
+      const prev = snap.exists() ? (snap.data().block_weeklyPoints || 0) : 0;
+      await setDoc(ref, { block_weeklyPoints: prev + pts, name: currentUserData?.name || 'User' }, { merge: true });
+      loadGamePoints();
+    } catch(e) {}
+  }
 }
 
 // --- LEADERBOARD ---
