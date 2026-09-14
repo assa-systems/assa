@@ -37,12 +37,50 @@ class _RequestScreenState extends State<RequestScreen> {
   Map<String, dynamic>? _userData;
   String? _pickupId;
   bool _isEsp32Reachable = false;
+  StreamSubscription? _campusLocationsSub;
+  List<String> _onlineLocations = [];
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _checkConnectivity();
+    _listenCampusLocations();
+  }
+
+  @override
+  void dispose() {
+    _campusLocationsSub?.cancel();
+    super.dispose();
+  }
+
+  void _listenCampusLocations() {
+    _campusLocationsSub = FirebaseFirestore.instance
+        .collection('campus_locations')
+        .snapshots()
+        .listen((snap) {
+      if (!mounted) return;
+      final locs = snap.docs
+          .where((d) => d.data()['deleted'] != true)
+          .map((d) => (d.data()['name'] as String?)?.trim() ?? '')
+          .where((name) => name.isNotEmpty)
+          .toSet()
+          .toList();
+      setState(() {
+        _onlineLocations = locs;
+        _validateSelectedLocations();
+      });
+    }, onError: (_) {});
+  }
+
+  void _validateSelectedLocations() {
+    final validList = _pickupLocations;
+    if (_selectedPickup != null && !validList.contains(_selectedPickup)) {
+      _selectedPickup = null;
+    }
+    if (_selectedDestination != null && !validList.contains(_selectedDestination)) {
+      _selectedDestination = null;
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -153,10 +191,23 @@ class _RequestScreenState extends State<RequestScreen> {
     });
   }
 
-  // Pickup locations are the same full campus list whether online or
-  // offline — offline (campus AP) mode now shows all 12 locations too.
-  List<String> get _pickupLocations => Esp32Service.allLocations;
-  List<String> get _destinationLocations => Esp32Service.allLocations;
+  // OFFLINE MODE: Always strictly returns the 12 fixed locations matching ESP32 firmware & LoRa gateway.
+  // ONLINE MODE: Dynamically loads the campus locations added personally by the Admin via the Admin Panel.
+  List<String> get _pickupLocations {
+    if (_isOnline && _onlineLocations.isNotEmpty) {
+      return _onlineLocations;
+    }
+    // Offline / ESP32 AP mode: Fixed 12 locations
+    return Esp32Service.allLocations;
+  }
+
+  List<String> get _destinationLocations {
+    if (_isOnline && _onlineLocations.isNotEmpty) {
+      return _onlineLocations;
+    }
+    // Offline / ESP32 AP mode: Fixed 12 locations
+    return Esp32Service.allLocations;
+  }
 
   // ─── SUBMIT REQUEST – ALWAYS TRIES, AUTO‑DETECTS PATH ─────────────
   Future<void> _submitRequest() async {
