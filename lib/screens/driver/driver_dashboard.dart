@@ -1,3 +1,4 @@
+import 'package:assa/services/driver_location_service.dart';
 import 'package:assa/services/notification_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -150,6 +151,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     _loadDriverData();
     _listenToRequests();
     _listenToShuttleStatus();
+      DriverLocationService.instance.startTracking(shuttleId: _driverData?['shuttleId']);
     _startOfflinePolling();
   }
 
@@ -158,6 +160,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     _requestSub?.cancel();
     _shuttleStatusSub?.cancel();
     _offlinePollTimer?.cancel();
+    DriverLocationService.instance.stopTracking(shuttleId: _driverData?['shuttleId']);
     super.dispose();
   }
 
@@ -283,6 +286,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
   }
 
   Future<void> _logout() async {
+    await DriverLocationService.instance.stopTracking(shuttleId: _driverData?['shuttleId']);
     await _auth.logout();
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(

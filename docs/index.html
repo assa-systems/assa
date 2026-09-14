@@ -892,9 +892,9 @@
     <!-- Map Layer & Student Spot Addition Bar -->
     <div class="map-controls-bar" style="flex-wrap:wrap;gap:6px">
       <div class="map-pill-group">
-        <button class="map-pill-btn active" id="btn-map-groads" onclick="setMapBaseLayer(&quot;google_roads&quot;)">🗺️ Google Maps</button>
+        <button class="map-pill-btn active" id="btn-map-osm" onclick="setMapBaseLayer(&quot;osm&quot;)">🌐 Campus (Low Data)</button>
+        <button class="map-pill-btn" id="btn-map-groads" onclick="setMapBaseLayer(&quot;google_roads&quot;)">🗺️ Google Roads</button>
         <button class="map-pill-btn" id="btn-map-gsat" onclick="setMapBaseLayer(&quot;google_sat&quot;)">🛰️ Satellite</button>
-        <button class="map-pill-btn" id="btn-map-osm" onclick="setMapBaseLayer(&quot;osm&quot;)">🌐 Street</button>
       </div>
       <div class="map-pill-group" style="display:flex;gap:4px">
         <button class="map-pill-btn" id="btn-student-add-spot" style="background:#10B981;color:#fff;font-weight:800;border:none;box-shadow:0 2px 6px rgba(16,185,129,0.35)" onclick="toggleStudentAddSpotMode()">
@@ -2859,7 +2859,7 @@ window.refreshTrackingMap = function() {
 };
 
 let currentBaseLayer = null;
-let currentBaseLayerType = 'google_roads';
+let currentBaseLayerType = 'osm';
 let activeShuttleListener = null;
 
 window.setMapBaseLayer = function(type) {
@@ -2882,9 +2882,11 @@ window.setMapBaseLayer = function(type) {
       attribution: '&copy; Google Maps Satellite'
     }).addTo(trackMap);
   } else {
-    currentBaseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // High-Efficiency, Low-Data OpenStreetMap / CartoDB Voyager
+    currentBaseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap'
+      subdomains: 'abcd',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
     }).addTo(trackMap);
   }
 };
@@ -4264,9 +4266,10 @@ function initAdminLiveMap() {
 
       L.control.zoom({ position: 'topright' }).addTo(adminLiveMap);
 
-      L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        maxZoom: 20,
-        attribution: 'Google Maps'
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
       }).addTo(adminLiveMap);
 
       // Map tap — only opens add prompt when adminPinMode is active
@@ -5053,32 +5056,71 @@ let driverActiveTripUnsub = null;
 // --- DRIVER REAL-TIME GPS TELEMETRY BROADCASTER ---
 let driverGpsWatchId = null;
 
+// --- ULTRA-LOW-DATA DRIVER TELEMETRY (Target: <5MB/day) ---
+let driverLastSentLat = null;
+let driverLastSentLng = null;
+let driverLastSentTime = 0;
+
+function calcFastMeters(lat1, lon1, lat2, lon2) {
+  const dLat = (lat2 - lat1) * 0.017453292519943295;
+  const dLon = (lon2 - lon1) * 0.017453292519943295;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * 0.017453292519943295) * Math.cos(lat2 * 0.017453292519943295) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 function startDriverTelemetryBroadcast() {
   if (!navigator.geolocation) return;
   if (driverGpsWatchId) navigator.geolocation.clearWatch(driverGpsWatchId);
-  // Clear stale liveLocation from Firebase when (re)starting broadcast
   if (currentUser?.uid) {
     updateDoc(doc(db, 'drivers', currentUser.uid), { isOnline: true }).catch(() => {});
   }
 
-  const updateTelemetry = async (lat, lng, acc) => {
+  const updateTelemetry = async (rawLat, rawLng, acc) => {
     if (!driverShuttleId) return;
+
+    const now = Date.now();
+    // Round to 5 decimals (~1.1m precision, saves payload bytes)
+    const lat = Number(Number(rawLat).toFixed(5));
+    const lng = Number(Number(rawLng).toFixed(5));
+
+    // SMART STATIONARY DEADBAND FILTER:
+    // If driver is stationary/waiting (moved < 12m):
+    // Only send a tiny heartbeat once every 60 seconds (95% data reduction while waiting!)
+    if (driverLastSentLat !== null && driverLastSentLng !== null) {
+      const movedMeters = calcFastMeters(driverLastSentLat, driverLastSentLng, lat, lng);
+      if (movedMeters < 12) {
+        if (now - driverLastSentTime < 60000) {
+          return; // Zero data consumed while waiting!
+        }
+      } else {
+        // While driving/moving, throttle to 6 seconds:
+        if (now - driverLastSentTime < 6000) {
+          return;
+        }
+      }
+    }
+
+    driverLastSentLat = lat;
+    driverLastSentLng = lng;
+    driverLastSentTime = now;
+
     try {
-      // Write to shuttle_status (for PWA tracking map)
       await setDoc(doc(db, 'shuttle_status', String(driverShuttleId)), {
         shuttleId: String(driverShuttleId),
-        lat: Number(lat),
-        lng: Number(lng),
+        lat: lat,
+        lng: lng,
         accuracy: acc || 10,
         updatedAt: serverTimestamp(),
         driverName: currentUserData?.name || 'Driver',
         driverId: currentUser?.uid || '',
         online: true
       }, { merge: true });
-      // ALSO write to drivers/{uid}/liveLocation (for Flutter app map)
+
       if (currentUser?.uid) {
         setDoc(doc(db, 'drivers', currentUser.uid), {
-          liveLocation: { lat: Number(lat), lng: Number(lng), heading: 0, speed: 0, updatedAt: serverTimestamp() },
+          liveLocation: { lat: lat, lng: lng, heading: 0, speed: 0, updatedAt: serverTimestamp() },
           isOnline: true,
           shuttleId: String(driverShuttleId),
           driverName: currentUserData?.name || 'Driver'
@@ -5089,15 +5131,13 @@ function startDriverTelemetryBroadcast() {
     }
   };
 
-  // Immediate fix
   navigator.geolocation.getCurrentPosition(pos => {
     updateTelemetry(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy));
   }, null, { enableHighAccuracy: true, timeout: 10000 });
 
-  // Continuous broadcast as driver moves
   driverGpsWatchId = navigator.geolocation.watchPosition(pos => {
     updateTelemetry(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy));
-  }, null, { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 });
+  }, null, { enableHighAccuracy: true, maximumAge: 4000, timeout: 15000 });
 }
 
 function initDriverPanel() {

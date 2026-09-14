@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:assa/core/constants/app_colors.dart';
 import 'package:assa/core/utils/helpers.dart';
 import 'package:assa/services/firestore_service.dart';
-import 'package:assa/services/esp32_service.dart';
+import '../../services/esp32_service.dart';
 import 'package:assa/widgets/common/common_widgets.dart';
 
 class ManageLocationsScreen extends StatefulWidget {
