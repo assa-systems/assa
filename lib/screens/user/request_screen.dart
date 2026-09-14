@@ -3,7 +3,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -191,10 +190,10 @@ class _RequestScreenState extends State<RequestScreen> {
     });
   }
 
-  // OFFLINE MODE: Always strictly returns the 12 fixed locations matching ESP32 firmware & LoRa gateway.
-  // ONLINE MODE: Dynamically loads the campus locations added personally by the Admin via the Admin Panel.
+  // OFFLINE MODE: Strictly returns the 12 fixed physical locations matching ESP32 firmware & LoRa gateway.
+  // ONLINE MODE: Exclusively returns the campus locations added by the Admin via the Admin Panel.
   List<String> get _pickupLocations {
-    if (_isOnline && _onlineLocations.isNotEmpty) {
+    if (_isOnline) {
       return _onlineLocations;
     }
     // Offline / ESP32 AP mode: Fixed 12 locations
@@ -202,7 +201,7 @@ class _RequestScreenState extends State<RequestScreen> {
   }
 
   List<String> get _destinationLocations {
-    if (_isOnline && _onlineLocations.isNotEmpty) {
+    if (_isOnline) {
       return _onlineLocations;
     }
     // Offline / ESP32 AP mode: Fixed 12 locations
@@ -454,17 +453,6 @@ class _RequestScreenState extends State<RequestScreen> {
       content: Text(message),
       backgroundColor: AppColors.error,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
-  }
-
-  void _showInfo(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: AppColors.pendingColor,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
   }
@@ -1031,7 +1019,6 @@ class _OfflineFeedbackDialogState extends State<_OfflineFeedbackDialog> {
   bool _gatewayForwarded = false;
   bool _assigned = false;
   bool _noShuttle = false;
-  bool _apUnreachable = false;
   String _shuttleId = '';
   int _pollAttempts = 0;
   static const int maxPollAttempts = 30;
@@ -1067,10 +1054,8 @@ class _OfflineFeedbackDialogState extends State<_OfflineFeedbackDialog> {
     final status = result['status'] as String? ?? 'PENDING';
 
     if (status == 'ERROR') {
-      setState(() => _apUnreachable = true);
       return;
     }
-    setState(() => _apUnreachable = false);
 
     debugPrint('[Offline] Poll $widget.offlineUUID: status=$status, AFIT KEKE=${result['AFIT KEKE']}');
 

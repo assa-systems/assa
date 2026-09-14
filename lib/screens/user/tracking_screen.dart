@@ -21,7 +21,6 @@ class _TrackingScreenState extends State<TrackingScreen> {
   StreamSubscription? _driversSub;
 
   bool _studentAddMode = false;
-  LatLng? _selectedSpot;
 
   @override
   void initState() {
@@ -63,7 +62,6 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
   void _onMapTap(TapPosition tapPos, LatLng latlng) {
     if (!_studentAddMode) return;
-    setState(() => _selectedSpot = latlng);
     _showAddLocationDialog(latlng);
   }
 
@@ -120,7 +118,6 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
     setState(() {
       _studentAddMode = false;
-      _selectedSpot = null;
     });
   }
 
@@ -187,7 +184,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
-        title: const Text('🗺️ Campus Map', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+        title: const Text('🗺️ Campus Shuttle Tracker', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
         actions: [
           if (_studentAddMode)
             TextButton.icon(
@@ -244,7 +241,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                         ),
                       ),
                     );
-                  }).whereType<Marker>().toList(),
+                  }).whereType<Marker>(),
 
                   // Online driver shuttle markers
                   ..._onlineDrivers.map((driver) {
@@ -267,7 +264,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                         child: const Text('🚌', style: TextStyle(fontSize: 20)),
                       ),
                     );
-                  }).whereType<Marker>().toList(),
+                  }).whereType<Marker>(),
                 ],
               ),
             ],
@@ -283,8 +280,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 children: [
                   const Icon(Icons.circle, color: Color(0xFF10B981), size: 10),
                   const SizedBox(width: 6),
-                  Text('${_onlineDrivers.length} shuttle(s) online  •  ${_campusLocations.length} locations',
+                  Text('Campus Shuttle Mode  •  ${_onlineDrivers.length} active',
                       style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                  const Spacer(),
+                  Text('${_campusLocations.length} locations',
+                      style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
                 ],
               ),
             ),

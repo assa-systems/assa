@@ -253,29 +253,29 @@
     }
     .map-pill-group {
       display: inline-flex;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(8px);
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(10px);
       padding: 4px;
       border-radius: 30px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
-      border: 1px solid var(--border);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.15);
       pointer-events: auto;
     }
     .map-pill-btn {
-      padding: 5px 12px;
+      padding: 6px 13px;
       border-radius: 20px;
       font-size: 0.75rem;
       font-weight: 700;
       border: none;
       background: transparent;
-      color: var(--text-secondary);
+      color: rgba(255,255,255,0.8);
       cursor: pointer;
       transition: all 0.2s;
     }
     .map-pill-btn.active {
-      background: var(--primary);
+      background: #2563EB;
       color: white;
-      box-shadow: 0 2px 8px rgba(21,101,192,0.3);
+      box-shadow: 0 2px 8px rgba(37,99,235,0.4);
     }
     .campus-pin-inner {
       background: #0D47A1;
@@ -881,18 +881,18 @@
 
   <!-- LIVE SHUTTLE TRACKING MAP -->
   <div class="screen" id="screen-tracking">
-    <div class="topbar" style="position:absolute;top:0;left:0;right:0;z-index:1001;background:rgba(255,255,255,0.95);backdrop-filter:blur(8px)">
+    <div class="topbar" style="position:absolute;top:0;left:0;right:0;z-index:1001;background:linear-gradient(135deg,#0F172A,#1E3A8A);border-bottom:1px solid rgba(255,255,255,0.12);backdrop-filter:blur(10px)">
       <div class="topbar-row">
-        <button class="topbar-icon" onclick="showScreen('dashboard')">&#8592;</button>
-        <div class="topbar-name" style="flex:1;text-align:center">&#128506;&#65039; Campus Shuttle Tracker</div>
-        <button class="topbar-icon" onclick="refreshTrackingMap()" title="Recenter">&#x1F504;</button>
+        <button class="topbar-icon" style="background:rgba(255,255,255,0.12);color:#FFFFFF;border:1px solid rgba(255,255,255,0.2)" onclick="showScreen('dashboard')">&#8592;</button>
+        <div class="topbar-name" style="flex:1;text-align:center;color:#FFFFFF;font-weight:800">&#128506;&#65039; Campus Shuttle Tracker</div>
+        <button class="topbar-icon" style="background:rgba(255,255,255,0.12);color:#FFFFFF;border:1px solid rgba(255,255,255,0.2)" onclick="refreshTrackingMap()" title="Recenter">&#x1F504;</button>
       </div>
     </div>
     
     <!-- Map Layer & Student Spot Addition Bar -->
     <div class="map-controls-bar" style="flex-wrap:wrap;gap:6px">
       <div class="map-pill-group">
-        <button class="map-pill-btn active" id="btn-map-osm" onclick="setMapBaseLayer(&quot;osm&quot;)">🌐 Campus (Low Data)</button>
+        <button class="map-pill-btn active" id="btn-map-osm" onclick="setMapBaseLayer(&quot;osm&quot;)">🌐 Campus Shuttle Mode</button>
         <button class="map-pill-btn" id="btn-map-groads" onclick="setMapBaseLayer(&quot;google_roads&quot;)">🗺️ Google Roads</button>
         <button class="map-pill-btn" id="btn-map-gsat" onclick="setMapBaseLayer(&quot;google_sat&quot;)">🛰️ Satellite</button>
       </div>
