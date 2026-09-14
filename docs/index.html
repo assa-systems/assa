@@ -204,31 +204,7 @@
     .active-ride-actions { display: flex; gap: 0.6rem; }
     
     
-    /* Three Panel Switcher */
-    .three-panel-switcher {
-      display: inline-flex;
-      background: rgba(0,0,0,0.15);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 30px;
-      padding: 3px;
-      gap: 3px;
-    }
-    .panel-switch-btn {
-      border: none;
-      background: transparent;
-      color: rgba(255,255,255,0.75);
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .panel-switch-btn.active {
-      background: var(--primary);
-      color: #fff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
+    /* Three-panel-switcher removed - strict role-based routing */
     .badge-role-admin {
       background: linear-gradient(135deg, #EF4444, #DC2626);
       color: #fff;
@@ -1210,11 +1186,7 @@
       <div class="topbar-row">
         <button class="topbar-icon" onclick="showScreen('dashboard')">&#8592;</button>
         <div class="topbar-name" style="flex:1;text-align:center">&#128652; Driver Panel</div>
-        <div id="driver-panel-switcher" class="three-panel-switcher">
-          <button class="panel-switch-btn" onclick="showScreen('dashboard')">User</button>
-          <button class="panel-switch-btn active" onclick="showScreen('driver')">Driver</button>
-          <button class="panel-switch-btn" onclick="showScreen('admin')">Admin</button>
-        </div>
+        
       </div>
     </div>
     <div class="screen-content">
@@ -1267,11 +1239,7 @@
       <div class="topbar-row">
         <button class="topbar-icon" onclick="showScreen('dashboard')">&#8592;</button>
         <div class="topbar-name" style="flex:1;text-align:center">&#128737; Admin Panel</div>
-        <div class="three-panel-switcher">
-          <button class="panel-switch-btn" onclick="showScreen('dashboard')">User</button>
-          <button class="panel-switch-btn" onclick="showScreen('driver')">Driver</button>
-          <button class="panel-switch-btn active" onclick="showScreen('admin')">Admin</button>
-        </div>
+        
         <button class="topbar-icon" style="background:rgba(255,82,82,0.15);color:var(--danger);margin-left:4px" onclick="doLogout()">&#x1F6AA;</button>
       </div>
     </div>
@@ -1738,20 +1706,8 @@ function escape(s) {
 window.escape = escape;
 
 // 12 Campus Locations with Verified Kawo, Kaduna Coordinates
-const AFIT_LOCATIONS = {
-  'AFIT Gates':                 { code: 1,  lat: 10.6068, lng: 7.4370, category: 'Main Entrance', defaultName: 'AFIT Main Gate' },
-  '45x1 Hostel':                { code: 2,  lat: 10.6185, lng: 7.4455, category: 'Hostel', defaultName: 'AFIT Boys Hostel (45x1)' },
-  'Old Girls Hostel':           { code: 3,  lat: 10.6134, lng: 7.4475, category: 'Hostel', defaultName: 'AFIT Girls Hostel' },
-  'TETFUND Hostel':             { code: 4,  lat: 10.6120, lng: 7.4560, category: 'Hostel', defaultName: 'Princess Gimbiya / TETFUND' },
-  'BK':                         { code: 5,  lat: 10.6083, lng: 7.4415, category: 'Academic', defaultName: 'School of Basic Studies (BK)' },
-  'Boys Hostel':                { code: 6,  lat: 10.6150, lng: 7.4520, category: 'Hostel', defaultName: 'Boys Hostel (Barakallahu)' },
-  'Alfa Hall':                  { code: 7,  lat: 10.6090, lng: 7.4439, category: 'Lecture Hall', defaultName: 'Ibrahim Alfa Auditorium' },
-  'EED':                        { code: 8,  lat: 10.6092, lng: 7.4385, category: 'Engineering', defaultName: 'Armament Engineering / EED' },
-  'AFIT Mosque':                { code: 9,  lat: 10.6088, lng: 7.4402, category: 'Worship', defaultName: 'AFIT Central Masjid' },
-  'New Mechanical':             { code: 10, lat: 10.6078, lng: 7.4395, category: 'Engineering', defaultName: 'Mechanical & Aerospace / Bush Canteen' },
-  'Centre of Entrepreneurship': { code: 11, lat: 10.6085, lng: 7.4465, category: 'Faculty', defaultName: 'Faculty of Science & Computing / Bukka Pot' },
-  'Hall A':                     { code: 12, lat: 10.6090, lng: 7.4380, category: 'Faculty', defaultName: 'AMAO Hall / Auditorium' }
-};
+const AFIT_LOCATIONS = {};
+// Locations are added exclusively by Admin via the Admin Panel → saved to Firebase
 
 // Building / Landmark Photos for Locations (Local-first & Firebase Synced)
 let customLocationImages = {};
@@ -1856,7 +1812,7 @@ async function loadLocationNamesFromFirestore() {
             if (!AFIT_LOCATIONS[locName]) {
               AFIT_LOCATIONS[locName] = {
                 code: 100 + idx,
-                lat: 10.6090 + (idx * 0.0008),
+                lat: Number(locData?.lat || 0),
                 lng: 7.4420 + (idx * 0.0008),
                 category: 'Online Location',
                 defaultName: locName
@@ -1883,7 +1839,7 @@ async function loadLocationNamesFromFirestore() {
           if (item && item.name) {
             AFIT_LOCATIONS[item.name] = {
               code: item.code || (100 + Object.keys(AFIT_LOCATIONS).length),
-              lat: Number(item.lat || 10.6120),
+              lat: Number(item.lat || 0),
               lng: Number(item.lng || 7.4452),
               category: item.category || 'Campus Spot',
               defaultName: item.name
@@ -2130,6 +2086,11 @@ window.doForgotPassword = async function() {
 
 window.doLogout = async function() {
   localStorage.removeItem('assa-user-profile');
+  // Clear driver liveLocation on logout so map dot disappears
+  if (currentUser?.uid) {
+    updateDoc(doc(db, 'drivers', currentUser.uid), { isOnline: false }).catch(() => {});
+  }
+  if (driverGpsWatchId) { navigator.geolocation.clearWatch(driverGpsWatchId); driverGpsWatchId = null; }
   await signOut(auth);
 };
 
@@ -3075,8 +3036,9 @@ function initTrackingMap() {
       // Zoom listener for hierarchical pin decluttering
       trackMap.on('zoomend', renderCampusPins);
 
-      // Student / Rider Map Tap Listener to add new spots directly!
+      // Student map tap — only opens add prompt when studentAddSpotMode is active
       trackMap.on('click', (e) => {
+        if (!studentAddSpotMode) return;
         openInMapPhotoPrompt(e.latlng.lat, e.latlng.lng, null, trackMap);
         toggleStudentAddSpotMode(false);
       });
@@ -4307,9 +4269,15 @@ function initAdminLiveMap() {
         attribution: 'Google Maps'
       }).addTo(adminLiveMap);
 
-      // Direct map tap to add spot & photo right in the popup!
+      // Map tap — only opens add prompt when adminPinMode is active
       adminLiveMap.on('click', (e) => {
+        if (!adminPinMode) return;
         openInMapPhotoPrompt(e.latlng.lat, e.latlng.lng, null);
+        adminPinMode = false;
+        const btn = document.getElementById('btn-pin-toggle');
+        const mapEl = document.getElementById('admin-live-map');
+        if (btn) { btn.textContent = 'Tap Mode'; btn.style.color = 'var(--primary)'; }
+        if (mapEl) mapEl.style.cursor = '';
       });
     }
 
@@ -4535,7 +4503,21 @@ function renderAdminMapPins() {
 
     m.on('click', (e) => {
       L.DomEvent.stopPropagation(e);
-      openInMapPhotoPrompt(loc.lat, loc.lng, key);
+      // VIEW POPUP: shows photo first, edit is secondary action
+      const photo = getLocPhoto(key) || '';
+      const photoHtml = photo
+        ? ('<div style="margin:5px 0;width:100%;height:90px;border-radius:8px;overflow:hidden;border:1.5px solid #10B981;cursor:pointer" data-img="' + escapeAttr(photo) + '" onclick="viewFullImage(this.dataset.img)"><img src="' + photo + '" style="width:100%;height:100%;object-fit:cover" alt="location"/><div style="font-size:8px;text-align:center;color:#10B981;font-weight:700">🔍 Tap to view full</div></div>')
+        : '<div style="margin:5px 0;padding:8px;background:#f9fafb;border-radius:6px;font-size:9.5px;color:#6b7280;text-align:center">No photo added yet</div>';
+      const viewHtml = '<div style="min-width:200px;max-width:250px;padding:4px">' +
+        '<div style="font-weight:800;font-size:11.5px;color:#1E3A8A;margin-bottom:4px">📍 ' + escape(getLocDisplayName(key)) + '</div>' +
+        '<div style="font-size:9px;color:#6b7280;margin-bottom:4px">' + (loc.category || '') + '</div>' +
+        photoHtml +
+        '<div style="display:flex;gap:5px;margin-top:6px">' +
+          '<button data-lat="' + loc.lat + '" data-lng="' + loc.lng + '" data-key="' + escapeAttr(key) + '" onclick="adminLiveMap.closePopup(); openInMapPhotoPrompt(Number(this.dataset.lat), Number(this.dataset.lng), this.dataset.key);" style="flex:1;background:#2563EB;color:#fff;border:none;padding:5px 8px;border-radius:6px;font-size:9px;font-weight:800;cursor:pointer">✏️ Edit / Add Photo</button>' +
+          '<button onclick="adminLiveMap.closePopup()" style="background:#e5e7eb;color:#374151;border:none;padding:5px 8px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer">Close</button>' +
+        '</div>' +
+        '</div>';
+      m.bindPopup(viewHtml, { autoPan: true, maxWidth: 270 }).openPopup();
     });
   });
 }
@@ -5074,10 +5056,15 @@ let driverGpsWatchId = null;
 function startDriverTelemetryBroadcast() {
   if (!navigator.geolocation) return;
   if (driverGpsWatchId) navigator.geolocation.clearWatch(driverGpsWatchId);
+  // Clear stale liveLocation from Firebase when (re)starting broadcast
+  if (currentUser?.uid) {
+    updateDoc(doc(db, 'drivers', currentUser.uid), { isOnline: true }).catch(() => {});
+  }
 
   const updateTelemetry = async (lat, lng, acc) => {
     if (!driverShuttleId) return;
     try {
+      // Write to shuttle_status (for PWA tracking map)
       await setDoc(doc(db, 'shuttle_status', String(driverShuttleId)), {
         shuttleId: String(driverShuttleId),
         lat: Number(lat),
@@ -5088,6 +5075,15 @@ function startDriverTelemetryBroadcast() {
         driverId: currentUser?.uid || '',
         online: true
       }, { merge: true });
+      // ALSO write to drivers/{uid}/liveLocation (for Flutter app map)
+      if (currentUser?.uid) {
+        setDoc(doc(db, 'drivers', currentUser.uid), {
+          liveLocation: { lat: Number(lat), lng: Number(lng), heading: 0, speed: 0, updatedAt: serverTimestamp() },
+          isOnline: true,
+          shuttleId: String(driverShuttleId),
+          driverName: currentUserData?.name || 'Driver'
+        }, { merge: true }).catch(() => {});
+      }
     } catch(e) {
       console.warn('Driver telemetry broadcast error:', e);
     }
